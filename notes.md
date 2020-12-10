@@ -1,12 +1,12 @@
-# so how will this work
-
 # networking functions
-- get_messages(time=None)
-    - gets messages since last login (maybe earlier w arguments?)
+- get(time)
+    * gets messages since time
+
+- get_file(name)
+    * downloads file given
 
 - send(data,type)
-    - sends data of type:
-        * one function for all messages, difference only in the final part
+    * sends data of type
 
 # display stuff
 ## 2 threads:
