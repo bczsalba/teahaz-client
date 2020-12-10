@@ -19,23 +19,38 @@ ROOMID = "conv1"
 USERNAME = "me"
 COOKIE = "test_cookie"
 
+# base data array, added onto later
+BASE_DATA = {
+    "username": USERNAME,
+    "cookie": COOKIE,
+    "chatroom": ROOMID,
+}
+
 
 # FUNCTIONS
+## RECEIVING METHOD
+def get(time):
+    # set specific fields
+    endpoint = "message"
+    data = BASE_DATA + { 'time': str(time) } 
+
+    # get response
+    response = requests.get(url=URL+endpoint,headers=BASE_DATA)
+    return response.text
+
 ## SENDING METHOD
 def send(message,mType='text'):
-    # base data array, added onto later
-    data = {
-        "username": USERNAME,
-        "cookie": COOKIE,
-        "chatroom": ROOMID,
-    }
-
+    # base data gets appended to
+    data = BASE_DATA
+    
+    # handle specificities
     if mType = 'text':
-        # add text-specific fields to data
+        # set text-specific fields
         data += {
                 "message": encode(message),
                 'type': "text"
         }
+        endpoint = "message"
 
     elif mType = 'file':
         # get file contents
@@ -45,18 +60,20 @@ def send(message,mType='text'):
         # get file extension bc mimetype sucks sometimes
         extension = message.split(".")[-1]
 
+        # set file-specific fields
         data += {
             'type': "file"
             'extension': extension,
             'data': contents
         }
+        endpoint = "file"
 
     else:
         return "Error: Invalid message type '"+str(mType)+"'"
 
-    res = s.post(url=url, json=data)
-
-    return res.text
+    # return response
+    response = s.post(url=URL+endpoint, json=data)
+    return response.text
 
 
 
