@@ -35,6 +35,8 @@
             "jk": "probably binded separately, navigation",
             "r": "react menu"
         }
+        // comment from thomas
+            // add some sort of text box navigations (eg: `I/A`, `hjkl`[where jk are actually gj and gk], `g/gg`)
         ```
         + add menu:
             - brings up selection between modes
