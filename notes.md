@@ -21,6 +21,7 @@
             - would allow header and footer to always be present
         + cons:
             - id need to keep track of all messages, and only print the ones i need to specific coords
+            - this could be done by storing messages line by line, and using the indexes as control
 
 ## navigation & inputs
 - vim like, binding based:

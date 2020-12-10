@@ -1,8 +1,8 @@
-# CHECK NOTES
 # IMPORTS
-import requests
+import os
 import json
 import base64
+import requests
 
 
 # HELPERS
@@ -20,32 +20,39 @@ USERNAME = "me"
 COOKIE = "test_cookie"
 
 
-# FILE SENDING METHOD
-def send_file(f=None):
-    # get filename
-    ## TODO: add file selector UI
-    if f == None:
-        return
-    
-    # use given
-    else:
-        filename = f
-
-    # get file contents
-    with open(filename, 'rb')as infile:
-        contents = encode_binary(infile.read())
-
-    # get file extension bc mimetype sucks sometimes
-    extension = filename.split(".")[-1]
-
+# FUNCTIONS
+## SENDING METHOD
+def send(message,mType='text'):
+    # base data array, added onto later
     data = {
         "username": USERNAME,
         "cookie": COOKIE,
         "chatroom": ROOMID,
-        "type": 'file',
-        'extension': extension,
-        'data': contents
     }
+
+    if mType = 'text':
+        # add text-specific fields to data
+        data += {
+                "message": encode(message),
+                'type': "text"
+        }
+
+    elif mType = 'file':
+        # get file contents
+        with open(message, 'rb') as infile:
+            contents = encode_binary(infile.read())
+
+        # get file extension bc mimetype sucks sometimes
+        extension = message.split(".")[-1]
+
+        data += {
+            'type': "file"
+            'extension': extension,
+            'data': contents
+        }
+
+    else:
+        return "Error: Invalid message type '"+str(mType)+"'"
 
     res = s.post(url=url, json=data)
 
