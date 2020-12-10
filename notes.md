@@ -1,17 +1,17 @@
 # networking functions
-- get(time)
-    * gets messages since time
+- get(parameter,type="messages")
+    * type can be `messages`/`file`
+    * messages will return messages since `parameter` (in UNIX ms)
+    * file will return contents of `parameter` on the server
 
-- get_file(name)
-    * downloads file given
-
-- send(data,type)
-    * sends data of type
+- send(data,mType="text")
+    * sends `data` of `mType`
 
 # display stuff
 ## 2 threads:
 - getch():
-    * gets characters, sends them to input handler like fishtank does
+    * IMPORTANT: refresh should probably be here too, not sure how often though.
+    * gets characters, sends them to input handler
     * likely could have custom bindings (local or server stored?)
     * needs its own thread as it's blocking
 - main():

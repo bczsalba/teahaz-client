@@ -36,14 +36,21 @@ BASE_DATA = {
 
 # FUNCTIONS
 ## receiving method
-def get(time):
+def get(parameter,mode="message"):
     data = BASE_DATA
     
-    # set specific fields
-    endpoint = "message/"
-    data['time'] = str(time)
+    # set endpoint
+    endpoint = mode+"/"
 
-    # get response
+    # set parameter based on mode
+    if mode == "message":
+        data["time"] = str(parameter)
+    elif mode == "file":
+        data["filename"] = str(parameter)
+    else:
+        return "Client Error: Invalid get mode '"+str(mode)+"'"
+
+    # return response
     response = SESSION.get(url=URL+endpoint,headers=BASE_DATA)
     return json.loads(response.text)
 
@@ -76,7 +83,7 @@ def send(message,mType='text'):
         endpoint = "file/"
 
     else:
-        return "Error: Invalid message type '"+str(mType)+"'"
+        return "Client Error: Invalid message type '"+str(mType)+"'"
 
     # return response
     response = SESSION.post(url=URL+endpoint, json=data)
