@@ -25,7 +25,8 @@
 ## navigation & inputs
 - vim like, binding based:
     * `i` always inserts into text box
-    * esc goes to esc mode like in vim
+    * `ESC` goes to esc mode like in vim
+    * rn there's no human-friendly translation for keycodes, so anything other than alphanumericals is a bit ugly
     * examples for binds:
         ```python
         binds = {
