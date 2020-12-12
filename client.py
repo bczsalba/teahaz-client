@@ -1,8 +1,12 @@
 # IMPORTS
 import os
+import sys
 import json
+import time
+import getch
 import base64
 import requests
+import threading
 
 
 
@@ -15,6 +19,8 @@ def encode_binary(a):
 
 
 # GLOBALS
+WIDTH,HEIGHT = os.get_terminal_size()
+KEEP_GOING = True
 SESSION = requests.Session()
 
 ## set by user
@@ -22,7 +28,7 @@ URL = "http://localhost:5000/api/v0/"
 ROOMID = "conv1"
 USERNAME = "pink"
 
-## given by server
+# given by server
 COOKIE = "flamingosareblue"
 
 ## base data array to append to
@@ -32,9 +38,22 @@ BASE_DATA = {
     "chatroom": ROOMID,
 }
 
+BINDS = {
+    "i": "insert",
+    "\x1b": "escape",
+    "j": "navigate_down",
+    "k": "navigate_up",
+    "a": "menu_add",
+    "r": "menu_react"
+}
+
+VALID_KEYS = [key for key in BINDS.keys()]
+MODE = "INPUT"
+INPUT = ""
 
 
-# FUNCTIONS
+
+# NETWORK FUNCTIONS
 ## receiving method
 def get(parameter,mode="message"):
     data = BASE_DATA
@@ -91,3 +110,35 @@ def send(message,mType='text'):
 
 
 
+# INPUT 
+## key intercepter loop, separate thread
+def getch_loop(): 
+    global INPUT
+
+    while KEEP_GOING:
+        key = getch.getch()
+        
+        if MODE == "INPUT":
+            INPUT += key
+            ADD EXIT
+        print_input()
+
+        if key in VALID_KEYS:
+            action = BINDS[key]
+
+
+
+
+# UI
+def print_input():
+    sys.stdout.write(f'\033[{HEIGHT-1};0H'+INPUT)
+    sys.stdout.flush()
+    
+
+
+
+threading.Thread(target=getch_loop).start()
+
+if __name__ == "__main__":
+    while KEEP_GOING:
+        time.sleep(1)

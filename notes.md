@@ -26,17 +26,25 @@
 ## navigation & inputs
 - vim like, binding based:
     * `i` always inserts into text box
-    * `ESC` goes to esc mode like in vim
+    * `ESC` goes to normal mode like in vim
     * rn there's no human-friendly translation for keycodes, so anything other than alphanumericals is a bit ugly
     * examples for binds:
         ```python
-        binds = {
+        BINDS = {
             "a": "add menu, like in messenger, has options for files and maybe games?",
             "jk": "probably binded separately, navigation",
             "r": "react menu"
         }
-        // comment from thomas
-            // add some sort of text box navigations (eg: `I/A`, `hjkl`[where jk are actually gj and gk], `g/gg`)
+        
+        VIMBINDS_ENABLED = 1
+        VIMBINDS = {
+            "I":  "goto_line_start",
+            "A":  "goto_line_end,
+            "j":  "goto_line_down",
+            "k":  "goto_line_up",
+            "gg": "goto_text_start",
+            "G":  "goto_text_end"
+        }
         ```
         + add menu:
             - brings up selection between modes
@@ -47,6 +55,7 @@
                     - ????????
         + react menu:
             - compacts all messages, gives each an index and allows scrolling
+                * maybe can be accessed by using arrow UP/DOWN in normal mode
             - user selects a message, and reactions come up:
             ```
             hey whats up
