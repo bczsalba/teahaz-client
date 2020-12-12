@@ -39,16 +39,22 @@ BASE_DATA = {
 }
 
 BINDS = {
-    "i": "insert",
-    "\x1b": "escape",
-    "j": "navigate_down",
-    "k": "navigate_up",
-    "a": "menu_add",
-    "r": "menu_react"
+        "NORMAL": {
+            "i": "insert",
+            "\x1b": "escape",
+            "j": "navigate_down",
+            "k": "navigate_up",
+            "a": "menu_add",
+            "r": "menu_react",
+            "m": "menu_message"
+        },
+        "INSERT" {
+            "\x1b": : "escape"
+        }
 }
 
 VALID_KEYS = [key for key in BINDS.keys()]
-MODE = "INPUT"
+MODE = "INSERT"
 INPUT = ""
 
 
@@ -113,18 +119,29 @@ def send(message,mType='text'):
 # INPUT 
 ## key intercepter loop, separate thread
 def getch_loop(): 
-    global INPUT
+    global INPUT,KEEP_GOING
 
     while KEEP_GOING:
         key = getch.getch()
+
+        # ^C behavior: will likely be properly binded
+        if key == "\x03":
+            KEEP_GOING = 0
+            break
+
+        # NORMAL mode: shortcuts
+        if MODE == "NORMAL":
+            if key in VALID_KEYS:   
+                action = BINDS[key]
         
-        if MODE == "INPUT":
+        # INSERT mode: text input
+        elif MODE == "INSERT":
+
             INPUT += key
-            ADD EXIT
+
+
         print_input()
 
-        if key in VALID_KEYS:
-            action = BINDS[key]
 
 
 
@@ -140,5 +157,6 @@ def print_input():
 threading.Thread(target=getch_loop).start()
 
 if __name__ == "__main__":
+    print('\033[2J')
     while KEEP_GOING:
         time.sleep(1)

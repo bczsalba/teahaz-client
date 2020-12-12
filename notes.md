@@ -58,11 +58,11 @@
                 * maybe can be accessed by using arrow UP/DOWN in normal mode
             - user selects a message, and reactions come up:
             ```
-            hey whats up
             0 :joy: 
             1 :sad:
             2 :idontknowdiscordemoticons:
             ```
+            - message moves to center of screen, other messages are hidden or **faded**
             - if user inputs int in range of reactions that reaction is sent
             - else an input is built in the input field and sent as a normal reply
 
