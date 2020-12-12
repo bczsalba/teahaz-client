@@ -15,7 +15,11 @@ def encode(a):
     return base64.b64encode(a.encode('utf-8')).decode('utf-8')
 def encode_binary(a):
     return base64.b64encode(a).decode('utf-8')
+def switch_mode(target):
+    global MODE, VALID_KEYS
 
+    MODE = target
+    VALID_KEYS = [key for key in BINDS[target].keys()]
 
 
 # GLOBALS
@@ -31,7 +35,7 @@ USERNAME = "pink"
 # given by server
 COOKIE = "flamingosareblue"
 
-## base data array to append to
+# base data array to append to
 BASE_DATA = {
     "username": USERNAME,
     "cookie": COOKIE,
@@ -39,23 +43,29 @@ BASE_DATA = {
 }
 
 BINDS = {
-        "NORMAL": {
-            "i": "insert",
-            "\x1b": "escape",
-            "j": "navigate_down",
-            "k": "navigate_up",
-            "a": "menu_add",
-            "r": "menu_react",
-            "m": "menu_message"
-        },
-        "INSERT" {
-            "\x1b": : "escape"
-        }
+    "NORMAL": {
+        "i": "insert",
+        "ESC": "escape",
+        "j": "navigate_down",
+        "k": "navigate_up",
+        "a": "menu_add",
+        "r": "menu_react",
+        "m": "menu_message"
+    },
+    "INSERT": {
+        "ESC": "escape"
+    },
+    "MESSAGE": {
+        "s": "message_send",
+        "ENTER": "message_newline",
+        "c": "message_clear",
+    },
 }
 
-VALID_KEYS = [key for key in BINDS.keys()]
-MODE = "INSERT"
 INPUT = ""
+
+# set default mode
+switch_mode("INSERT")
 
 
 
@@ -125,7 +135,7 @@ def getch_loop():
         key = getch.getch()
 
         # ^C behavior: will likely be properly binded
-        if key == "\x03":
+        if key == "SIGTERM":
             KEEP_GOING = 0
             break
 
@@ -143,20 +153,20 @@ def getch_loop():
         print_input()
 
 
-
-
-
 # UI
 def print_input():
     sys.stdout.write(f'\033[{HEIGHT-1};0H'+INPUT)
     sys.stdout.flush()
     
 
-
-
-threading.Thread(target=getch_loop).start()
-
+# TEMP MAIN
 if __name__ == "__main__":
+    # input thread
+    threading.Thread(target=getch_loop).start()
+
+    # clear screen
     print('\033[2J')
+
+    # main loop
     while KEEP_GOING:
-        time.sleep(1)
+        time.sleep(0.2)
