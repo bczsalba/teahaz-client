@@ -31,6 +31,7 @@ SESSION = requests.Session()
 URL = "http://localhost:5000/api/v0/"
 ROOMID = "conv1"
 USERNAME = "pink"
+MESSAGE_BREAKLEN = 25
 
 # given by server
 COOKIE = "flamingosareblue"
@@ -130,7 +131,7 @@ def send(message,mType='text'):
 # INPUT 
 ## key intercepter loop, separate thread
 def getch_loop(): 
-    global INPUT,INPUT_CURSOR,KEEP_GOING
+    global KEEP_GOING
 
     while KEEP_GOING:
         key = getch.getch()
@@ -138,6 +139,7 @@ def getch_loop():
         # ^C behavior: will likely be properly binded
         if key == "SIGTERM":
             KEEP_GOING = 0
+            print('\033[?25h')
             break
 
         # NORMAL mode: shortcuts
@@ -155,25 +157,50 @@ def getch_loop():
 
 
 
-
 # UI
-def print_input():
-    sys.stdout.write(f'\033[K\033[{HEIGHT-1};0H'+INPUT)
-    sys.stdout.flush()
-    
+## test function to get messages
+## TODO: the goal of this is to set up a storage of all messages that can be handled line by line
+"""
+messages = [
+    {
+        "sender": "me",
+        "time": "178929287",
+        "contents": [
+            "line 1", 
+            "line 2",
+            "line 3"
+        ]
+    }
+]
+# this needs to use the given structure, and expand with the line by line data
+"""
+def get_lines():
+    # TODO: this will probably be way too much and needs to be looked at later
+    messages_raw = get(0)
+    messages_sorted = sorted(messages_raw,key=lambda x: x["time"])
+    messages_encoded = [m for m in messages_sorted if m["message"] != None and m["type"] == "text"]
+    messages = []
+    for m in messages_encoded:
+        m["message"] = base64.b64decode(m["message"]).decode('utf-8')
+        messages.append(m)
+
+    for m in messages:
+        print(m["message"]+'\n')
 
 
 # TEMP MAIN
-##  TODO: add x, y limit
-infield = getch.InputField()
 
 if __name__ == "__main__":
+    ##  TODO: add x, y limit
+    infield = getch.InputField()
+
+    ## clear screen
+    print('\033[2J')
+
     # input thread
     threading.Thread(target=getch_loop).start()
 
-    # clear screen
-    print('\033[2J')
-
     # main loop
     while KEEP_GOING:
-        time.sleep(0.2)
+        get_lines()
+        time.sleep(1)

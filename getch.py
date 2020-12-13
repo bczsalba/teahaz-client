@@ -107,6 +107,7 @@ class InputField:
             self.x,self.y = pos
 
         self.set_cursor(False)
+        self.print()
 
     def send(self,key):
         if key == "BACKSPACE":
@@ -170,7 +171,7 @@ getch = _Getch()
 # example code
 if __name__ == "__main__":
     infield = InputField()
-    infield.print()
+    #infield.print()
 
     while True:
         key = getch()

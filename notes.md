@@ -10,9 +10,8 @@
 # display stuff
 ## 2 threads:
 - getch():
-    * IMPORTANT: refresh should probably be here too, not sure how often though.
-    * gets characters, sends them to input handler
-    * likely could have custom bindings (local or server stored?)
+    * uses getch.InputField class
+    * bindings are stored in the BINDS dict
     * needs its own thread as it's blocking
 - main():
     * handles everything else
@@ -31,11 +30,24 @@
     * examples for binds:
         ```python
         BINDS = {
-            "a": "add menu, like in messenger, has options for files and maybe games?",
-            "jk": "probably binded separately, navigation",
-            "r": "react menu"
+            "NORMAL": {
+                "i": "insert",
+                "ESC": "escape",
+                "j": "navigate_down",
+                "k": "navigate_up",
+                "a": "menu_add",
+                "r": "menu_react",
+                "m": "menu_message"
+            },
+            "INSERT": {
+                "ESC": "escape"
+            },
+            "MESSAGE": {
+                "s": "message_send",
+                "ENTER": "message_newline",
+                "c": "message_clear",
+            },
         }
-        
         VIMBINDS_ENABLED = 1
         VIMBINDS = {
             "I":  "goto_line_start",
