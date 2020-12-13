@@ -1,7 +1,7 @@
 # networking functions
 - get(parameter,type="messages")
     * type can be `messages`/`file`
-    * messages will return messages since `parameter` (in UNIX ms)
+    * messages will return messages since `parameter` (in EPOCH time)
     * file will return contents of `parameter` on the server
 
 - send(data,mType="text")
@@ -39,7 +39,7 @@
         VIMBINDS_ENABLED = 1
         VIMBINDS = {
             "I":  "goto_line_start",
-            "A":  "goto_line_end,
+            "A":  "goto_line_end",
             "j":  "goto_line_down",
             "k":  "goto_line_up",
             "gg": "goto_text_start",
