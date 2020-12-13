@@ -132,6 +132,7 @@ class InputField:
                     key = "\n"
                 else:
                     key = ""
+                    self.cursor -= 1
 
             left = self.value[:self.cursor]
             right = self.value[self.cursor:]
@@ -150,6 +151,7 @@ class InputField:
             charUnderCursor = self.value[self.cursor]
 
         line = left + '\033[47m\033[30m' + charUnderCursor + '\033[0m' + right
+        # TODO: replace '\033[K' with something that will only clear as much as needed
         sys.stdout.write(f'\033[{self.y};{self.x}H'+'\033[K'+line)
 
         if flush:

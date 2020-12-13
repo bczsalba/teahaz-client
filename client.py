@@ -147,27 +147,12 @@ def getch_loop():
         
         # INSERT mode: text input
         elif MODE == "INSERT":
-            if key == "BACKSPACE":
-                if INPUT_CURSOR > 0:
-                    left = INPUT[:INPUT_CURSOR-1]
-                    right = INPUT[INPUT_CURSOR:]
-                    INPUT = left+right
-                    INPUT_CURSOR -= 1
+            # send key to inputfield to handle
+            infield.send(key)
 
-            elif key == "ARROW_LEFT":
-                pass
+        # print inputfield
+        infield.print()
 
-            elif key == "ARROW_RIGHT":
-                pass
-
-            else:
-                left = INPUT[:INPUT_CURSOR]
-                right = INPUT[INPUT_CURSOR:]
-                INPUT = left+key+right
-                INPUT_CURSOR += 1
-
-
-        print_input()
 
 
 
@@ -179,6 +164,9 @@ def print_input():
 
 
 # TEMP MAIN
+##  TODO: add x, y limit
+infield = getch.InputField()
+
 if __name__ == "__main__":
     # input thread
     threading.Thread(target=getch_loop).start()
