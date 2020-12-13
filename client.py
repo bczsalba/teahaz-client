@@ -63,6 +63,7 @@ BINDS = {
 }
 
 INPUT = ""
+INPUT_CURSOR = 0
 
 # set default mode
 switch_mode("INSERT")
@@ -129,7 +130,7 @@ def send(message,mType='text'):
 # INPUT 
 ## key intercepter loop, separate thread
 def getch_loop(): 
-    global INPUT,KEEP_GOING
+    global INPUT,INPUT_CURSOR,KEEP_GOING
 
     while KEEP_GOING:
         key = getch.getch()
@@ -146,18 +147,36 @@ def getch_loop():
         
         # INSERT mode: text input
         elif MODE == "INSERT":
+            if key == "BACKSPACE":
+                if INPUT_CURSOR > 0:
+                    left = INPUT[:INPUT_CURSOR-1]
+                    right = INPUT[INPUT_CURSOR:]
+                    INPUT = left+right
+                    INPUT_CURSOR -= 1
 
-            INPUT += key
+            elif key == "ARROW_LEFT":
+                pass
+
+            elif key == "ARROW_RIGHT":
+                pass
+
+            else:
+                left = INPUT[:INPUT_CURSOR]
+                right = INPUT[INPUT_CURSOR:]
+                INPUT = left+key+right
+                INPUT_CURSOR += 1
 
 
         print_input()
 
 
+
 # UI
 def print_input():
-    sys.stdout.write(f'\033[{HEIGHT-1};0H'+INPUT)
+    sys.stdout.write(f'\033[K\033[{HEIGHT-1};0H'+INPUT)
     sys.stdout.flush()
     
+
 
 # TEMP MAIN
 if __name__ == "__main__":

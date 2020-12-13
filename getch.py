@@ -49,15 +49,15 @@ class _GetchUnix:
             "\x1a": "SIGHUP",
             "\x1c": "SIGQUIT",
             # TEXT EDITING
-            "\x7b": "BACKSPACE",
+            "\x7f": "BACKSPACE",
             "\x1b": "ESC",
             "\n": "ENTER",
             "\r": "ENTER",
             "\t": "TAB",
             # MOVEMENT
             "\x1b[A": "ARROW_UP",
-            "\x1b[B": "ARROW_RIGHT",
-            "\x1b[C": "ARROW_DOWN",
+            "\x1b[B": "ARROW_DOWN",
+            "\x1b[C": "ARROW_RIGHT",
             "\x1b[D": "ARROW_LEFT",
         }
 
@@ -90,4 +90,93 @@ class _GetchWindows:
         import msvcrt
         return msvcrt.getch()
 
+
+class InputField:
+    """ Example of use at the bottom of the file """
+    def __init__(self,pos=None,allow_multiline="TODO"):
+        self.cursor = 0
+        self.value = ''
+        self.allow_multiline = False
+
+        if pos == None:
+            import os
+            _,tHeight = os.get_terminal_size()
+            self.x = 0
+            self.y = tHeight
+        else:
+            self.x,self.y = pos
+
+        self.set_cursor(False)
+
+    def send(self,key):
+        if key == "BACKSPACE":
+            if self.cursor > 0:
+                left = self.value[:self.cursor-1]
+                right = self.value[self.cursor:]
+                self.value = left+right
+                self.cursor -= 1
+
+        elif key == "ARROW_LEFT":
+            self.cursor = max(self.cursor-1,0)
+
+        elif key == "ARROW_RIGHT":
+            self.cursor = min(self.cursor+1,len(self.value))
+
+        elif key in ["ARROW_DOWN","ARROW_UP"]:
+            # TODO
+            key = ''
+
+        else:
+            if key == "ENTER":
+                if self.allow_multiline:
+                    key = "\n"
+                else:
+                    key = ""
+
+            left = self.value[:self.cursor]
+            right = self.value[self.cursor:]
+            self.value = left+key+right
+            self.cursor += 1
+
+    def print(self,flush=True):
+        import sys
+
+        left = self.value[:self.cursor]
+        right = self.value[self.cursor+1:]
+
+        if self.cursor > len(self.value)-1:
+            charUnderCursor = ' '
+        else:
+            charUnderCursor = self.value[self.cursor]
+
+        line = left + '\033[47m\033[30m' + charUnderCursor + '\033[0m' + right
+        sys.stdout.write(f'\033[{self.y};{self.x}H'+'\033[K'+line)
+
+        if flush:
+            sys.stdout.flush()
+
+    def set_cursor(self,value):
+        if value:
+            print('\033[?25h')
+        else:
+            print('\033[?25l')
+
+
+# clean namespace
 getch = _Getch()
+
+# example code
+if __name__ == "__main__":
+    infield = InputField()
+    infield.print()
+
+    while True:
+        key = getch()
+        # catch ^C signal to exit
+        if key == "SIGTERM":
+            # re-show cursor (IMPORTANT!)
+            infield.set_cursor(True)
+            break
+        else:
+            infield.send(key)
+        infield.print()
