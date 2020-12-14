@@ -1,4 +1,7 @@
-# networking functions
+# Teahaz Client
+this is the ongoing notes documenting the program, proper README to be added closer to release.
+
+## networking functions
 - get(parameter,type="messages")
     * type can be `messages`/`file`
     * messages will return messages since `parameter` (in EPOCH time)
@@ -7,22 +10,22 @@
 - send(data,mType="text")
     * sends `data` of `mType`
 
-# display stuff
-## 2 threads:
+## display stuff
+### 2 threads:
 - getch():
     * uses getch.InputField class
     * bindings are stored in the BINDS dict
     * needs its own thread as it's blocking
 - main():
     * handles everything else
-    * maybe uses frame based drawing?
+    * maybe uses frame based drawing? BINGO
         + pros:
             - would allow header and footer to always be present
         + cons:
             - id need to keep track of all messages, and only print the ones i need to specific coords
             - this could be done by storing messages line by line, and using the indexes as control
 
-## navigation & inputs
+### navigation & inputs
 - vim like, binding based:
     * `i` always inserts into text box
     * `ESC` goes to normal mode like in vim
