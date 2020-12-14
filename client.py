@@ -1,4 +1,5 @@
 # IMPORTS
+import re
 import os
 import sys
 import json
@@ -13,13 +14,60 @@ import threading
 # HELPERS
 def encode(a):
     return base64.b64encode(a.encode('utf-8')).decode('utf-8')
+
 def encode_binary(a):
     return base64.b64encode(a).decode('utf-8')
+
+def decode(a):
+    return base64.b64decode(a).decode('utf-8')
+
 def switch_mode(target):
     global MODE, VALID_KEYS
 
     MODE = target
     VALID_KEYS = [key for key in BINDS[target].keys()]
+
+def clean_ansi(s):
+    return re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]').sub('', s)
+
+def real_length(s):
+    return len(clean_ansi(s))
+
+def break_line(_inline,_len,_separator=' '):
+    # check if line is over length provided
+    if real_length(_inline) > _len:
+        clean = clean_ansi(_inline)
+        current = ''
+        control = ''
+        lines = []
+
+        for i,(clen,real) in enumerate(zip(clean.split(_separator),_inline.split(_separator))):
+            # dont add separator if no current
+            sep = (_separator if len(current) else "") 
+
+            # add string to line if not too long
+            if len(control+_separator+clen) <= _len:
+                current += sep + real
+                control += sep + clen
+
+            # add current to lines
+            elif len(current):
+                lines.append(current)
+
+            # set new current and control values
+            current = real
+            control = clen
+
+        # add leftover values
+        if len(current):
+            lines.append(current)
+
+        return lines
+
+    # return original line in array
+    else:
+        return _inline.split(_separator)
+
 
 
 # GLOBALS
@@ -31,7 +79,7 @@ SESSION = requests.Session()
 URL = "http://localhost:5000/api/v0/"
 ROOMID = "conv1"
 USERNAME = "pink"
-MESSAGE_BREAKLEN = 25
+MESSAGE_BREAKLEN = 5
 
 # given by server
 COOKIE = "flamingosareblue"
@@ -158,38 +206,34 @@ def getch_loop():
 
 
 # UI
-## test function to get messages
-## TODO: the goal of this is to set up a storage of all messages that can be handled line by line
-"""
-messages = [
-    {
-        "sender": "me",
-        "time": "178929287",
-        "contents": [
-            "line 1", 
-            "line 2",
-            "line 3"
-        ]
-    }
-]
-# this needs to use the given structure, and expand with the line by line data
-"""
+## get and sort messages, add lines attribute
 def get_lines():
-    # TODO: this will probably be way too much and needs to be looked at later
+    # TODO: this 0 might be too much in the future
     messages_raw = get(0)
-    messages_sorted = sorted(messages_raw,key=lambda x: x["time"])
-    messages_encoded = [m for m in messages_sorted if m["message"] != None and m["type"] == "text"]
     messages = []
-    for m in messages_encoded:
-        m["message"] = base64.b64decode(m["message"]).decode('utf-8')
+
+    # sort messages
+    for m in sorted(messages_raw,key=lambda x: x['time']):
+        # add representation of file 
+        if m['type'] == 'file':
+            m['message'] = f"`.{m['extension']}` file."
+
+        # decode message
+        elif m['type'] == 'text':
+            m['message'] = decode(m['message'])
+
+        # break message into lines
+        m['lines'] = []
+        #m['lines'].append(m['username'])
+        m['lines'] += break_line(m['message'],MESSAGE_BREAKLEN)
+
+        # add message to list
         messages.append(m)
 
-    for m in messages:
-        print(m["message"]+'\n')
+    return messages
 
 
 # TEMP MAIN
-
 if __name__ == "__main__":
     ##  TODO: add x, y limit
     infield = getch.InputField()
@@ -202,5 +246,7 @@ if __name__ == "__main__":
 
     # main loop
     while KEEP_GOING:
-        get_lines()
+        #with open('test.json','w') as f:
+        #    f.write(json.dumps(get_lines(),indent=4))
+        #    break
         time.sleep(1)
