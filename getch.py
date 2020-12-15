@@ -41,10 +41,11 @@ class OSReadWrapper(object):
 
 class InputField:
     """ Example of use at the bottom of the file """
-    def __init__(self,pos=None,allow_multiline="TODO",default=""):
+    def __init__(self,pos=None,linecap=0,default=""):
         self.value = default
         self.cursor = len(self.value)
-        self.allow_multiline = False
+        self.linecap = linecap
+        self.lines = []
 
         if pos == None:
             import os
@@ -74,6 +75,13 @@ class InputField:
         elif key in ["ARROW_DOWN","ARROW_UP"]:
             # TODO: history navigation
             key = ''
+
+        elif key == '\n':
+            # TODO: multiline support:
+            # - line breaking for too long lines (could be an overwritten print function)
+            # - manual insert line break
+            pass
+            
 
         else:
             if key == "ENTER":

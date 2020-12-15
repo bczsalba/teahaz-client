@@ -8,6 +8,7 @@ import getch
 import base64
 import requests
 import threading
+from settings import *
 
 
 
@@ -22,12 +23,22 @@ def encode_binary(a):
 def decode(a):
     return base64.b64decode(a).decode('utf-8')
 
+## DEV
+def dbg(*args):
+    s = ' '.join([str(a) for a in args])
+    with open(LOGFILE,'a') as f:
+        f.write(s+'\n')
+
 ## BINDS
 def switch_mode(target):
-    global MODE, VALID_KEYS
+    global MODE, VALID_KEYS, VIMKEYS
 
     MODE = target
     VALID_KEYS = [key for key in BINDS[target].keys()]
+
+    ## get vim valid binds
+    VIMKEYS = [key for key in VIMBINDS[MODE].keys()]
+
     printTo(WIDTH-len(MODE),0,MODE,clear=1)
 
 ## TEXT
@@ -57,10 +68,8 @@ def break_line(_inline,_len,_separator=' '):
             # add current to lines
             elif len(current):
                 lines.append(current)
-
-            # set new current and control values
-            current = real
-            control = clen
+                current = real
+                control = clen
 
         # add leftover values
         if len(current):
@@ -82,58 +91,6 @@ def printTo(x=0,y=0,s='',clear=False):
 
     # print
     print(f'\033[{y};{x}H'+s)
-
-
-
-# GLOBALS
-WIDTH,HEIGHT = os.get_terminal_size()
-KEEP_GOING = True
-SESSION = requests.Session()
-
-## set by user
-URL = "http://localhost:5000/api/v0/"
-ROOMID = "conv1"
-USERNAME = "pink"
-MESSAGE_BREAKLEN = 10
-
-# given by server
-COOKIE = "flamingosareblue"
-
-# base data array to append to
-BASE_DATA = {
-    "username": USERNAME,
-    "cookie": COOKIE,
-    "chatroom": ROOMID,
-}
-
-BINDS = {
-    "ESCAPE": {
-        "i": "mode_insert",
-        "j": "navigate_down",
-        "k": "navigate_up",
-        "a": "mode_add",
-        "r": "mode_react",
-        "m": "mode_message",
-        "q": "quit"
-    },
-    "INSERT": {
-        "ESC": "mode_escape",
-        "CTRL_N": "insert_newline"
-    },
-    "MESSAGE": {
-        "s": "message_send",
-        "ENTER": "message_newline",
-        "c": "message_clear",
-    },
-}
-
-ESCAPE_KEY = "ESC"
-
-INPUT = ""
-INPUT_CURSOR = 0
-
-# set default mode
-switch_mode("ESCAPE")
 
 
 
@@ -197,25 +154,66 @@ def send(message,mType='text'):
 # INPUT 
 ## key intercepter loop, separate thread
 def getch_loop(): 
-    global KEEP_GOING
+    global PIPE_OUTPUT
 
+    buff = ''
     while KEEP_GOING:
         key = getch.getch()
+
+        # this lets other functions hijack the key output as parameters
+        if PIPE_OUTPUT:
+            PIPE_OUTPUT(key)
+            PIPE_OUTPUT = None
+        
+        # add key to buffer if key+buffer is in either key cluster
+        elif MODE != "INSERT" and len(buff):
+            for v in VIMKEYS+VALID_KEYS:
+                buffkeylen = len(buff+key)-1
+                if buff+key in v:
+                    _buffkey_valid = True
+                    break
+
+                # TODO: add wildstar char for ci
+                #elif len(v) >= buffkeylen+1 and v[buffkeylen] == "*":
+                #    _buffkey_valid = True
+                #    break
+            else:
+                _buffkey_valid = False
+
+            # add key 
+            if _buffkey_valid:
+                key = buff+key
+                buff = key
+                printTo(WIDTH-5,4,'multi',clear=1)
+
+            # "reset" key
+            else:
+                buff = key
+                printTo(WIDTH-6,4,'single',clear=1)
+        
+        # reset buffer
+        else:
+            buff = key
+
+
         printTo(WIDTH-len(key),3,key,clear=1)
 
         # currently inactive
         if key == "SIGTERM":
-            KEEP_GOING = 0
-            print('\033[?25h')
-            break
+            handle_action('quit')
 
         # go to escape mode from any menu
         elif key == ESCAPE_KEY:
             handle_action("mode_escape")
             continue
 
+        # check if key is a valid single key vimbind
+        elif VIMMODE and key in VIMBINDS[MODE]:
+            action = VIMBINDS[MODE][key]
+            handle_action(action)   
+
         # shortcuts
-        if key in VALID_KEYS:   
+        elif key in VALID_KEYS:   
             action = BINDS[MODE][key]
             handle_action(action)
 
@@ -228,33 +226,67 @@ def getch_loop():
             infield.print() 
 
 
+
 def handle_action(action):
-    global KEEP_GOING
+    global KEEP_GOING,PIPE_OUTPUT
 
     printTo(WIDTH-len(action),2,action,clear=1)
     
+
     # mode switching
     if action.startswith('mode_'):
         # filter out start of string
         action = action.replace('mode_','')
         
         # print infield with highlight controlled by mode
-        infield.print(highlight=(action=="INSERT"))
+        infield.print(highlight=(action=="insert"))
 
         # switch to mode
         switch_mode(action.upper())
 
-    # escape binds
-    if MODE == "ESCAPE":
-        if action == "quit":
-            print('\033[?25h')
-            KEEP_GOING = 0
+
+    # input navigation
+    elif action.startswith('goto_'):
+        # filter out start of string
+        action = action.replace('goto_','')
+
+        if action == "line_start":
+            infield.cursor = 0 
+
+        elif action == "line_end":
+            infield.cursor = len(infield.value)
+
+        # TODO: multiline support for infield
+        elif action == "text_start":
+            infield.linecursor = 0
+
+        elif action == "text_end":
+            infield.linecursor = len(infield.lines)
+
+        switch_mode('INSERT')
+        infield.print()
+
+
+    # vim-like change_in function
+    elif action == "change_in":
+        # hijack getch_loop output, send it to the change_in function
+        PIPE_OUTPUT = dbg
+
+    # quit program in a clean way
+    elif action == "quit":
+        print('\033[?25h')
+        KEEP_GOING = 0
 
     # message binds
-    elif MODE == "MESSAGE":
-        if action == "message_send":
-            msg = infield.value
-            send(msg,'text')
+    elif action == "message_send":
+        # TODO: add command interface option here
+        msg = infield.value
+        send(msg,'text')
+
+    # TODO
+    elif action == "insert_newline":
+        infield.send('\n')
+
 
 
 # UI
@@ -285,6 +317,34 @@ def get_lines():
     return messages
 
 
+
+# GLOBALS
+PATH = os.path.abspath(os.path.dirname(__file__))
+LOGFILE = os.path.join(PATH,'log')
+WIDTH,HEIGHT = os.get_terminal_size()
+KEEP_GOING = True
+SESSION = requests.Session()
+INPUT = ""
+INPUT_CURSOR = 0
+PIPE_OUTPUT = None
+
+# given by server
+COOKIE = "flamingoestothestore"
+
+# base data array to append to
+BASE_DATA = {
+    "username": USERNAME,
+    "cookie": COOKIE,
+    "chatroom": ROOMID,
+}
+
+#VIMVALID = []
+#_vimbind_maxlen = max([len(bind) for bind in VIMBINDS.keys()])
+#for _ in range(_vimbind_maxlen):
+#    VIMVALID.append([])
+
+
+
 # TEMP MAIN
 if __name__ == "__main__":
     ##  TODO: add x, y limit
@@ -295,7 +355,10 @@ if __name__ == "__main__":
 
     # input thread
     threading.Thread(target=getch_loop).start()
-##
+
+    # set default mode
+    switch_mode("ESCAPE")
+
     # main loop
     while KEEP_GOING:
         with open('test.json','w') as f:

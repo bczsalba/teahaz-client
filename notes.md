@@ -57,7 +57,8 @@ this is the ongoing notes documenting the program, proper README to be added clo
             "j":  "goto_line_down",
             "k":  "goto_line_up",
             "gg": "goto_text_start",
-            "G":  "goto_text_end"
+            "G":  "goto_text_end",
+            "abcdefghijkl": "this is a test"
         }
         ```
         + add menu:
@@ -80,3 +81,7 @@ this is the ongoing notes documenting the program, proper README to be added clo
             - if user inputs int in range of reactions that reaction is sent
             - else an input is built in the input field and sent as a normal reply
 
+## notification system
+- likely separate program that runs in the background
+- shows new message in top right corner of terminal
+- allows user to go to teahaz to open it (like a special argument or something) with a command
