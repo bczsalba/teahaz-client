@@ -29,7 +29,6 @@ this is the ongoing notes documenting the program, proper README to be added clo
 - vim like, binding based:
     * `i` always inserts into text box
     * `ESC` goes to normal mode like in vim
-    * rn there's no human-friendly translation for keycodes, so anything other than alphanumericals is a bit ugly
     * examples for binds:
         ```python
         BINDS = {

@@ -12,6 +12,7 @@ import threading
 
 
 # HELPERS
+## API
 def encode(a):
     return base64.b64encode(a.encode('utf-8')).decode('utf-8')
 
@@ -21,12 +22,14 @@ def encode_binary(a):
 def decode(a):
     return base64.b64decode(a).decode('utf-8')
 
+## BINDS
 def switch_mode(target):
     global MODE, VALID_KEYS
 
     MODE = target
     VALID_KEYS = [key for key in BINDS[target].keys()]
 
+## TEXT
 def clean_ansi(s):
     return re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]').sub('', s)
 
@@ -68,6 +71,10 @@ def break_line(_inline,_len,_separator=' '):
     else:
         return _inline.split(_separator)
 
+## UI
+def printTo(x=0,y=0,s=''):
+    print(f'\033[{y};{x}'+s)
+
 
 
 # GLOBALS
@@ -94,12 +101,12 @@ BASE_DATA = {
 BINDS = {
     "NORMAL": {
         "i": "insert",
-        "ESC": "escape",
         "j": "navigate_down",
         "k": "navigate_up",
         "a": "menu_add",
         "r": "menu_react",
-        "m": "menu_message"
+        "m": "menu_message",
+        "q": "quit"
     },
     "INSERT": {
         "ESC": "escape"
@@ -115,7 +122,7 @@ INPUT = ""
 INPUT_CURSOR = 0
 
 # set default mode
-switch_mode("INSERT")
+switch_mode("NORMAL")
 
 
 
@@ -185,6 +192,7 @@ def getch_loop():
         key = getch.getch()
 
         # ^C behavior: will likely be properly binded
+        # currently inactive
         if key == "SIGTERM":
             KEEP_GOING = 0
             print('\033[?25h')
@@ -193,15 +201,37 @@ def getch_loop():
         # NORMAL mode: shortcuts
         if MODE == "NORMAL":
             if key in VALID_KEYS:   
-                action = BINDS[key]
+                action = BINDS[MODE][key]
+                handle_action(action)
         
         # INSERT mode: text input
         elif MODE == "INSERT":
+            if key == "ESC":
+                handle_action("escape")
+                continue
+
             # send key to inputfield to handle
             infield.send(key)
 
-        # print inputfield
-        infield.print()
+            # print inputfield
+            infield.print()
+
+def handle_action(action):
+    global KEEP_GOING
+
+    if MODE == "INSERT":
+        if action == "escape":
+            infield.print(highlight=False)
+            switch_mode("NORMAL")
+
+    elif MODE == "NORMAL":
+        if action == "quit":
+            print('\033[?25h')
+            KEEP_GOING = 0
+
+        elif action == "insert":
+            infield.print(highlight=True)
+            switch_mode("INSERT")
 
 
 

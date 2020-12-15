@@ -1,95 +1,43 @@
 # taken and edited from https://code.activestate.com/recipes/134892/
-# originally written by Danny Yoo
-#
 # fun note: it was posted 18 years ago and still works!
+# originally written by Danny Yoo
 
+import os, sys, tty, codecs, select, termios
+from contextlib import contextmanager
 
-class _Getch:
-    def __init__(self):
-        try:
-            self.impl = _GetchWindows()
-        except ImportError:
-            self.impl = _GetchUnix()
-        self.keycodes = self.impl.keycodes
+# this needs to be here in order to have arrow keys registered
+# from https://github.com/kcsaff/getkey
+class OSReadWrapper(object):
+    """Wrap os.read binary input with encoding in standard stream interface.
+    We need this since os.read works more consistently on unix, but only
+    returns byte strings.  Since the user might be typing on an international
+    keyboard or pasting unicode, we need to decode that.  Fortunately
+    python's stdin has the fileno & encoding attached to it, so we can
+    just use that.
+    """
+    def __init__(self, stream, encoding=None):
+        """Construct os.read wrapper.
+        Arguments:
+            stream (file object): File object to read.
+            encoding (str): Encoding to use (gets from stream by default)
+        """
+        self.__stream = stream
+        self.__fd = stream.fileno()
+        self.encoding = encoding or stream.encoding
+        self.__decoder = codecs.getincrementaldecoder(self.encoding)()
 
-    def readchar(self):
-        # from https://github.com/magmax/python-readchar
-        # this checks if the input has ended or not
-        c1 = self.impl()
-        if ord(c1) != 0x1b:
-            return c1
+    def fileno(self):
+        return self.__fd
 
-        c2 = self.impl()
-        if ord(c2) != 0x5b:
-            return c1 + c2
+    @property
+    def buffer(self):
+        return self.__stream.buffer
 
-        c3 = self.impl()
-        if ord(c3) != 0x33:
-            return c1 + c2 + c3
-        
-        c4 = self.impl()
-        return c1 + c2 + c3 + c4
-
-    def __call__(self):
-        key = self.readchar()
-
-        # return human-readable name if found
-        if key in self.keycodes.keys():
-            return self.keycodes[key]
-        else:
-            return key
-
-
-class _GetchUnix:
-    def __init__(self):
-        import tty, sys, select
-        self.keycodes = {
-            # SIGNALS
-            "\x03": "SIGTERM",
-            "\x1a": "SIGHUP",
-            "\x1c": "SIGQUIT",
-            # TEXT EDITING
-            "\x7f": "BACKSPACE",
-            "\x1b": "ESC",
-            "\n": "ENTER",
-            "\r": "ENTER",
-            "\t": "TAB",
-            # MOVEMENT
-            "\x1b[A": "ARROW_UP",
-            "\x1b[B": "ARROW_DOWN",
-            "\x1b[C": "ARROW_RIGHT",
-            "\x1b[D": "ARROW_LEFT",
-        }
-
-    def __call__(self):
-        import sys, tty, termios, select
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(sys.stdin.fileno())
-            ch = sys.stdin.read(1)
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-        return ch
-
-
-class _GetchWindows:
-    def __init__(self):
-        import msvcrt
-        # TODO: add more compatibility
-        self.keycodes = {
-            "\x1b": "ESC",
-            "\n": "ENTER",
-            "\r": "ENTER",
-            "\x7b": "BACKSPACE",
-        }
-
-    def __call__(self):
-        global key
-
-        import msvcrt
-        return msvcrt.getch()
-
+    def read(self, chars):
+        buffer = ''
+        while len(buffer) < chars:
+            buffer += self.__decoder.decode(os.read(self.__fd, 1))
+        return buffer
 
 class InputField:
     """ Example of use at the bottom of the file """
@@ -140,7 +88,7 @@ class InputField:
             self.value = left+key+right
             self.cursor += 1
 
-    def print(self,flush=True):
+    def print(self,flush=True,highlight=True):
         import sys
 
         left = self.value[:self.cursor]
@@ -151,9 +99,11 @@ class InputField:
         else:
             charUnderCursor = self.value[self.cursor]
 
-        line = left + '\033[47m\033[30m' + charUnderCursor + '\033[0m' + right
-        # TODO: replace '\033[K' with something that will only clear as much as needed
-        sys.stdout.write(f'\033[{self.y};{self.x}H'+'\033[K'+line)
+        highlighter = ('\033[47m\033[30m' if highlight else '')
+        line = left + highlighter + charUnderCursor + '\033[0m' + right
+
+        sys.stdout.write(f'\033[{self.y};{self.x}H' + ' '*(len(self.value)+1))
+        sys.stdout.write(f'\033[{self.y};{self.x}H'+line)
 
         if flush:
             sys.stdout.flush()
@@ -163,6 +113,88 @@ class InputField:
             print('\033[?25h')
         else:
             print('\033[?25l')
+
+
+class _Getch:
+    def __init__(self):
+        try:
+            self.impl = _GetchWindows()
+        except ImportError:
+            self.impl = _GetchUnix()
+        self.keycodes = self.impl.keycodes
+        
+
+    def __call__(self):
+        key = self.impl()
+
+        # return human-readable name if found
+        if key in self.keycodes.keys():
+            return self.keycodes[key]
+        else:
+            return key
+
+class _GetchUnix:
+    def __init__(self):
+        import tty, sys, select
+        self.keycodes = {
+            # SIGNALS
+            "\x03": "SIGTERM",
+            "\x1a": "SIGHUP",
+            "\x1c": "SIGQUIT",
+            # TEXT EDITING
+            "\x7f": "BACKSPACE",
+            "\x1b": "ESC",
+            "\n": "ENTER",
+            "\r": "ENTER",
+            "\t": "TAB",
+            # MOVEMENT
+            "\x1b[A": "ARROW_UP",
+            "\x1b[B": "ARROW_DOWN",
+            "\x1b[C": "ARROW_RIGHT",
+            "\x1b[D": "ARROW_LEFT",
+        }
+        self.stream = OSReadWrapper(sys.stdin)
+
+    @contextmanager
+    def context(self):
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        tty.setcbreak(fd)
+        try:
+            yield
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+    def get_chars(self):
+        with self.context():
+            yield self.stream.read(1)
+
+            while select.select([sys.stdin,], [], [], 0.0)[0]:
+                yield self.stream.read(1)
+
+    def __call__(self):
+        buff = ''
+        for c in self.get_chars():
+            buff += c
+
+        return buff
+
+class _GetchWindows:
+    def __init__(self):
+        import msvcrt
+        # TODO: add more compatibility
+        self.keycodes = {
+            "\x1b": "ESC",
+            "\n": "ENTER",
+            "\r": "ENTER",
+            "\x7b": "BACKSPACE",
+        }
+
+    def __call__(self):
+        global key
+
+        import msvcrt
+        return msvcrt.getch()
 
 
 # clean namespace
