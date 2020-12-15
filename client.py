@@ -28,6 +28,7 @@ def switch_mode(target):
 
     MODE = target
     VALID_KEYS = [key for key in BINDS[target].keys()]
+    printTo(WIDTH-len(MODE),0,MODE)
 
 ## TEXT
 def clean_ansi(s):
@@ -73,7 +74,8 @@ def break_line(_inline,_len,_separator=' '):
 
 ## UI
 def printTo(x=0,y=0,s=''):
-    print(f'\033[{y};{x}'+s)
+    print(f'\033[{y};{x-1}H'+(len(s)+2)*' ')
+    print(f'\033[{y};{x}H'+s)
 
 
 
@@ -99,17 +101,17 @@ BASE_DATA = {
 }
 
 BINDS = {
-    "NORMAL": {
-        "i": "insert",
+    "ESCAPE": {
+        "i": "mode_insert",
         "j": "navigate_down",
         "k": "navigate_up",
-        "a": "menu_add",
-        "r": "menu_react",
-        "m": "menu_message",
+        "a": "mode_add",
+        "r": "mode_react",
+        "m": "mode_message",
         "q": "quit"
     },
     "INSERT": {
-        "ESC": "escape"
+        "ESC": "mode_escape"
     },
     "MESSAGE": {
         "s": "message_send",
@@ -122,7 +124,7 @@ INPUT = ""
 INPUT_CURSOR = 0
 
 # set default mode
-switch_mode("NORMAL")
+switch_mode("ESCAPE")
 
 
 
@@ -198,18 +200,19 @@ def getch_loop():
             print('\033[?25h')
             break
 
+        # go to escape mode if escape pressed
+        if key == "ESC":
+            handle_action("mode_escape")
+            continue
+
         # NORMAL mode: shortcuts
-        if MODE == "NORMAL":
+        if MODE == "ESCAPE":
             if key in VALID_KEYS:   
                 action = BINDS[MODE][key]
                 handle_action(action)
         
         # INSERT mode: text input
         elif MODE == "INSERT":
-            if key == "ESC":
-                handle_action("escape")
-                continue
-
             # send key to inputfield to handle
             infield.send(key)
 
@@ -219,20 +222,18 @@ def getch_loop():
 def handle_action(action):
     global KEEP_GOING
 
-    if MODE == "INSERT":
-        if action == "escape":
-            infield.print(highlight=False)
-            switch_mode("NORMAL")
+    printTo(WIDTH-len(action),2,action)
+    
+    if action.startswith('mode_'):
+        action = action.replace('mode_','')
+        infield.print(highlight=(action=="INSERT"))
+        switch_mode(action.upper())
 
-    elif MODE == "NORMAL":
+
+    if MODE == "ESCAPE":
         if action == "quit":
             print('\033[?25h')
             KEEP_GOING = 0
-
-        elif action == "insert":
-            infield.print(highlight=True)
-            switch_mode("INSERT")
-
 
 
 # UI
