@@ -94,7 +94,7 @@ SESSION = requests.Session()
 URL = "http://localhost:5000/api/v0/"
 ROOMID = "conv1"
 USERNAME = "pink"
-MESSAGE_BREAKLEN = 5
+MESSAGE_BREAKLEN = 10
 
 # given by server
 COOKIE = "flamingosareblue"
@@ -200,14 +200,13 @@ def getch_loop():
         key = getch.getch()
         printTo(WIDTH-len(key),3,key,clear=1)
 
-        # ^C behavior: will likely be properly binded
         # currently inactive
         if key == "SIGTERM":
             KEEP_GOING = 0
             print('\033[?25h')
             break
 
-        # go to escape mode if escape pressed
+        # go to escape mode from any menu
         elif key == "ESC":
             handle_action("mode_escape")
             continue
@@ -231,16 +230,23 @@ def handle_action(action):
 
     printTo(WIDTH-len(action),2,action,clear=1)
     
+    # mode switching
     if action.startswith('mode_'):
         action = action.replace('mode_','')
         infield.print(highlight=(action=="INSERT"))
         switch_mode(action.upper())
 
-
+    # escape binds
     if MODE == "ESCAPE":
         if action == "quit":
             print('\033[?25h')
             KEEP_GOING = 0
+
+    # message binds
+    elif MODE == "MESSAGE":
+        if action == "message_send":
+            msg = infield.value
+            send(msg,'text')
 
 
 # UI
@@ -284,7 +290,6 @@ if __name__ == "__main__":
 ##
     # main loop
     while KEEP_GOING:
-        #with open('test.json','w') as f:
-        #    f.write(json.dumps(get_lines(),indent=4))
-        #    break
+        with open('test.json','w') as f:
+            f.write(json.dumps(get_lines(),indent=4))
         time.sleep(1)
