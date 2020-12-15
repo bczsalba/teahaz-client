@@ -28,7 +28,7 @@ def switch_mode(target):
 
     MODE = target
     VALID_KEYS = [key for key in BINDS[target].keys()]
-    printTo(WIDTH-len(MODE),0,MODE)
+    printTo(WIDTH-len(MODE),0,MODE,clear=1)
 
 ## TEXT
 def clean_ansi(s):
@@ -73,8 +73,14 @@ def break_line(_inline,_len,_separator=' '):
         return _inline.split(_separator)
 
 ## UI
-def printTo(x=0,y=0,s=''):
-    print(f'\033[{y};{x-1}H'+(len(s)+2)*' ')
+def printTo(x=0,y=0,s='',clear=False):
+    # clear the len of string with 1 margin on both sides
+    if clear:
+        print(f'\033[{y};0H'+'\033[K')
+    else:
+        print(f'\033[{y};{x-1}H'+(len(s)+2)*' ')
+
+    # print
     print(f'\033[{y};{x}H'+s)
 
 
@@ -192,6 +198,7 @@ def getch_loop():
 
     while KEEP_GOING:
         key = getch.getch()
+        printTo(WIDTH-len(key),3,key,clear=1)
 
         # ^C behavior: will likely be properly binded
         # currently inactive
@@ -201,28 +208,28 @@ def getch_loop():
             break
 
         # go to escape mode if escape pressed
-        if key == "ESC":
+        elif key == "ESC":
             handle_action("mode_escape")
             continue
 
-        # NORMAL mode: shortcuts
-        if MODE == "ESCAPE":
-            if key in VALID_KEYS:   
-                action = BINDS[MODE][key]
-                handle_action(action)
-        
-        # INSERT mode: text input
-        elif MODE == "INSERT":
+        # INSERT mode: inputs
+        if MODE == "INSERT":
             # send key to inputfield to handle
             infield.send(key)
 
             # print inputfield
             infield.print()
 
+        # ESCAPE mode: shortcuts
+        elif key in VALID_KEYS:   
+            action = BINDS[MODE][key]
+            handle_action(action)
+        
+
 def handle_action(action):
     global KEEP_GOING
 
-    printTo(WIDTH-len(action),2,action)
+    printTo(WIDTH-len(action),2,action,clear=1)
     
     if action.startswith('mode_'):
         action = action.replace('mode_','')
@@ -274,7 +281,7 @@ if __name__ == "__main__":
 
     # input thread
     threading.Thread(target=getch_loop).start()
-
+##
     # main loop
     while KEEP_GOING:
         #with open('test.json','w') as f:

@@ -41,9 +41,9 @@ class OSReadWrapper(object):
 
 class InputField:
     """ Example of use at the bottom of the file """
-    def __init__(self,pos=None,allow_multiline="TODO"):
-        self.cursor = 0
-        self.value = ''
+    def __init__(self,pos=None,allow_multiline="TODO",default=""):
+        self.value = default
+        self.cursor = len(self.value)
         self.allow_multiline = False
 
         if pos == None:
@@ -72,7 +72,7 @@ class InputField:
             self.cursor = min(self.cursor+1,len(self.value))
 
         elif key in ["ARROW_DOWN","ARROW_UP"]:
-            # TODO
+            # TODO: history navigation
             key = ''
 
         else:
@@ -81,12 +81,11 @@ class InputField:
                     key = "\n"
                 else:
                     key = ""
-                    self.cursor -= 1
 
             left = self.value[:self.cursor]
             right = self.value[self.cursor:]
             self.value = left+key+right
-            self.cursor += 1
+            self.cursor += len(key)
 
     def print(self,flush=True,highlight=True):
         import sys
@@ -102,7 +101,7 @@ class InputField:
         highlighter = ('\033[47m\033[30m' if highlight else '')
         line = left + highlighter + charUnderCursor + '\033[0m' + right
 
-        sys.stdout.write(f'\033[{self.y};{self.x}H' + ' '*(len(self.value)+1))
+        sys.stdout.write(f'\033[{self.y};{self.x}H' + ' '*(len(self.value)+2))
         sys.stdout.write(f'\033[{self.y};{self.x}H'+line)
 
         if flush:
@@ -202,7 +201,7 @@ getch = _Getch()
 
 # example code
 if __name__ == "__main__":
-    infield = InputField()
+    infield = InputField(default="Welcome!")
     #infield.print()
 
     while True:
