@@ -117,7 +117,8 @@ BINDS = {
         "q": "quit"
     },
     "INSERT": {
-        "ESC": "mode_escape"
+        "ESC": "mode_escape",
+        "CTRL_N": "insert_newline"
     },
     "MESSAGE": {
         "s": "message_send",
@@ -125,6 +126,8 @@ BINDS = {
         "c": "message_clear",
     },
 }
+
+ESCAPE_KEY = "ESC"
 
 INPUT = ""
 INPUT_CURSOR = 0
@@ -207,23 +210,23 @@ def getch_loop():
             break
 
         # go to escape mode from any menu
-        elif key == "ESC":
+        elif key == ESCAPE_KEY:
             handle_action("mode_escape")
             continue
 
+        # shortcuts
+        if key in VALID_KEYS:   
+            action = BINDS[MODE][key]
+            handle_action(action)
+
         # INSERT mode: inputs
-        if MODE == "INSERT":
+        elif MODE == "INSERT":
             # send key to inputfield to handle
             infield.send(key)
 
             # print inputfield
-            infield.print()
+            infield.print() 
 
-        # ESCAPE mode: shortcuts
-        elif key in VALID_KEYS:   
-            action = BINDS[MODE][key]
-            handle_action(action)
-        
 
 def handle_action(action):
     global KEEP_GOING
@@ -232,8 +235,13 @@ def handle_action(action):
     
     # mode switching
     if action.startswith('mode_'):
+        # filter out start of string
         action = action.replace('mode_','')
+        
+        # print infield with highlight controlled by mode
         infield.print(highlight=(action=="INSERT"))
+
+        # switch to mode
         switch_mode(action.upper())
 
     # escape binds

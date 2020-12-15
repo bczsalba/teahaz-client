@@ -136,10 +136,12 @@ class _GetchUnix:
     def __init__(self):
         import tty, sys, select
         self.keycodes = {
-            # SIGNALS
+            # SIGNALS: not captured currently
             "\x03": "SIGTERM",
             "\x1a": "SIGHUP",
             "\x1c": "SIGQUIT",
+            # CONTROL KEYS
+            "\x0e" : "CTRL_N",
             # TEXT EDITING
             "\x7f": "BACKSPACE",
             "\x1b": "ESC",
