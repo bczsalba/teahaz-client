@@ -154,7 +154,7 @@ def send(message,mType='text'):
 # INPUT 
 ## key intercepter loop, separate thread
 def getch_loop(): 
-    global PIPE_OUTPUT
+    global PIPE_OUTPUT,PIPE_ARGS
 
     buff = ''
     while KEEP_GOING:
@@ -162,8 +162,9 @@ def getch_loop():
 
         # this lets other functions hijack the key output as parameters
         if PIPE_OUTPUT:
-            PIPE_OUTPUT(key)
+            PIPE_OUTPUT(key,**PIPE_ARGS)
             PIPE_OUTPUT = None
+            PIPE_ARGS = {}
             continue
         
         # add key to buffer if key+buffer is in either key cluster
@@ -227,7 +228,7 @@ def getch_loop():
             infield.print() 
 
 def handle_action(action):
-    global KEEP_GOING,PIPE_OUTPUT,infield
+    global KEEP_GOING,PIPE_OUTPUT,PIPE_ARGS,infield
 
     printTo(WIDTH-len(action),2,action,clear=1)
     
@@ -287,11 +288,6 @@ def handle_action(action):
         infield.print()
 
 
-    # vim-like change_in function
-    elif action == "change_in":
-        # hijack getch_loop output, send it to the change_in function
-        PIPE_OUTPUT = change_in
-
     # quit program in a clean way
     elif action == "quit":
         print('\033[?25h')
@@ -307,6 +303,26 @@ def handle_action(action):
     elif action == "insert_newline":
         infield.send('\n')
 
+    # vim-like change_in function
+    elif action == "change_in":
+        # hijack getch_loop output, send it to the change_in function
+        PIPE_OUTPUT = change_in
+
+    elif action == "find":
+        PIPE_OUTPUT = find
+
+    elif action == "find_reverse":
+        PIPE_OUTPUT = find
+        PIPE_ARGS = {'reverse': True}
+    
+    elif action == "till":
+        PIPE_OUTPUT = find
+        PIPE_ARGS = {'offset': -1}
+
+    elif action == "till_reverse":
+        PIPE_OUTPUT = find
+        PIPE_ARGS = {'offset': -1, 'reverse': True}
+
 
 
 # ACTION HANDLER FUNCTIONS
@@ -314,7 +330,7 @@ def handle_action(action):
 def change_in(param):
     global infield
 
-    valid = ["w","'",'"','[]','{}','()']
+    valid = ["w","'",'"','[]','{}','()','<>']
 
     # set up start, end pairs
     for pair in valid:
@@ -331,9 +347,12 @@ def change_in(param):
                 param = pair[0]
                 end = pair[1]
             break
+
+    # return if param isnt in valid
     else:
         return
 
+    # return if param isnt in input value
     if not param in infield.value:
         return
 
@@ -372,9 +391,13 @@ def change_in(param):
         # set cursor, add space to the left
         infield.cursor = spaces[wordindex]
         if not infield.cursor == 0:
-            left = infield.value[:infield.cursor]+' '
+
+            # separate two sides
+            left = infield.value[:infield.cursor]
             right = infield.value[infield.cursor:]
-            infield.value = left+right
+            
+            # add space
+            infield.value = left+' '+right
             infield.cursor += 1
 
 
@@ -391,6 +414,7 @@ def change_in(param):
         left = infield.value[:startpos+1]
         right = infield.value[endpos:]
 
+        # update cursor
         infield.cursor = startpos+1
 
         # wipe previous
@@ -402,6 +426,39 @@ def change_in(param):
     # print, switch mode
     infield.print()
     switch_mode('INSERT')
+
+def find(key,offset=0,reverse=False):
+    global infield
+
+    # set variables
+    value = infield.value
+    index = infield.cursor
+
+    # apply reverse search setup
+    if reverse:
+        fromcursor = value[::-1][len(value)-index:]
+
+    # apply normal search setup
+    else:
+        fromcursor = value[index+1:]
+
+    # dont do anything if not found in infield
+    if not key in fromcursor:
+        return
+
+    # set found
+    found = fromcursor.index(key)
+
+    # get cursor depending on reverse
+    if reverse:
+        infield.cursor -= found + 1 + offset
+    else:
+        infield.cursor = infield.cursor + offset + found + 1
+
+    # print infield
+    infield.print()
+    
+
 
 
 # UI
@@ -442,6 +499,7 @@ SESSION = requests.Session()
 INPUT = ""
 INPUT_CURSOR = 0
 PIPE_OUTPUT = None
+PIPE_ARGS = {}
 
 # given by server
 COOKIE = "flamingoestothestore"

@@ -40,6 +40,10 @@ VIMBINDS = {
         "gg": "goto_text_start",
         "G":  "goto_text_end",
         "ci": "change_in",
+        "f": "find",
+        "F": "find_reverse",
+        "t": "till",
+        "T": "till_reverse",
     },
     "INSERT": {
     }
