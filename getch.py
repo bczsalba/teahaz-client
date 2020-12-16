@@ -115,6 +115,10 @@ class InputField:
         if flush:
             sys.stdout.flush()
 
+    def wipe(self):
+        sys.stdout.write(f'\033[{self.y};{self.x}H'+(len(self.value)+2)*' ')
+        sys.stdout.flush()
+
     def set_cursor(self,value):
         if value:
             print('\033[?25h')

@@ -11,6 +11,8 @@ BINDS = {
         "ENTER": "message_send",
         "j": "navigate_down",
         "k": "navigate_up",
+        "h": "goto_cursor_left",
+        "l": "goto_cursor_right",
         #"a": "mode_add",
         #"r": "mode_react",
         #"m": "mode_message",

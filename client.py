@@ -164,6 +164,7 @@ def getch_loop():
         if PIPE_OUTPUT:
             PIPE_OUTPUT(key)
             PIPE_OUTPUT = None
+            continue
         
         # add key to buffer if key+buffer is in either key cluster
         elif MODE != "INSERT" and len(buff):
@@ -225,10 +226,8 @@ def getch_loop():
             # print inputfield
             infield.print() 
 
-
-
 def handle_action(action):
-    global KEEP_GOING,PIPE_OUTPUT
+    global KEEP_GOING,PIPE_OUTPUT,infield
 
     printTo(WIDTH-len(action),2,action,clear=1)
     
@@ -239,7 +238,10 @@ def handle_action(action):
         action = action.replace('mode_','')
         
         # print infield with highlight controlled by mode
-        infield.print(highlight=(action=="insert"))
+        if action == "escape":
+            infield.cursor -= 1
+
+        infield.print()
 
         # switch to mode
         switch_mode(action.upper())
@@ -247,15 +249,30 @@ def handle_action(action):
 
     # input navigation
     elif action.startswith('goto_'):
+        insert = True
+
         # filter out start of string
         action = action.replace('goto_','')
 
+
+        # horizontal jumping
         if action == "line_start":
             infield.cursor = 0 
 
         elif action == "line_end":
             infield.cursor = len(infield.value)
 
+
+        # horizontal movement
+        elif action == "cursor_left":
+            infield.cursor = max(0,infield.cursor-1)
+            insert = False 
+
+        elif action == "cursor_right":
+            infield.cursor = min(len(infield.value)-1,infield.cursor+1)
+            insert = False 
+
+    
         # TODO: multiline support for infield
         elif action == "text_start":
             infield.linecursor = 0
@@ -263,14 +280,17 @@ def handle_action(action):
         elif action == "text_end":
             infield.linecursor = len(infield.lines)
 
-        switch_mode('INSERT')
+
+        # switch mode, print
+        if insert:
+            switch_mode('INSERT')
         infield.print()
 
 
     # vim-like change_in function
     elif action == "change_in":
         # hijack getch_loop output, send it to the change_in function
-        PIPE_OUTPUT = dbg
+        PIPE_OUTPUT = change_in
 
     # quit program in a clean way
     elif action == "quit":
@@ -287,6 +307,101 @@ def handle_action(action):
     elif action == "insert_newline":
         infield.send('\n')
 
+
+
+# ACTION HANDLER FUNCTIONS
+## these are actions that require a parameter key
+def change_in(param):
+    global infield
+
+    valid = ["w","'",'"','[]','{}','()']
+
+    # set up start, end pairs
+    for pair in valid:
+        if param in pair:
+            # single length 
+            if len(pair) == 1:
+                end = param
+
+            # double length, opener
+            elif pair.index(param) == 0:
+                end = pair[1]
+            # double length, closer
+            else:
+                param = pair[0]
+                end = pair[1]
+            break
+    else:
+        return
+
+    if not param in infield.value:
+        return
+
+    # word
+    if param == "w":
+        # set up variables
+        words = infield.value.split(' ')
+        characters = 0
+
+        # loop through words
+        for wordindex,word in enumerate(words):
+
+            # if the index is in word
+            if characters+len(word+' ') >= infield.cursor+1:
+                break
+
+            # otherwise iterate characers
+            characters += len(word+' ')
+
+        # remove chosen word from words
+        words.pop(wordindex)
+
+        # clear current input
+        infield.wipe()
+
+        # update value
+        infield.value = ' '.join(words)
+
+        # get spaces in value for cursor
+        spaces = [0]
+        for i,c in enumerate(infield.value):
+            if c == " ":
+                spaces.append(i)
+        spaces.append(len(infield.value))
+
+        # set cursor, add space to the left
+        infield.cursor = spaces[wordindex]
+        if not infield.cursor == 0:
+            left = infield.value[:infield.cursor]+' '
+            right = infield.value[infield.cursor:]
+            infield.value = left+right
+            infield.cursor += 1
+
+
+    # others
+    else:
+        # find start
+        startpos = infield.value.index(param)
+
+        # find end
+        endindex = infield.value[startpos+1:].index(end)
+        endpos = startpos+endindex+1
+
+        # set two sides up
+        left = infield.value[:startpos+1]
+        right = infield.value[endpos:]
+
+        infield.cursor = startpos+1
+
+        # wipe previous
+        infield.wipe()
+
+        # update value
+        infield.value = left+right
+
+    # print, switch mode
+    infield.print()
+    switch_mode('INSERT')
 
 
 # UI
@@ -337,11 +452,6 @@ BASE_DATA = {
     "cookie": COOKIE,
     "chatroom": ROOMID,
 }
-
-#VIMVALID = []
-#_vimbind_maxlen = max([len(bind) for bind in VIMBINDS.keys()])
-#for _ in range(_vimbind_maxlen):
-#    VIMVALID.append([])
 
 
 
