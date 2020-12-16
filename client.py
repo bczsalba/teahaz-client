@@ -297,9 +297,11 @@ def handle_action(action):
 
     # message binds
     elif action == "message_send":
-        # TODO: add command interface option here
         msg = infield.value
         send(msg,'text')
+        infield.wipe()
+        infield.value = ''
+        infield.print()
 
     # TODO
     elif action == "insert_newline":
