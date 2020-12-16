@@ -45,7 +45,6 @@ class InputField:
         self.value = default
         self.cursor = len(self.value)
         self.linecap = linecap
-        self.lines = []
 
         if pos == None:
             import os
@@ -77,9 +76,6 @@ class InputField:
             key = ''
 
         elif key == '\n':
-            # TODO: multiline support:
-            # - line breaking for too long lines (could be an overwritten print function)
-            # - manual insert line break
             pass
             
 
@@ -101,7 +97,7 @@ class InputField:
         left = self.value[:self.cursor]
         right = self.value[self.cursor+1:]
 
-        if self.cursor > len(self.value)-1:
+        if self.cursor > len(self.value)-1 or self.cursor == 0:
             charUnderCursor = ' '
         else:
             charUnderCursor = self.value[self.cursor]
@@ -114,10 +110,6 @@ class InputField:
 
         if flush:
             sys.stdout.flush()
-
-    def wipe(self):
-        sys.stdout.write(f'\033[{self.y};{self.x}H'+(len(self.value)+2)*' ')
-        sys.stdout.flush()
 
     def set_cursor(self,value):
         if value:

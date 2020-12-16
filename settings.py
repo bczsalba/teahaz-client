@@ -8,6 +8,7 @@ ESCAPE_KEY = "ESC"
 BINDS = {
     "ESCAPE": {
         "i": "mode_insert",
+        "v": "mode_visual",
         "ENTER": "message_send",
         "j": "navigate_down",
         "k": "navigate_up",
@@ -22,11 +23,9 @@ BINDS = {
         "ESC": "mode_escape",
         "ENTER": "insert_newline"
     },
-    "MESSAGE": {
-        "s": "message_send",
-        "ENTER": "message_newline",
-        "c": "message_clear",
-    },
+    "VISUAL": {
+
+    }
 }
 
 # VIM BINDINGS
@@ -44,8 +43,14 @@ VIMBINDS = {
         "F": "find_reverse",
         "t": "till",
         "T": "till_reverse",
+        "x": "character_delete",
     },
     "INSERT": {
+    },
+
+    "VISUAL": {
+        "u": "selection_lowercase",
+        "U": "selection_uppercase"
     }
 }
 

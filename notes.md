@@ -58,7 +58,6 @@ this is the ongoing notes documenting the program, proper README to be added clo
             "k":  "goto_line_up",
             "gg": "goto_text_start",
             "G":  "goto_text_end",
-            "abcdefghijkl": "this is a test"
         }
         ```
         + add menu:

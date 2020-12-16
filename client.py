@@ -238,8 +238,8 @@ def handle_action(action):
         # filter out start of string
         action = action.replace('mode_','')
         
-        # print infield with highlight controlled by mode
-        if action == "escape":
+        # if going into escape mode move cursor 
+        if action == "escape" and len(infield.value):
             infield.cursor -= 1
 
         infield.print()
@@ -266,12 +266,14 @@ def handle_action(action):
 
         # horizontal movement
         elif action == "cursor_left":
-            infield.cursor = max(0,infield.cursor-1)
-            insert = False 
+            if len(infield.value):
+                infield.cursor = max(0,infield.cursor-1)
+                insert = False 
 
         elif action == "cursor_right":
-            infield.cursor = min(len(infield.value)-1,infield.cursor+1)
-            insert = False 
+            if len(infield.value):
+                infield.cursor = min(len(infield.value)-1,infield.cursor+1)
+                insert = False 
 
     
         # TODO: multiline support for infield
@@ -307,6 +309,30 @@ def handle_action(action):
     elif action == "change_in":
         # hijack getch_loop output, send it to the change_in function
         PIPE_OUTPUT = change_in
+
+    elif action == "character_delete":
+        # convert value to list
+        value = list(infield.value)
+
+        if not len(value):
+            return
+
+        # pop cursor
+        value.pop(infield.cursor)
+
+        # convert back to str
+        infield.value = ''.join(value)
+
+        # adjust cursor pos
+        if len(infield.value) == 0:
+            infield.cursor == 0
+
+        # set cursor to 0 if no text left
+        elif infield.cursor > len(infield.value)-1:
+            infield.cursor = len(infield.value)-1
+
+        # print
+        infield.print()
 
     elif action == "find":
         PIPE_OUTPUT = find
@@ -353,7 +379,7 @@ def change_in(param):
         return
 
     # return if param isnt in input value
-    if not param in infield.value:
+    if not param == "w" and not param in infield.value:
         return
 
     # word
