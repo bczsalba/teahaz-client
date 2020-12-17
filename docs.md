@@ -1,5 +1,5 @@
 # documentation
-## temporary README file for documentation
+temporary README file for documentation
 
 ## BIND system
 - global BINDS dict controls it
@@ -33,9 +33,9 @@
 ```md
 getch_loop() -> getch.getch() -> if $ESCAPE_KEY -> switch_mode('ESCAPE')
                                  \
-                                  elif in VIMKEYS -> handle_action
+                                  else if in VIMKEYS -> handle_action
                                   \
-                                   elif in VALID_KEYS -> handle_action
+                                   else if in VALID_KEYS -> handle_action
                                     \ 
                                      else if INPUT_MODE -> input.send(key)
 ```
