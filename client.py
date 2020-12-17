@@ -29,6 +29,12 @@ def dbg(*args):
     with open(LOGFILE,'a') as f:
         f.write(s+'\n')
 
+# do `fun` after `ms` passes, nonblocking
+def do_after(ms,fun,args={}):
+    timed = lambda: (time.sleep(ms/1000),fun(**args))
+    threading.Thread(target=timed).start()
+
+
 ## BINDS
 def switch_mode(target):
     global MODE, VALID_KEYS, VIMKEYS
@@ -81,6 +87,7 @@ def break_line(_inline,_len,_separator=' '):
     # return original line in array
     else:
         return _inline.split(_separator)
+
 
 ## UI
 def printTo(x=0,y=0,s='',clear=False):
@@ -240,6 +247,9 @@ def handle_action(action):
         # filter out start of string
         action = action.replace('mode_','')
         
+        if action.upper() == MODE:
+            return
+
         # if going into escape mode move cursor 
         if action == "escape" and len(infield.value):
             infield.cursor -= 1
@@ -300,10 +310,11 @@ def handle_action(action):
     # message binds
     elif action == "message_send":
         msg = infield.value
-        send(msg,'text')
-        infield.wipe()
-        infield.value = ''
-        infield.print()
+        ret = send(msg,'text')
+        dbg(ret)
+        if 'OK' in ret:
+            infield.set_value('Message sent!',highlight=False)
+        do_after(1400,infield.clear_value)
 
     # TODO
     elif action == "insert_newline":
@@ -313,25 +324,20 @@ def handle_action(action):
         # convert value to list
         value = list(infield.value)
 
-        if not len(value):
+        if not len(value) > 0:
             return
 
         # pop cursor
         value.pop(infield.cursor)
 
         # convert back to str
-        infield.value = ''.join(value)
+        value = ''.join(value)
 
-        # adjust cursor pos
-        if len(infield.value) == 0:
-            infield.cursor == 0
-
-        # set cursor to 0 if no text left
-        elif infield.cursor > len(infield.value)-1:
-            infield.cursor = len(infield.value)-1
-
-        # print
-        infield.print()
+        if infield.cursor >= len(value)-1:
+            cursor = None
+        else:
+            cursor = infield.cursor
+        infield.set_value(value,cursor=cursor)
 
     
     ## PIPES
@@ -406,31 +412,29 @@ def change_in(param):
         # remove chosen word from words
         words.pop(wordindex)
 
-        # clear current input
-        infield.wipe()
-
         # update value
-        infield.value = ' '.join(words)
+        value = ' '.join(words)
 
         # get spaces in value for cursor
         spaces = [0]
-        for i,c in enumerate(infield.value):
+        for i,c in enumerate(value):
             if c == " ":
                 spaces.append(i)
-        spaces.append(len(infield.value))
+        spaces.append(len(value))
 
         # set cursor, add space to the left
         infield.cursor = spaces[wordindex]
-        if not infield.cursor == 0:
 
+        if infield.cursor == 0:
+            infield.set_value(value,False)
+
+        else:
             # separate two sides
-            left = infield.value[:infield.cursor]
-            right = infield.value[infield.cursor:]
+            left = value[:infield.cursor]
+            right = value[infield.cursor:]
             
             # add space
-            infield.value = left+' '+right
-            infield.cursor += 1
-
+            infield.set_value(left+' '+right,infield.cursor+1)
 
     # others
     else:
@@ -445,14 +449,8 @@ def change_in(param):
         left = infield.value[:startpos+1]
         right = infield.value[endpos:]
 
-        # update cursor
-        infield.cursor = startpos+1
-
-        # wipe previous
-        infield.wipe()
-
-        # update value
-        infield.value = left+right
+        # set new value
+        infield.set_value(left+right,startpos+1)
 
     # print, switch mode
     infield.print()

@@ -44,12 +44,13 @@ class InputField:
     def __init__(self,pos=None,linecap=0,default="",xlimit=None,ylimit=None):
         self.value = default
         self.cursor = len(self.value)
+
+        # TODO
         self.linecap = linecap
         self.xlimit = xlimit
         self.ylimit = ylimit
 
         if pos == None:
-            import os
             _,tHeight = os.get_terminal_size()
             self.x = 0
             self.y = tHeight
@@ -92,13 +93,38 @@ class InputField:
             self.value = left+key+right
             self.cursor += len(key)
 
-    def print(self,flush=True,highlight=True):
-        import sys
+    def set_cursor(self,value):
+        if value:
+            print('\033[?25h')
+        else:
+            print('\033[?25l')
 
+    def clear_value(self):
+        self.wipe()
+        self.value = ''
+        self.print()
+
+    def set_value(self,target,cursor=None,highlight=True):
+        self.wipe()
+        self.value = target
+
+        if cursor == None and len(self.value):
+            self.cursor = len(self.value)-1
+
+        elif cursor:
+            self.cursor = cursor
+
+        self.print(highlight=highlight)
+ 
+    def wipe(self):
+        sys.stdout.write(f'\033[{self.y};{self.x}H'+(len(self.value)+2)*' ')
+        sys.stdout.flush()
+
+    def print(self,flush=True,highlight=True):
         left = self.value[:self.cursor]
         right = self.value[self.cursor+1:]
 
-        if self.cursor > len(self.value)-1 or self.cursor == 0:
+        if self.cursor > len(self.value)-1:
             charUnderCursor = ' '
         else:
             charUnderCursor = self.value[self.cursor]
@@ -111,16 +137,6 @@ class InputField:
 
         if flush:
             sys.stdout.flush()
-    
-    def wipe(self):
-        sys.stdout.write(f'\033[{self.y};{self.x}H'+(len(self.value)+2)*' ')
-        sys.stdout.flush()
-
-    def set_cursor(self,value):
-        if value:
-            print('\033[?25h')
-        else:
-            print('\033[?25l')
 
 
 class _Getch:
@@ -143,7 +159,6 @@ class _Getch:
 
 class _GetchUnix:
     def __init__(self):
-        import tty, sys, select
         self.keycodes = {
             # SIGNALS: not captured currently
             "\x03": "SIGTERM",
