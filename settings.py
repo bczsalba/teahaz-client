@@ -13,7 +13,9 @@ BINDS = {
         "j": "navigate_down",
         "k": "navigate_up",
         "h": "goto_cursor_left",
+        "ARROW_LEFT": "goto_cursor_left",
         "l": "goto_cursor_right",
+        "ARROW_RIGHT": "goto_cursor_right",
         #"a": "mode_add",
         #"r": "mode_react",
         #"m": "mode_message",
@@ -29,6 +31,7 @@ BINDS = {
 }
 
 # VIM BINDINGS
+## will likely be merged together with other bind 
 VIMMODE = 1
 VIMBINDS = {
     "ESCAPE": {

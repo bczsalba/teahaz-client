@@ -1,9 +1,10 @@
 # documentation
+## temporary README file for documentation
 
 ## BIND system
 - global BINDS dict controls it
 - syntax of dict
-    ```python3
+    ```python
     BINDS = {
         "<MODENAME>" = {
             "<key>": "<action>",
@@ -29,12 +30,16 @@
 ### Important notes
 - all modes go to `ESCAPE` by pressing `$ESCAPE_KEY`.
 - flowchart of bind system:
-```
+```md
 getch_loop() -> getch.getch() -> if $ESCAPE_KEY -> switch_mode('ESCAPE')
-                              \
-                               elif in VALID_KEYS -> handle_action
-                                \ 
-                                 else if INPUT_MODE -> input.send(key)
+                                 \
+                                  elif in VIMKEYS -> handle_action
+                                  \
+                                   elif in VALID_KEYS -> handle_action
+                                    \ 
+                                     else if INPUT_MODE -> input.send(key)
 ```
 
-```
+## Extensions
+- extensions would overwrite the `BINDS` dict with their `on_enter` method
+- their actions would have to be prefixed with something, so that `handle_action` can direct it to the extension

@@ -84,3 +84,10 @@ this is the ongoing notes documenting the program, proper README to be added clo
 - likely separate program that runs in the background
 - shows new message in top right corner of terminal
 - allows user to go to teahaz to open it (like a special argument or something) with a command
+
+## extensions
+- separate scripts
+- teahaz imports them and runs their start function in a thread
+- they can be locally hosted servers
+- if the user switches to locally hosted chatroom, its `on_enter` function is called, same with `on_exit`
+- these functions are to set up special bindings for the server, and to start whatever process it needs

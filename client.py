@@ -41,6 +41,7 @@ def switch_mode(target):
 
     printTo(WIDTH-len(MODE),0,MODE,clear=1)
 
+
 ## TEXT
 def clean_ansi(s):
     return re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]').sub('', s)
@@ -559,6 +560,6 @@ if __name__ == "__main__":
 
     # main loop
     while KEEP_GOING:
-        with open('test.json','w') as f:
-            f.write(json.dumps(get_lines(),indent=4))
+        #   with open('test.json','w') as f:
+        #       f.write(json.dumps(get_lines(),indent=4))
         time.sleep(1)
