@@ -29,9 +29,14 @@ def dbg(*args):
     with open(LOGFILE,'a') as f:
         f.write(s+'\n')
 
+def is_set(var):
+    return (var in globals() and globals()[var])
+
 # do `fun` after `ms` passes, nonblocking
-def do_after(ms,fun,args={}):
-    timed = lambda: (time.sleep(ms/1000),fun(**args))
+def do_after(ms,fun,control='true',args={}):
+    timed = lambda: (time.sleep(ms/1000),
+                     fun(**args) if is_set(control) else 0)
+
     threading.Thread(target=timed).start()
 
 
@@ -313,8 +318,7 @@ def handle_action(action):
         ret = send(msg,'text')
         dbg(ret)
         if 'OK' in ret:
-            infield.set_value('Message sent!',highlight=False)
-        do_after(1400,infield.clear_value)
+            infield.clear_value()
 
     # TODO
     elif action == "insert_newline":
@@ -453,7 +457,6 @@ def change_in(param):
         infield.set_value(left+right,startpos+1)
 
     # print, switch mode
-    infield.print()
     switch_mode('INSERT')
 
 def find(key,offset=0,reverse=False):
