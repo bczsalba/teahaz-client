@@ -34,10 +34,10 @@ temporary README file for documentation
 getch_loop() -> getch.getch() -> if $ESCAPE_KEY -> switch_mode('ESCAPE')
                                  \
                                   else if in VIMKEYS -> handle_action
-                                  \
-                                   else if in VALID_KEYS -> handle_action
-                                    \ 
-                                     else if INPUT_MODE -> input.send(key)
+                                   \
+                                    else if in VALID_KEYS -> handle_action
+                                     \ 
+                                      else if INPUT_MODE -> input.send(key)
 ```
 
 ## Extensions
