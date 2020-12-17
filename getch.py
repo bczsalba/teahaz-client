@@ -41,10 +41,12 @@ class OSReadWrapper(object):
 
 class InputField:
     """ Example of use at the bottom of the file """
-    def __init__(self,pos=None,linecap=0,default=""):
+    def __init__(self,pos=None,linecap=0,default="",xlimit=None,ylimit=None):
         self.value = default
         self.cursor = len(self.value)
         self.linecap = linecap
+        self.xlimit = xlimit
+        self.ylimit = ylimit
 
         if pos == None:
             import os
@@ -77,7 +79,6 @@ class InputField:
 
         elif key == '\n':
             pass
-            
 
         else:
             if key == "ENTER":

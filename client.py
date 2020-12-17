@@ -233,6 +233,7 @@ def handle_action(action):
     printTo(WIDTH-len(action),2,action,clear=1)
     
 
+    ## CATEGORIES
     # mode switching
     if action.startswith('mode_'):
         # filter out start of string
@@ -246,7 +247,6 @@ def handle_action(action):
 
         # switch to mode
         switch_mode(action.upper())
-
 
     # input navigation
     elif action.startswith('goto_'):
@@ -290,6 +290,7 @@ def handle_action(action):
         infield.print()
 
 
+    ## INLINE ACTIONS
     # quit program in a clean way
     elif action == "quit":
         print('\033[?25h')
@@ -306,11 +307,6 @@ def handle_action(action):
     # TODO
     elif action == "insert_newline":
         infield.send('\n')
-
-    # vim-like change_in function
-    elif action == "change_in":
-        # hijack getch_loop output, send it to the change_in function
-        PIPE_OUTPUT = change_in
 
     elif action == "character_delete":
         # convert value to list
@@ -335,6 +331,12 @@ def handle_action(action):
 
         # print
         infield.print()
+
+    
+    ## PIPES
+    # vim-like change_in function
+    elif action == "change_in":
+        PIPE_OUTPUT = change_in
 
     elif action == "find":
         PIPE_OUTPUT = find
