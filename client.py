@@ -241,7 +241,7 @@ def getch_loop():
             infield.print() 
 
 def handle_action(action):
-    global KEEP_GOING,PIPE_OUTPUT,PIPE_ARGS,infield
+    global KEEP_GOING,PIPE_OUTPUT,PIPE_ARGS,VISUAL_START,VISUAL_END,infield
 
     printTo(WIDTH-len(action),2,action,clear=1)
     
@@ -259,6 +259,9 @@ def handle_action(action):
         if action == "escape" and len(infield.value):
             infield.cursor -= 1
 
+        elif action == "visual":
+            VISUAL_START = infield.cursor
+
         infield.print()
 
         # switch to mode
@@ -266,6 +269,7 @@ def handle_action(action):
 
     # input navigation
     elif action.startswith('goto_'):
+        # go to insert mode at the end
         insert = True
 
         # filter out start of string
@@ -304,6 +308,19 @@ def handle_action(action):
         if insert:
             switch_mode('INSERT')
         infield.print()
+
+    # visual mode
+    elif action.startswith('visual_'):
+        action = action.replace('visual_','')
+
+        if action == "selection_right":
+            VISUAL_END += 1
+
+        elif action == "selection_left":
+            VISUAL_END -= 1
+
+        infield.select(VISUAL_START,VISUAL_END)
+
 
 
     ## INLINE ACTIONS
@@ -525,11 +542,18 @@ def get_lines():
 # GLOBALS
 PATH = os.path.abspath(os.path.dirname(__file__))
 LOGFILE = os.path.join(PATH,'log')
+
 WIDTH,HEIGHT = os.get_terminal_size()
 KEEP_GOING = True
+
 SESSION = requests.Session()
+
 INPUT = ""
 INPUT_CURSOR = 0
+
+VISUAL_START = 0
+VISUAL_END = 0
+
 PIPE_OUTPUT = None
 PIPE_ARGS = {}
 

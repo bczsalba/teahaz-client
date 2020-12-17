@@ -26,7 +26,8 @@ BINDS = {
         "ENTER": "insert_newline"
     },
     "VISUAL": {
-
+        "h": "visual_selection_left",
+        "l": "visual_selection_right",
     }
 }
 

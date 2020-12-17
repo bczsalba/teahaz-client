@@ -42,9 +42,10 @@ class OSReadWrapper(object):
 class InputField:
     """ Example of use at the bottom of the file """
     def __init__(self,pos=None,linecap=0,default="",xlimit=None,ylimit=None):
-        # set up values
+        # set up instance variables
         self.value = default
         self.cursor = len(self.value)
+        self.selected_value = ''
 
         # TODO
         self.linecap = linecap
@@ -167,6 +168,36 @@ class InputField:
         # flush if needed
         if flush:
             sys.stdout.flush()
+
+    def select(self,start=None,end=None):
+        from client import dbg
+        if start > end:
+            temp = end
+            end = start
+            start = temp
+
+        if start == None or start < 0:
+            start = self.cursor
+        if end == None or end > len(self.value)-1:
+            end = len(self.value)-1
+
+        left = self.value[:start]
+        selected = self.value[start:(start+end)]
+        right = self.value[(start+end):]
+
+        dbg(left,'T',selected,'T',right)
+
+        highlight = '\033[47m\033[30m'
+        
+        self.wipe()
+
+        line = left+highlight+selected+'\033[0m'+right
+        dbg(line)
+
+        # write to stdout
+        sys.stdout.write(f'\033[{self.y};{self.x}H'+line)
+        sys.stdout.flush()
+
 
 
 class _Getch:
