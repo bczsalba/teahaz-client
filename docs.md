@@ -18,9 +18,9 @@ temporary README file for documentation
     }
     ```
 ### Key for values
-- \<MODENAME\> is an uppercase string
-- \<action\> is a lowercase string with `_` separating multiple words
-- \<key\> can be aquired by running `import getch; getch.getch()` in the python intepreter (`python3 -i`)
+- `<MODENAME>` is an uppercase string
+- `<action>` is a lowercase string with `_` separating multiple words
+- `<key>` can be aquired by running `import getch; getch.getch()` in the python intepreter (`python3 -i`)
 
 ## Variables
 - BINDS: above dict
