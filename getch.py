@@ -171,28 +171,32 @@ class InputField:
 
     def select(self,start=None,end=None):
         from client import dbg
+
         if start > end:
             temp = end
             end = start
             start = temp
 
-        if start == None or start < 0:
+        if start == None or start < 0 and 0:
             start = self.cursor
-        if end == None or end > len(self.value)-1:
-            end = len(self.value)-1
+        if end == None or end > len(self.value):
+            end = len(self.value)
+
 
         left = self.value[:start]
-        selected = self.value[start:(start+end)]
-        right = self.value[(start+end):]
+        selected = self.value[start:end]
+        right = self.value[end:]
 
-        dbg(left,'T',selected,'T',right)
+        #dbg(left,'T',selected,'T',right)
+        dbg(end)
+
 
         highlight = '\033[47m\033[30m'
         
         self.wipe()
 
         line = left+highlight+selected+'\033[0m'+right
-        dbg(line)
+        #dbg(line)
 
         # write to stdout
         sys.stdout.write(f'\033[{self.y};{self.x}H'+line)

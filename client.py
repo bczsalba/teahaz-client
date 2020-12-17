@@ -261,6 +261,7 @@ def handle_action(action):
 
         elif action == "visual":
             VISUAL_START = infield.cursor
+            VISUAL_END = infield.cursor
 
         infield.print()
 
