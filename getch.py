@@ -131,7 +131,7 @@ class InputField:
 
         # set cursor auto
         dbg(cursor,len(self.value))
-        if (cursor == None and len(self.value)) or cursor > len(self.value)-1:
+        if (cursor == None and len(self.value)) or (cursor and cursor > len(self.value)-1):
             self.cursor = max(len(self.value)-1,0)
     
         # set cursor manual
