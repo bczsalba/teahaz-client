@@ -45,7 +45,9 @@ class InputField:
         # set up instance variables
         self.value = default
         self.cursor = len(self.value)
-        self.selected_value = ''
+        self.selected = ''
+        self.selected_start = 0
+        self.selected_end = 0
 
         # TODO
         self.linecap = linecap
@@ -127,7 +129,7 @@ class InputField:
         self.value = target
 
         # set cursor auto
-        if cursor == None and len(self.value):
+        if cursor == None and len(self.value) or cursor > len(self.value)-1:
             self.cursor = len(self.value)-1
     
         # set cursor manual
@@ -177,26 +179,26 @@ class InputField:
             end = start
             start = temp
 
-        if start == None or start < 0 and 0:
+        if start == None or start < 0:
             start = self.cursor
         if end == None or end > len(self.value):
             end = len(self.value)
 
+        end += 1
 
         left = self.value[:start]
         selected = self.value[start:end]
         right = self.value[end:]
 
-        #dbg(left,'T',selected,'T',right)
-        dbg(end)
-
-
         highlight = '\033[47m\033[30m'
+
+        self.selected = selected
+        self.selected_start = start
+        self.selected_end = end
         
         self.wipe()
 
         line = left+highlight+selected+'\033[0m'+right
-        #dbg(line)
 
         # write to stdout
         sys.stdout.write(f'\033[{self.y};{self.x}H'+line)
@@ -294,6 +296,8 @@ getch = _Getch()
 if __name__ == "__main__":
     infield = InputField(default="Welcome!")
     #infield.print()
+    infield.select(3,3)
+    sys.exit()
 
     while True:
         key = getch()

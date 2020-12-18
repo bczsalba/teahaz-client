@@ -28,6 +28,7 @@ BINDS = {
     "VISUAL": {
         "h": "visual_selection_left",
         "l": "visual_selection_right",
+        "x": "visual_selection_delete",
     }
 }
 

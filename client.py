@@ -315,10 +315,22 @@ def handle_action(action):
         action = action.replace('visual_','')
 
         if action == "selection_right":
-            VISUAL_END += 1
+            VISUAL_END = min(VISUAL_END+1,len(infield.value)-1)
 
         elif action == "selection_left":
-            VISUAL_END -= 1
+            VISUAL_END = max(VISUAL_END-1,0)
+
+        elif action == "selection_delete":
+            # split up value to not include selected
+            left = infield.value[:infield.selected_start]
+            right = infield.value[infield.selected_end:]
+
+            # set value
+            infield.set_value(left+right,infield.selected_start+1)
+
+            # switch mode
+            switch_mode('ESCAPE')
+            return
 
         infield.select(VISUAL_START,VISUAL_END)
 
@@ -573,7 +585,7 @@ BASE_DATA = {
 # TEMP MAIN
 if __name__ == "__main__":
     ##  TODO: add x, y limit
-    infield = getch.InputField()
+    infield = getch.InputField(pos=[0,HEIGHT-1])
 
     ## clear screen
     print('\033[2J')
