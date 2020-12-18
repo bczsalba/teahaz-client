@@ -181,8 +181,8 @@ class InputField:
 
         if start == None or start < 0:
             start = self.cursor
-        if end == None or end > len(self.value):
-            end = len(self.value)
+        if end == None or end > len(self.value)-1:
+            end = len(self.value)-1
 
         end += 1
 
