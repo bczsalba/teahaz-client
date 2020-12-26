@@ -28,3 +28,7 @@ As expected, a messaging client will need some way to notify users. I am yet to 
 That is I think it for the day, next log will probably be more code-focused, as this was kind of an introduction. Thank you!
 
 @bczsalba
+
+# 2020/12/22
+
+Today, I want to start working on some UI. 

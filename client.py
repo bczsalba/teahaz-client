@@ -9,6 +9,7 @@ import base64
 import requests
 import threading
 from settings import *
+from getch import clean_ansi,real_length,break_line
 
 
 
@@ -29,8 +30,10 @@ def dbg(*args):
     with open(LOGFILE,'a') as f:
         f.write(s+'\n')
 
-def is_set(var):
-    return (var in globals() and globals()[var])
+def is_set(var,scope=None):
+    if scope == None:
+        scope = globals()
+    return (var in scope and scope[var])
 
 # do `fun` after `ms` passes, nonblocking
 def do_after(ms,fun,control='true',args={}):
@@ -54,45 +57,6 @@ def switch_mode(target):
 
 
 ## TEXT
-def clean_ansi(s):
-    return re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]').sub('', s)
-
-def real_length(s):
-    return len(clean_ansi(s))
-
-def break_line(_inline,_len,_separator=' '):
-    # check if line is over length provided
-    if real_length(_inline) > _len:
-        clean = clean_ansi(_inline)
-        current = ''
-        control = ''
-        lines = []
-
-        for i,(clen,real) in enumerate(zip(clean.split(_separator),_inline.split(_separator))):
-            # dont add separator if no current
-            sep = (_separator if len(current) else "") 
-
-            # add string to line if not too long
-            if len(control+_separator+clen) <= _len:
-                current += sep + real
-                control += sep + clen
-
-            # add current to lines
-            elif len(current):
-                lines.append(current)
-                current = real
-                control = clen
-
-        # add leftover values
-        if len(current):
-            lines.append(current)
-
-        return lines
-
-    # return original line in array
-    else:
-        return _inline.split(_separator)
-
 
 ## UI
 def printTo(x=0,y=0,s='',clear=False):
@@ -333,6 +297,7 @@ def handle_action(action):
             return
 
         infield.select(VISUAL_START,VISUAL_END)
+        infield.cursor = infield.selected_start+1
 
 
 
@@ -423,10 +388,6 @@ def change_in(param):
     else:
         return
 
-    # return if param isnt in input value
-    if not param == "w" and not param in infield.value:
-        return
-
     # word
     if param == "w":
         # set up variables
@@ -466,12 +427,43 @@ def change_in(param):
             # separate two sides
             left = value[:infield.cursor]
             right = value[infield.cursor:]
+
+            # figure out amount of whitespace needed
+            if len(right) and right[0] == ' ':
+                if len(right) > 1:
+                    whitespaces = 1
+                else:
+                    whitespaces = 2
+            else:
+                whitespaces = 2
+
+            # add whitespace
+            value = left+whitespaces*' '+right
             
-            # add space
-            infield.set_value(left+' '+right,infield.cursor+1)
+            # set value
+            infield.set_value(value,infield.cursor+1)
 
     # others
     else:
+        # check if param, end in value
+        tester = list(infield.value)
+        param_found, end_found = 0,0
+
+        for i,c in enumerate(tester):
+            if not param_found and c == param:
+                param_found = 1
+                tester.pop(i)
+
+            elif not end_found and c == end:
+                end_found = 1
+                tester.pop(i)
+
+            dbg(tester)
+
+        dbg(param_found,end_found)
+        if not all([param_found,end_found]):
+            return
+
         # find start
         startpos = infield.value.index(param)
 
@@ -552,6 +544,7 @@ def get_lines():
 
 
 
+
 # GLOBALS
 PATH = os.path.abspath(os.path.dirname(__file__))
 LOGFILE = os.path.join(PATH,'log')
@@ -585,7 +578,7 @@ BASE_DATA = {
 # TEMP MAIN
 if __name__ == "__main__":
     ##  TODO: add x, y limit
-    infield = getch.InputField(pos=[0,HEIGHT-1])
+    infield = getch.InputField(pos=[0,HEIGHT-1],xlimit=5)
 
     ## clear screen
     print('\033[2J')
