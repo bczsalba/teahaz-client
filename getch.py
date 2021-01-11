@@ -2,17 +2,19 @@
 # fun note: it was posted 18 years ago and still works!
 # originally written by Danny Yoo
 
-import os, sys, tty, codecs, select, termios, re
+import os, sys, tty, codecs, select, termios
 from contextlib import contextmanager
 
-# functions for future multiline support
+
+
+# helpers
 def clean_ansi(s):
     return re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]').sub('', s)
 
 def real_length(s):
     return len(clean_ansi(s))
 
-def break_line(_inline,_len,_separator=' '):
+def break_line(_inline,_len,_pad=0,_separator=' '):
     if _len == None or _separator not in _inline:
         return [_inline]
 
@@ -22,31 +24,33 @@ def break_line(_inline,_len,_separator=' '):
         current = ''
         control = ''
         lines = []
+        pad = lambda l: (_pad*' ' if len(l) else '')
 
         for i,(clen,real) in enumerate(zip(clean.split(_separator),_inline.split(_separator))):
             # dont add separator if no current
             sep = (_separator if len(current) else "") 
 
             # add string to line if not too long
-            if len(control+_separator+clen) <= _len:
+            if len(pad(lines)+control+_separator+clen) <= _len:
                 current += sep + real
                 control += sep + clen
 
             # add current to lines
             elif len(current):
-                lines.append(current)
+                lines.append(pad(lines)+current)
                 current = real
                 control = clen
 
         # add leftover values
         if len(current):
-            lines.append(current)
+            lines.append(pad(lines)+current)
 
         return lines
 
     # return original line in array
     else:
-        return _inline.split(_separator)
+        return _inline.split('\n')
+
 
 
 # this needs to be here in order to have arrow keys registered
@@ -87,11 +91,9 @@ class InputField:
     """ Example of use at the bottom of the file """
     def __init__(self,pos=None,linecap=0,default="",xlimit=None,ylimit=None):
         # set up instance variables
-        self.lines = break_line(default,xlimit)
-        self.xcursor = len(self.lines[-1])
-        self.ycursor = len(self.lines)-1
         self.value = default
-        self.selected = '' 
+        self.cursor = len(self.value)
+        self.selected = ''
         self.selected_start = 0
         self.selected_end = 0
 
@@ -104,7 +106,7 @@ class InputField:
         if pos == None:
             _,tHeight = os.get_terminal_size()
             self.x = 0
-            self.y = tHeight-len(self.lines)+1
+            self.y = tHeight
         else:
             self.x,self.y = pos
 
@@ -116,29 +118,23 @@ class InputField:
     def send(self,key):
         # delete char before cursor
         if key == "BACKSPACE":
-            if self.xcursor > 0:
-                index = self.get_index()
-                left = self.value[:index-1]
-                right = self.value[index:]
+            if self.cursor > 0:
+                left = self.value[:self.cursor-1]
+                right = self.value[self.cursor:]
                 self.value = left+right
-                self.lines = break_line(self.value,self.xlimit)
-                self.xcursor -= 1
+                self.cursor -= 1
 
         # move left
         elif key == "ARROW_LEFT":
-            self.xcursor = max(self.xcursor-1,0)
+            self.cursor = max(self.cursor-1,0)
 
         # move right
         elif key == "ARROW_RIGHT":
-            self.xcursor = min(self.xcursor+1,len(self.lines[self.ycursor]))
+            self.cursor = min(self.cursor+1,len(self.value))
 
         # TODO: history navigation, toggleable
-        elif key == "ARROW_DOWN":
-            self.ycursor = min(len(self.lines)-1,self.ycursor+1)
-
-        elif key == "ARROW_UP":
-            self.ycursor = max(0,self.ycursor-1)
-            
+        elif key in ["ARROW_DOWN","ARROW_UP"]:
+            key = ''
 
         # TODO
         elif key == '\n':
@@ -153,37 +149,10 @@ class InputField:
                     key = ""
 
             # add character at cursor
-            ## get index in value
-            index = self.get_index()
-
-            left = self.value[:index]
-            right = self.value[index:]
-            old_lines = self.lines
+            left = self.value[:self.cursor]
+            right = self.value[self.cursor:]
             self.value = left+key+right
-
-            new = self.lines[self.ycursor]+key
-
-            self.lines = break_line(self.value,self.xlimit)
-            diff = len(self.lines) - len(old_lines)
-            self.ycursor += diff
-            self.xcursor += len(key)
-            if diff:
-                self.xcursor = 0
-            #line = self.lines[self.ycursor]
-            print('\033[0;130H',self.lines)
-
-            #self.xcursor = min(self.xcursor+1,len(line)-1)
-
-                
-    def get_index(self,xy=None):
-        if xy == None:
-            x = self.xcursor
-            y = self.ycursor
-        else:
-            x,y = xy
-
-        return sum(len(w) for w in self.lines[:y]) + x
-
+            self.cursor += len(key)
 
     # enable/disable (terminal) cursor
     def set_cursor(self,value):
@@ -201,6 +170,7 @@ class InputField:
 
     # set value, cursor location, pass highlight
     def set_value(self,target,cursor=None,highlight=True):
+        from client import dbg
         # clear space
         self.wipe()
 
@@ -220,27 +190,20 @@ class InputField:
  
     # clear the space occupied by input currently
     def wipe(self):
-        for i,l in self.lines:
-            y = len(lines)-1-i
-            sys.stdout.write(f'\033[{self.y-y};{self.x}H'+(len(l)+2)*' ')
+        sys.stdout.write(f'\033[{self.y};{self.x}H'+(len(self.value)+2)*' ')
         sys.stdout.flush()
 
     # print self, flush and show highlight if set
     def print(self,flush=True,highlight=True):
         # set up two sides 
-        lines = self.lines.copy()
-        cursor_line = self.lines[self.ycursor]
-        index = self.get_index()
-        right = self.value[index+1:]
-        leftindex = sum(len(l) for l in lines[:self.ycursor])
-        #left = self.value[leftindex:index]
-        left = lines[self.ycursor][:self.xcursor]
+        left = self.value[:self.cursor]
+        right = self.value[self.cursor+1:]
 
         # get char under cursor to highlight
-        if self.xcursor > len(cursor_line)-1 or len(cursor_line) == 0:
+        if self.cursor > len(self.value)-1:
             charUnderCursor = ' '
         else:
-            charUnderCursor = cursor_line[self.xcursor]
+            charUnderCursor = self.value[self.cursor]
 
         # set highlighter according to highlight param
         highlighter = ('\033[47m\033[30m' if highlight else '')
@@ -248,13 +211,10 @@ class InputField:
         # construct line
         line = left + highlighter + charUnderCursor + '\033[0m' + right
 
-        lines[self.ycursor] = line
-
-        for i,l in enumerate(reversed(lines)):
-            # clear current
-            sys.stdout.write(f'\033[{self.y-i};{self.x}H' + ' '*(len(l)+2))
-            # write to stdout
-            sys.stdout.write(f'\033[{self.y-i};{self.x}H'+l)
+        # clear current
+        sys.stdout.write(f'\033[{self.y};{self.x}H' + ' '*(len(self.value)+2))
+        # write to stdout
+        sys.stdout.write(f'\033[{self.y};{self.x}H'+line)
 
         # flush if needed
         if flush:
@@ -294,6 +254,7 @@ class InputField:
         sys.stdout.flush()
 
 
+
 class _Getch:
     def __init__(self):
         try:
@@ -314,7 +275,6 @@ class _Getch:
 
 class _GetchUnix:
     def __init__(self):
-        import tty, sys, select
         self.keycodes = {
             # SIGNALS: not captured currently
             "\x03": "SIGTERM",
@@ -383,8 +343,10 @@ getch = _Getch()
 
 # example code
 if __name__ == "__main__":
-    infield = InputField(default="Welcome!",xlimit=10)
+    infield = InputField(default="Welcome!")
     #infield.print()
+    infield.select(3,3)
+    sys.exit()
 
     while True:
         key = getch()

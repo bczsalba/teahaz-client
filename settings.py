@@ -9,6 +9,8 @@ BINDS = {
     "ESCAPE": {
         "i": "mode_insert",
         "v": "mode_visual",
+        "v$": "visual_goto_end",
+        "viw": "visual_select_word",
         "ENTER": "message_send",
         "j": "navigate_down",
         "k": "navigate_up",

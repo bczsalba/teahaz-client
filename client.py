@@ -1,3 +1,5 @@
+# :main= python3 %
+
 # IMPORTS
 import re
 import os
@@ -14,28 +16,34 @@ from getch import clean_ansi,real_length,break_line
 
 
 # HELPERS
-## API
+
+### b64 encode
 def encode(a):
     return base64.b64encode(a.encode('utf-8')).decode('utf-8')
 
+### b64 encode into bytes
 def encode_binary(a):
     return base64.b64encode(a).decode('utf-8')
 
+### b64 decode
 def decode(a):
     return base64.b64decode(a).decode('utf-8')
 
-## DEV
+# DEV
+
+## send args to logfile
 def dbg(*args):
     s = ' '.join([str(a) for a in args])
     with open(LOGFILE,'a') as f:
         f.write(s+'\n')
 
+## check if variable is in scope
 def is_set(var,scope=None):
     if scope == None:
         scope = globals()
     return (var in scope and scope[var])
 
-# do `fun` after `ms` passes, nonblocking
+## do `fun` after `ms` passes, nonblocking
 def do_after(ms,fun,control='true',args={}):
     timed = lambda: (time.sleep(ms/1000),
                      fun(**args) if is_set(control) else 0)
@@ -43,7 +51,9 @@ def do_after(ms,fun,control='true',args={}):
     threading.Thread(target=timed).start()
 
 
-## BINDS
+# BINDS #
+
+## switch to input mode, set globals
 def switch_mode(target):
     global MODE, VALID_KEYS, VIMKEYS
 
@@ -56,9 +66,9 @@ def switch_mode(target):
     printTo(WIDTH-len(MODE),0,MODE,clear=1)
 
 
-## TEXT
+# UI #
 
-## UI
+## print s to coordinates, clear space for it if needed
 def printTo(x=0,y=0,s='',clear=False):
     # clear the len of string with 1 margin on both sides
     if clear:
@@ -71,7 +81,8 @@ def printTo(x=0,y=0,s='',clear=False):
 
 
 
-# NETWORK FUNCTIONS
+# NETWORK FUNCTIONS #
+
 ## receiving method
 def get(parameter,mode="message"):
     data = BASE_DATA
@@ -129,6 +140,7 @@ def send(message,mType='text'):
 
 
 # INPUT 
+
 ## key intercepter loop, separate thread
 def getch_loop(): 
     global PIPE_OUTPUT,PIPE_ARGS
@@ -152,10 +164,6 @@ def getch_loop():
                     _buffkey_valid = True
                     break
 
-                # TODO: add wildstar char for ci
-                #elif len(v) >= buffkeylen+1 and v[buffkeylen] == "*":
-                #    _buffkey_valid = True
-                #    break
             else:
                 _buffkey_valid = False
 
@@ -204,6 +212,7 @@ def getch_loop():
             # print inputfield
             infield.print() 
 
+## act on action
 def handle_action(action):
     global KEEP_GOING,PIPE_OUTPUT,PIPE_ARGS,VISUAL_START,VISUAL_END,infield
 
@@ -220,12 +229,15 @@ def handle_action(action):
             return
 
         # if going into escape mode move cursor 
-        if action == "escape" and len(infield.value):
+        if action == "escape" and len(infield.value) and MODE != "VISUAL":
             infield.cursor -= 1
 
         elif action == "visual":
             VISUAL_START = infield.cursor
             VISUAL_END = infield.cursor
+
+            infield.selected_start = VISUAL_START
+            infield.selected_end = VISUAL_END
 
         infield.print()
 
@@ -285,19 +297,26 @@ def handle_action(action):
             VISUAL_END = max(VISUAL_END-1,0)
 
         elif action == "selection_delete":
+            dbg(infield.selected_start,infield.selected_end)
+
             # split up value to not include selected
-            left = infield.value[:infield.selected_start]
-            right = infield.value[infield.selected_end:]
+            if infield.selected_start == infield.selected_end:
+                handle_action('character_delete')
+                switch_mode('ESCAPE')
+                return
+            else:
+                left = infield.value[:infield.selected_start]
+                right = infield.value[infield.selected_end:]
 
             # set value
-            infield.set_value(left+right,infield.selected_start+1)
+            infield.set_value(left+right,infield.selected_start)
 
             # switch mode
             switch_mode('ESCAPE')
             return
 
+        infield.cursor = VISUAL_END
         infield.select(VISUAL_START,VISUAL_END)
-        infield.cursor = infield.selected_start+1
 
 
 
@@ -362,6 +381,7 @@ def handle_action(action):
 
 
 # ACTION HANDLER FUNCTIONS
+
 ## these are actions that require a parameter key
 def change_in(param):
     global infield
@@ -481,6 +501,7 @@ def change_in(param):
     # print, switch mode
     switch_mode('INSERT')
 
+## find key, set cursor to index+offset
 def find(key,offset=0,reverse=False):
     global infield
 
@@ -516,6 +537,7 @@ def find(key,offset=0,reverse=False):
 
 
 # UI
+
 ## get and sort messages, add lines attribute
 def get_lines():
     # TODO: this 0 might be too much in the future
@@ -591,6 +613,4 @@ if __name__ == "__main__":
 
     # main loop
     while KEEP_GOING:
-        #   with open('test.json','w') as f:
-        #       f.write(json.dumps(get_lines(),indent=4))
         time.sleep(1)

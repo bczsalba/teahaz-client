@@ -2,6 +2,8 @@ Hey!
 
 This file will document my development of the client side of Teahaz. It will be periodically updated.
 
+
+
 # 2020/12/20
 
 ## intro
@@ -29,6 +31,30 @@ That is I think it for the day, next log will probably be more code-focused, as 
 
 @bczsalba
 
+
+
 # 2020/12/22
 
 Today, I want to start working on some UI. 
+
+
+
+# 2021/01/06
+
+## 06:06 PM
+Plans were made, not many of them were followed up on.
+
+I *did* start working on UI, but then I realized multiline support is a must before I get to that. However, multiline support is basically Palpatine, and I am about a random engineer in the rebel team. I'm sure you can figure out how well that went.
+
+Jokes aside, I have some of it down, the biggest problem is that the system was made with pretty much only single line inputs in mind. This means much of the underlying systems need to be changed and rearranged, and the whole logistics of it all need to be figured out. 
+
+In the meanwhile though, I spent a good amount of time creating a git-based config syncing system which ended up pretty cool.
+
+## 11:33 PM
+Not much work was done today (surprisingly, right?), but I hope to be more productive tomorrow.
+
+@bczsalba
+
+
+
+
