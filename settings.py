@@ -1,9 +1,15 @@
-# SERVER SETTINGS
+# vim: foldmethod=marker
+
+#: GENERAL {{{1
+DO_DEBUG = 1
+
+#: SERVER SETTINGS {{{1
 URL = "http://localhost:5000/api/v0/"
 ROOMID = "conv1"
 USERNAME = "pink"
 
-# BINDINGS & INPUT
+#: BINDINGS & INPUT {{{1
+# general binds {{{2
 ESCAPE_KEY = "ESC"
 BINDS = {
     "ESCAPE": {
@@ -34,8 +40,7 @@ BINDS = {
     }
 }
 
-# VIM BINDINGS
-## will likely be merged together with other bind 
+# vim binds {{{2
 VIMMODE = 1
 VIMBINDS = {
     "ESCAPE": {
@@ -60,7 +65,4 @@ VIMBINDS = {
         "U": "selection_uppercase"
     }
 }
-
-# MISC
-## this probably wont be user selectable
-MESSAGE_BREAKLEN = 10
+# }}}

@@ -59,6 +59,7 @@ def switch_mode(target):
 
     MODE = target
     VALID_KEYS = [key for key in BINDS[target].keys()]
+    dbg(VALID_KEYS)
 
     ## get vim valid binds
     VIMKEYS = [key for key in VIMBINDS[MODE].keys()]
