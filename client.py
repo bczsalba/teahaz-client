@@ -33,6 +33,9 @@ def decode(a):
 
 ## send args to logfile
 def dbg(*args):
+    if not DO_DEBUG:
+        return
+
     s = ' '.join([str(a) for a in args])
     with open(LOGFILE,'a') as f:
         f.write(s+'\n')
@@ -59,7 +62,6 @@ def switch_mode(target):
 
     MODE = target
     VALID_KEYS = [key for key in BINDS[target].keys()]
-    dbg(VALID_KEYS)
 
     ## get vim valid binds
     VIMKEYS = [key for key in VIMBINDS[MODE].keys()]
@@ -144,7 +146,7 @@ def send(message,mType='text'):
 
 ## key intercepter loop, separate thread
 def getch_loop(): 
-    global PIPE_OUTPUT,PIPE_ARGS
+    global PIPE_OUTPUT
 
     buff = ''
     while KEEP_GOING:
@@ -152,9 +154,9 @@ def getch_loop():
 
         # this lets other functions hijack the key output as parameters
         if PIPE_OUTPUT:
-            PIPE_OUTPUT(key,**PIPE_ARGS)
+            fun,args = PIPE_OUTPUT
+            fun(key,**args)
             PIPE_OUTPUT = None
-            PIPE_ARGS = {}
             continue
         
         # add key to buffer if key+buffer is in either key cluster
@@ -230,7 +232,7 @@ def handle_action(action):
             return
 
         # if going into escape mode move cursor 
-        if action == "escape" and len(infield.value) and MODE != "VISUAL":
+        if action == "escape" and len(infield.value) and MODE != "VISUAL" and infield.cursor > 0:
             infield.cursor -= 1
 
         elif action == "visual":
@@ -316,6 +318,16 @@ def handle_action(action):
             switch_mode('ESCAPE')
             return
 
+        #elif action == "select_end":
+        #    VISUAL_END = len(infield.value)-1
+
+        #elif action == "select_word_end":
+        #    do_in('w','select_end')
+
+        #elif action == "select_in":
+        #    PIPE_OUTPUT = do_in,{'action': 'select'}
+
+
         infield.cursor = VISUAL_END
         infield.select(VISUAL_START,VISUAL_END)
 
@@ -326,6 +338,7 @@ def handle_action(action):
     elif action == "quit":
         print('\033[?25h')
         KEEP_GOING = 0
+        sys.exit()
 
     # message binds
     elif action == "message_send":
@@ -361,32 +374,74 @@ def handle_action(action):
     
     ## PIPES
     # vim-like change_in function
-    elif action == "change_in":
-        PIPE_OUTPUT = change_in
+    elif action.endswith("_in"):
+            PIPE_OUTPUT = do_in,{'action': action}
 
     elif action == "find":
-        PIPE_OUTPUT = find
+        PIPE_OUTPUT = find,{}
 
     elif action == "find_reverse":
-        PIPE_OUTPUT = find
-        PIPE_ARGS = {'reverse': True}
+        PIPE_OUTPUT = find,{'reverse': True}
     
     elif action == "till":
-        PIPE_OUTPUT = find
-        PIPE_ARGS = {'offset': -1}
+        PIPE_OUTPUT = find,{'offset': -1}
 
     elif action == "till_reverse":
-        PIPE_OUTPUT = find
-        PIPE_ARGS = {'offset': -1, 'reverse': True}
+        PIPE_OUTPUT = find,{'offset': -1, 'reverse': True}
 
 
 
 # ACTION HANDLER FUNCTIONS
 
-## these are actions that require a parameter key
-def change_in(param):
-    global infield
+## do `action` in infield.value, using get_indices for start/end
+def do_in(param, action):
+    global infield, VISUAL_START, VISUAL_END
 
+    # react on error in indices
+    indices = get_indices(param)
+    if indices == None or len(indices) < 3:
+        dbg("Indices is non-iterable:",indices)
+        return
+    else:
+        start,end,position = indices
+        wordlist_len,wordindex = position
+
+    # selection commands
+    if "select" in action:
+        if action == "select_end":
+            VISUAL_END = end
+
+        elif action == "select_in":
+            VISUAL_START = start
+            VISUAL_END = end-1
+
+        # update values
+        infield.select(VISUAL_START,VISUAL_END)
+        if not KEEP_CURSOR_AFTER_SELECT:
+            infield.cursor = VISUAL_END
+
+    elif any(o in action for o in ['change','delete']):
+        # set up values
+        left = infield.value[:start]
+        right = infield.value[end:]
+        cursor = start
+
+        if action == "change_in":
+            # add space if last word is edited
+            if wordlist_len-1 == wordindex:
+                left += ' '
+                cursor += 1
+            switch_mode("INSERT")
+
+            
+        infield.set_value(left+right,cursor)
+        infield.print()
+        
+
+
+
+## find start,end indices for type `param` in infield
+def get_indices(param):
     valid = ["w","'",'"','[]','{}','()','<>']
 
     # set up start, end pairs
@@ -396,111 +451,77 @@ def change_in(param):
             if len(pair) == 1:
                 end = param
 
-            # double length, opener
+            # double length
+            ## opener
             elif pair.index(param) == 0:
                 end = pair[1]
-            # double length, closer
+
+            ## closer
             else:
                 param = pair[0]
                 end = pair[1]
             break
 
-    # return if param isnt in valid
+    # return if both arent found
     else:
         return
 
-    # word
+
+    # find word
     if param == "w":
-        # set up variables
-        words = infield.value.split(' ')
-        characters = 0
+        wordlist = []
+        buff = ""
 
-        # loop through words
-        for wordindex,word in enumerate(words):
+        # create list separated by non-shitespace
+        for c in infield.value:
+            if c in "!@#$%^&*()[]{}|\\;':\",.<>/? \t":
+                wordlist.append(buff)
+                buff = ""
+            else:
+                buff += c
+        wordlist.append(buff)
+        start = 0
 
+        # loop through words to find start, wordindex
+        for wordindex,word in enumerate(wordlist):
             # if the index is in word
-            if characters+len(word+' ') >= infield.cursor+1:
+            if start+len(word)+1 >= infield.cursor+1:
                 break
 
             # otherwise iterate characers
-            characters += len(word+' ')
+            start += len(word+' ')
 
-        # remove chosen word from words
-        words.pop(wordindex)
+        # get end
+        end = start+len(wordlist[wordindex])
 
-        # update value
-        value = ' '.join(words)
-
-        # get spaces in value for cursor
-        spaces = [0]
-        for i,c in enumerate(value):
-            if c == " ":
-                spaces.append(i)
-        spaces.append(len(value))
-
-        # set cursor, add space to the left
-        infield.cursor = spaces[wordindex]
-
-        if infield.cursor == 0:
-            infield.set_value(value,False)
-
-        else:
-            # separate two sides
-            left = value[:infield.cursor]
-            right = value[infield.cursor:]
-
-            # figure out amount of whitespace needed
-            if len(right) and right[0] == ' ':
-                if len(right) > 1:
-                    whitespaces = 1
-                else:
-                    whitespaces = 2
-            else:
-                whitespaces = 2
-
-            # add whitespace
-            value = left+whitespaces*' '+right
-            
-            # set value
-            infield.set_value(value,infield.cursor+1)
-
-    # others
+    # find in delimiters 
     else:
         # check if param, end in value
         tester = list(infield.value)
         param_found, end_found = 0,0
 
+        # loop through tester, check for param and end
         for i,c in enumerate(tester):
             if not param_found and c == param:
                 param_found = 1
+                start = i+1
                 tester.pop(i)
 
             elif not end_found and c == end:
                 end_found = 1
+                end = i+1
                 tester.pop(i)
 
-            dbg(tester)
 
-        dbg(param_found,end_found)
+        # return if param, end not in string 
         if not all([param_found,end_found]):
-            return
+            return None
+        
+    # position is redundant for now, but may be useful at some point
+    position = [len(wordlist),wordindex]
+    return start,end,position
 
-        # find start
-        startpos = infield.value.index(param)
 
-        # find end
-        endindex = infield.value[startpos+1:].index(end)
-        endpos = startpos+endindex+1
-
-        # set two sides up
-        left = infield.value[:startpos+1]
-        right = infield.value[endpos:]
-
-        # set new value
-        infield.set_value(left+right,startpos+1)
-
-    # print, switch mode
-    switch_mode('INSERT')
 
 ## find key, set cursor to index+offset
 def find(key,offset=0,reverse=False):
@@ -600,6 +621,9 @@ BASE_DATA = {
 
 # TEMP MAIN
 if __name__ == "__main__":
+    if DO_DEBUG:
+        open(LOGFILE,'w').close()
+
     ##  TODO: add x, y limit
     infield = getch.InputField(pos=[0,HEIGHT-1],xlimit=5)
 

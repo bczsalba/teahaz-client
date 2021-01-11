@@ -15,18 +15,13 @@ BINDS = {
     "ESCAPE": {
         "i": "mode_insert",
         "v": "mode_visual",
-        "v$": "visual_goto_end",
-        "viw": "visual_select_word",
         "ENTER": "message_send",
         "j": "navigate_down",
         "k": "navigate_up",
         "h": "goto_cursor_left",
         "ARROW_LEFT": "goto_cursor_left",
-        "l": "goto_cursor_right",
         "ARROW_RIGHT": "goto_cursor_right",
-        #"a": "mode_add",
-        #"r": "mode_react",
-        #"m": "mode_message",
+        "l": "goto_cursor_right",
         "q": "quit",
     },
     "INSERT": {
@@ -41,6 +36,8 @@ BINDS = {
 }
 
 # vim binds {{{2
+## keep original cursor after exiting visual mode from `vi` input
+KEEP_CURSOR_AFTER_SELECT = 0
 VIMMODE = 1
 VIMBINDS = {
     "ESCAPE": {
@@ -51,18 +48,22 @@ VIMBINDS = {
         "gg": "goto_text_start",
         "G":  "goto_text_end",
         "ci": "change_in",
-        "f": "find",
-        "F": "find_reverse",
-        "t": "till",
-        "T": "till_reverse",
-        "x": "character_delete",
+        "di": "delete_in",
+        "f":  "find",
+        "F":  "find_reverse",
+        "t":  "till",
+        "T":  "till_reverse",
+        "x":  "character_delete",
     },
     "INSERT": {
     },
 
     "VISUAL": {
         "u": "selection_lowercase",
-        "U": "selection_uppercase"
+        "U": "selection_uppercase",
+        "$": "select_end",
+        "w": "select_word_end",
+        "i": "select_in" 
     }
 }
 # }}}

@@ -171,6 +171,7 @@ class InputField:
     # set value, cursor location, pass highlight
     def set_value(self,target,cursor=None,highlight=True):
         from client import dbg
+        dbg(cursor)
         # clear space
         self.wipe()
 
@@ -178,11 +179,11 @@ class InputField:
         self.value = target
 
         # set cursor auto
-        if (cursor == None and len(self.value)) or (cursor and cursor > len(self.value)-1):
+        if cursor == None or cursor > len(self.value)-1:
             self.cursor = max(len(self.value)-1,0)
-    
+
         # set cursor manual
-        elif cursor:
+        elif not cursor == None:
             self.cursor = cursor
 
         # print self
