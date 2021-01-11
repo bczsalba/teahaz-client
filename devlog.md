@@ -78,8 +78,10 @@ An example of how I imagine this would work:
 
 ```python
 def load():
-    ...
 
+    # ...
+    # extension load procedures
+    
     return {
                 "name": 'Test',
                 "version": 0.0,
@@ -102,6 +104,7 @@ This merge would be done by a function like `change_context`. The job of this fu
 Other than this, `handle_action` also needs to be able to use extension parts. This will be done by a code snippet similar to this:
 
 ```python
+
 def handle_action(key,context_overwrite=False):
     if CONTEXT != <default_context> or context_overwrite:
         ret = CONTEXT_HANDLER(key)
@@ -111,8 +114,9 @@ def handle_action(key,context_overwrite=False):
             handle_action(key,context_overwrite=True)
             return
 
-    ...
-    <normal handler stuff>
+    # normal handler stuff
+    # ...
+    
 ```
 
 This should, in theory, fix most of the problems I was having with the idea. I hope to be able to start implementing this somewhat soon, but it's not high priority as long as stuff like *the entire messaging functionality* is missing.
