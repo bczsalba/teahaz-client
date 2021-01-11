@@ -11,6 +11,7 @@ import base64
 import requests
 import threading
 from settings import *
+import pyperclip as clip
 from getch import clean_ansi,real_length,break_line
 
 
@@ -373,10 +374,11 @@ def handle_action(action):
 
     
     ## PIPES
-    # vim-like change_in function
+    ### action_in actions
     elif action.endswith("_in"):
             PIPE_OUTPUT = do_in,{'action': action}
 
+    ### find & till
     elif action == "find":
         PIPE_OUTPUT = find,{}
 
@@ -426,13 +428,19 @@ def do_in(param, action):
         right = infield.value[end:]
         cursor = start
 
+        # only do these if changing
         if action == "change_in":
             # add space if last word is edited
             if wordlist_len-1 == wordindex:
                 left += ' '
                 cursor += 1
             switch_mode("INSERT")
-
+        
+        elif action == "delete_in":
+            # store selected value
+            selected = infield.value[start:end]
+            clip.copy(selected)
+ 
             
         infield.set_value(left+right,cursor)
         infield.print()
