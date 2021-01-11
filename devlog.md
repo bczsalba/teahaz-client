@@ -62,9 +62,9 @@ Man, I'm not good at this.
 
 Delays and inability to remember things aside, I actually did a lot of work on the input mechanism.
 
-Firstly, I rewrote the whole `change_in` function, as it was painfully non-modular. The current implementation consists of the function `do_in`, which takes a key and an action as parameters, gets start and end through `get_indices`, and does the rest of the handling itself. This made the pretty hard to understand/work with, single use `change_in` into two short and modular functions working together. 
+Firstly, I rewrote the whole `change_in` function, as it was painfully non-modular. The current implementation consists of the function `do_in`, which takes a key and an action as parameters, gets start and end through `get_indices`, and does the rest of the handling itself. This turned the pretty hard to understand/work with, single use `change_in` method into two short and modular functions working together. 
 
-I also added the capability of detecting `word`s using a lot more delimiters, as it was previously limited to " ".
+Other than this, I added the capability of detecting `word`s using a lot more delimiters, as it was previously limited to " ".
 
 
 
