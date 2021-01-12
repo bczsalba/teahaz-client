@@ -111,7 +111,7 @@ class InputField:
             self.x,self.y = pos
 
         # disable cursor
-        self.set_cursor(False)
+        self.set_cursor_visible(False)
         # print
         self.print()
 
@@ -154,8 +154,10 @@ class InputField:
             self.value = left+key+right
             self.cursor += len(key)
 
+        self.print()
+
     # enable/disable (terminal) cursor
-    def set_cursor(self,value):
+    def set_cursor_visible(self,value):
         if value:
             print('\033[?25h')
         else:
@@ -169,9 +171,7 @@ class InputField:
         self.print()
 
     # set value, cursor location, pass highlight
-    def set_value(self,target,cursor=None,highlight=True):
-        from client import dbg
-        dbg(cursor)
+    def set_value(self,target,cursor=None,highlight=True,force_cursor=False,do_print=True):
         # clear space
         self.wipe()
 
@@ -179,15 +179,16 @@ class InputField:
         self.value = target
 
         # set cursor auto
-        if cursor == None or cursor > len(self.value)-1:
+        if cursor == None or cursor > len(self.value)-1 and not force_cursor:
             self.cursor = max(len(self.value)-1,0)
 
         # set cursor manual
         elif not cursor == None:
             self.cursor = cursor
 
-        # print self
-        self.print(highlight=highlight)
+        if do_print:
+            # print self
+            self.print(highlight=highlight)
  
     # clear the space occupied by input currently
     def wipe(self):
@@ -222,8 +223,6 @@ class InputField:
             sys.stdout.flush()
 
     def select(self,start=None,end=None):
-        from client import dbg
-
         if start > end:
             temp = end
             end = start
@@ -281,20 +280,46 @@ class _GetchUnix:
             "\x03": "SIGTERM",
             "\x1a": "SIGHUP",
             "\x1c": "SIGQUIT",
+
             # CONTROL KEYS
+            "\x17" : "CTRL_W",
+            "\x05" : "CTRL_E",
+            "\x12" : "CTRL_R",
+            "\x14" : "CTRL_T",
+            "\x15" : "CTRL_U",
+            "\x10" : "CTRL_P",
+            "\x1d" : "CTRL_]",
+            "\x01" : "CTRL_A",
+            "\x04" : "CTRL_D",
+            "\x06" : "CTRL_F",
+            "\x07" : "CTRL_G",
+            "\x08" : "CTRL_H",
+            "\x0b" : "CTRL_K",
+            "\x0c" : "CTRL_L",
+            "\x18" : "CTRL_X",
+            "\x16" : "CTRL_V",
+            "\x02" : "CTRL_B",
             "\x0e" : "CTRL_N",
+            "\x1f" : "CTRL_/",
+
             # TEXT EDITING
             "\x7f": "BACKSPACE",
             "\x1b": "ESC",
             "\n": "ENTER",
             "\r": "ENTER",
             "\t": "TAB",
+
             # MOVEMENT
             "\x1b[A": "ARROW_UP",
+            "\x1bOA": "ARROW_UP",
             "\x1b[B": "ARROW_DOWN",
+            "\x1bOB": "ARROW_DOWN",
             "\x1b[C": "ARROW_RIGHT",
+            "\x1bOC": "ARROW_RIGHT",
             "\x1b[D": "ARROW_LEFT",
+            "\x1bOD": "ARROW_LEFT",
         }
+
         self.stream = OSReadWrapper(sys.stdin)
 
     @contextmanager

@@ -30,7 +30,7 @@ def encode_binary(a):
 def decode(a):
     return base64.b64decode(a).decode('utf-8')
 
-# DEV
+# INTERNAL #
 
 ## send args to logfile
 def dbg(*args):
@@ -54,6 +54,51 @@ def do_after(ms,fun,control='true',args={}):
 
     threading.Thread(target=timed).start()
 
+## merge two dicts together, on conflict overwrite one's values
+def merge(one,two):
+    merged = one.copy()
+    for key in two.keys():
+        for subkey,value in two[key].items():
+            merged[key][subkey] = value
+    return merged
+
+## split `s` by delimiters defined in `DELIMITERS`, return array of words
+def split_by_delimiters(s,return_indices=False):
+    # set up variables
+    wordlist = []
+    indices = []
+    buff = ""
+
+    # create list separated by non-shitespace
+    for i,c in enumerate(s):
+        if c in DELIMITERS: 
+            if return_indices:
+                indices.append(i)
+
+            wordlist.append(buff)
+            buff = ""
+        else:
+            buff += c
+
+    wordlist.append(buff)
+
+    if return_indices:
+        indices.append(i)
+        return wordlist,indices
+    else:
+        return wordlist
+
+## return True if the given `index` is part of the last word in the strong
+def is_in_last_word(index,string):
+    wordlist = split_by_delimiters(string)
+    last_word_index = len(string)-len(wordlist[-1])
+    return (last_word_index <= index)
+
+
+        
+
+
+
 
 # BINDS #
 
@@ -61,13 +106,20 @@ def do_after(ms,fun,control='true',args={}):
 def switch_mode(target):
     global MODE, VALID_KEYS, VIMKEYS
 
+    ## dont switch to escape mode if not in VIMMODE
+    if not VIMMODE:
+        if target == "ESCAPE":
+            target = "INSERT"
+
     MODE = target
     VALID_KEYS = [key for key in BINDS[target].keys()]
 
     ## get vim valid binds
     VIMKEYS = [key for key in VIMBINDS[MODE].keys()]
 
+
     printTo(WIDTH-len(MODE),0,MODE,clear=1)
+
 
 
 # UI #
@@ -82,6 +134,37 @@ def printTo(x=0,y=0,s='',clear=False):
 
     # print
     print(f'\033[{y};{x}H'+s)
+
+## get and sort messages, add lines attribute
+def get_lines():
+    # TODO: this 0 might be too much in the future
+    messages_raw = get(0)
+    messages = []
+
+    # sort messages
+    for m in sorted(messages_raw,key=lambda x: x['time']):
+        # add representation of file 
+        if m['type'] == 'file':
+            m['message'] = f"`.{m['extension']}` file."
+
+        # decode message
+        elif m['type'] == 'text':
+            m['message'] = decode(m['message'])
+
+        # break message into lines
+        m['lines'] = []
+        #m['lines'].append(m['username'])
+        m['lines'] += break_line(m['message'],MESSAGE_BREAKLEN)
+
+        # add message to list
+        messages.append(m)
+
+    return messages
+
+## main UI loop
+def UI_loop():
+    while KEEP_GOING:
+        time.sleep(1)
 
 
 
@@ -143,7 +226,7 @@ def send(message,mType='text'):
 
 
 
-# INPUT 
+# INPUT #
 
 ## key intercepter loop, separate thread
 def getch_loop(): 
@@ -152,6 +235,7 @@ def getch_loop():
     buff = ''
     while KEEP_GOING:
         key = getch.getch()
+        dbg('key:',key)
 
         # this lets other functions hijack the key output as parameters
         if PIPE_OUTPUT:
@@ -186,17 +270,11 @@ def getch_loop():
         else:
             buff = key
 
-
         printTo(WIDTH-len(key),3,key,clear=1)
 
         # currently inactive
         if key == "SIGTERM":
             handle_action('quit')
-
-        # go to escape mode from any menu
-        elif key == ESCAPE_KEY:
-            handle_action("mode_escape")
-            continue
 
         # check if key is a valid single key vimbind
         elif VIMMODE and key in VIMBINDS[MODE]:
@@ -210,6 +288,10 @@ def getch_loop():
 
         # INSERT mode: inputs
         elif MODE == "INSERT":
+            # ignore unrecognized ctrl keys
+            if key.startswith('CTRL_'):
+                continue
+
             # send key to inputfield to handle
             infield.send(key)
 
@@ -223,120 +305,10 @@ def handle_action(action):
     printTo(WIDTH-len(action),2,action,clear=1)
     
 
-    ## CATEGORIES
-    # mode switching
-    if action.startswith('mode_'):
-        # filter out start of string
-        action = action.replace('mode_','')
-        
-        if action.upper() == MODE:
-            return
-
-        # if going into escape mode move cursor 
-        if action == "escape" and len(infield.value) and MODE != "VISUAL" and infield.cursor > 0:
-            infield.cursor -= 1
-
-        elif action == "visual":
-            VISUAL_START = infield.cursor
-            VISUAL_END = infield.cursor
-
-            infield.selected_start = VISUAL_START
-            infield.selected_end = VISUAL_END
-
-        infield.print()
-
-        # switch to mode
-        switch_mode(action.upper())
-
-    # input navigation
-    elif action.startswith('goto_'):
-        # go to insert mode at the end
-        insert = True
-
-        # filter out start of string
-        action = action.replace('goto_','')
-
-
-        # horizontal jumping
-        if action == "line_start":
-            infield.cursor = 0 
-
-        elif action == "line_end":
-            infield.cursor = len(infield.value)
-
-
-        # horizontal movement
-        elif action == "cursor_left":
-            if len(infield.value):
-                infield.cursor = max(0,infield.cursor-1)
-                insert = False 
-
-        elif action == "cursor_right":
-            if len(infield.value):
-                infield.cursor = min(len(infield.value)-1,infield.cursor+1)
-                insert = False 
-
-    
-        # TODO: multiline support for infield
-        elif action == "text_start":
-            infield.linecursor = 0
-
-        elif action == "text_end":
-            infield.linecursor = len(infield.lines)
-
-
-        # switch mode, print
-        if insert:
-            switch_mode('INSERT')
-        infield.print()
-
-    # visual mode
-    elif action.startswith('visual_'):
-        action = action.replace('visual_','')
-
-        if action == "selection_right":
-            VISUAL_END = min(VISUAL_END+1,len(infield.value)-1)
-
-        elif action == "selection_left":
-            VISUAL_END = max(VISUAL_END-1,0)
-
-        elif action == "selection_delete":
-            dbg(infield.selected_start,infield.selected_end)
-
-            # split up value to not include selected
-            if infield.selected_start == infield.selected_end:
-                handle_action('character_delete')
-                switch_mode('ESCAPE')
-                return
-            else:
-                left = infield.value[:infield.selected_start]
-                right = infield.value[infield.selected_end:]
-
-            # set value
-            infield.set_value(left+right,infield.selected_start)
-
-            # switch mode
-            switch_mode('ESCAPE')
-            return
-
-        #elif action == "select_end":
-        #    VISUAL_END = len(infield.value)-1
-
-        #elif action == "select_word_end":
-        #    do_in('w','select_end')
-
-        #elif action == "select_in":
-        #    PIPE_OUTPUT = do_in,{'action': 'select'}
-
-
-        infield.cursor = VISUAL_END
-        infield.select(VISUAL_START,VISUAL_END)
-
-
 
     ## INLINE ACTIONS
     # quit program in a clean way
-    elif action == "quit":
+    if action == "quit":
         print('\033[?25h')
         KEEP_GOING = 0
         sys.exit()
@@ -372,12 +344,230 @@ def handle_action(action):
             cursor = infield.cursor
         infield.set_value(value,cursor=cursor)
 
+    elif action == "paste":
+        cursor = infield.cursor
+        paste = clip.paste()
+
+        offset = (1 if VIMMODE else 0)
+
+        left = infield.value[:cursor+offset]
+        right = infield.value[cursor+offset:]
+      
+        infield.set_value(left+paste+right,infield.cursor+len(paste))
+
+
+
+    ## CATEGORIES
+    # mode switching
+    if action.startswith('mode_'):
+        # filter out start of string
+        action = action.replace('mode_','')
+        
+        if action.upper() == MODE:
+            return
+
+        # if going into escape mode move cursor 
+        if action == "escape" and len(infield.value) and MODE != "VISUAL" and infield.cursor > 0:
+            infield.cursor -= 1
+
+        elif action == "visual":
+            VISUAL_START = infield.cursor
+            VISUAL_END = infield.cursor
+
+            infield.selected_start = VISUAL_START
+            infield.selected_end = VISUAL_END
+
+        infield.print()
+
+        # switch to mode
+        switch_mode(action.upper())
+
+    # input navigation
+    elif action.startswith('goto_'):
+        # go to insert mode at the end
+        insert = False
+
+        # filter out start of string
+        action = action.replace('goto_','')
+
+
+        # horizontal jumping
+        if action == "line_start":
+            insert = True
+            infield.cursor = 0 
+
+        elif action == "line_end":
+            insert = True
+            infield.cursor = len(infield.value)
+
+
+        # horizontal movement
+        elif action == "cursor_left":
+            if len(infield.value):
+                infield.cursor = max(0,infield.cursor-1)
+                insert = False 
+
+        elif action == "cursor_right":
+            if len(infield.value):
+                infield.cursor = min(len(infield.value)-1,infield.cursor+1)
+                insert = False 
+
+    
+        # go to start of text
+        elif action == "text_start":
+            infield.cursor = 0
+
+        # go to end of text
+        elif action == "text_end":
+            infield.cursor = len(infield.value)
+
+        # navigate in `word`-s and `WORD`-s
+        elif action.startswith('word') or action.startswith('WORD'):
+            # get words and indices using delimiters
+            if action.startswith('word'):
+                words,indices = split_by_delimiters(infield.value,return_indices=True)
+
+            # get words and indices using whitespaces
+            else:
+                words = []
+                indices = []
+                buff = ''
+                for i,c in enumerate(infield.value):
+                    if c == ' ':
+                        words.append(buff)
+                        indices.append(i)
+                        buff = ''
+                    else:
+                        buff += c
+                words.append(buff)
+                indices.append(i)
+
+            # find the w/W the cursor is in
+            buff = 0
+            for i,index in enumerate(indices):
+                if index >= infield.cursor:
+                    break
+
+            # go to next
+            if action.endswith("_next"):
+                if i == len(words)-1:
+                    return
+
+                infield.cursor = index+1
+
+            # go to previous 
+            elif action.endswith("_prev"):
+                if i == 0:
+                    return
+
+                word = words[i-1]
+                infield.cursor = indices[i-1]-len(word)
+
+        # switch mode, print
+        if insert:
+            switch_mode('INSERT')
+        infield.print()
+
+    # visual mode
+    elif action.startswith('selection_'):
+        if action == "selection_right":
+            VISUAL_END = min(VISUAL_END+1,len(infield.value)-1)
+
+        elif action == "selection_left":
+            VISUAL_END = max(VISUAL_END-1,0)
+
+        elif action == "selection_delete":
+            # split up value to not include selected
+            if infield.selected_start == infield.selected_end:
+                handle_action('character_delete')
+                switch_mode('ESCAPE')
+                return
+            else:
+                left = infield.value[:infield.selected_start]
+                right = infield.value[infield.selected_end:]
+
+            # set value
+            infield.set_value(left+right,infield.selected_start)
+
+            # switch mode
+            switch_mode('ESCAPE')
+            return
+
+        elif action.endswith("cut") or action.endswith("copy"):
+            # get start and end values
+            start = infield.selected_start
+            end = infield.selected_end
+
+            # store selected value
+            selected = infield.value[start:end]
+            clip.copy(selected)
+
+            if action.endswith("cut"):
+                # set new value
+                left = infield.value[:start]
+                right = infield.value[end:]
+                infield.set_value(left+right,start)
+
+            switch_mode("ESCAPE")
+            return
+        
+
+        infield.cursor = VISUAL_END
+        infield.select(VISUAL_START,VISUAL_END)
+
+    # action done to end
+    elif action.endswith('_end'):
+        if action.startswith('select'):
+            if action == "select_line_end":
+                VISUAL_END = len(infield.value)-1
+
+            elif action == "select_word_end":
+                 start,end = get_indices('w')
+                 VISUAL_END = end-1
+            infield.select(VISUAL_START,VISUAL_END)
+
+        elif action.startswith('delete') or action.startswith('change'):
+            if action == "delete_line_end":
+                end = len(infield.value)
+                selected = infield.value[infield.cursor:end]
+                clip.copy(selected)
+
+                infield.set_value(infield.value[:infield.cursor])
+
+            elif action.endswith("_word_end"):
+                indices = get_indices('w')
+                if not indices or not len(indices) == 2:
+                    return
+                else:
+                    start,end = indices
+
+                value = infield.value[:infield.cursor]+infield.value[end:]
+
+                infield.set_value(value,infield.cursor,force_cursor=1)
+
+                if action.startswith("change"):
+                    switch_mode("INSERT")
+
+    # actions done on entire line
+    elif action.endswith('_line'):
+        if action == "delete_line":
+            clip.copy(infield.value)
+            infield.set_value('')       
+
+        elif action == "select_line":
+            VISUAL_START = 0
+            VISUAL_END = len(infield.value)
+
+            infield.select(VISUAL_START,VISUAL_END)
+            switch_mode("VISUAL")
+
+
     
     ## PIPES
     ### action_in actions
     elif action.endswith("_in"):
-            PIPE_OUTPUT = do_in,{'action': action}
-
+        PIPE_OUTPUT = do_in,{'action': action}
+    
     ### find & till
     elif action == "find":
         PIPE_OUTPUT = find,{}
@@ -393,7 +583,8 @@ def handle_action(action):
 
 
 
-# ACTION HANDLER FUNCTIONS
+
+# ACTION HANDLER FUNCTIONS #
 
 ## do `action` in infield.value, using get_indices for start/end
 def do_in(param, action):
@@ -401,15 +592,14 @@ def do_in(param, action):
 
     # react on error in indices
     indices = get_indices(param)
-    if indices == None or len(indices) < 3:
+    if indices == None or len(indices) < 2:
         dbg("Indices is non-iterable:",indices)
         return
     else:
-        start,end,position = indices
-        wordlist_len,wordindex = position
+        start,end = indices
 
     # selection commands
-    if "select" in action:
+    if action.startswith("select"):
         if action == "select_end":
             VISUAL_END = end
 
@@ -422,35 +612,34 @@ def do_in(param, action):
         if not KEEP_CURSOR_AFTER_SELECT:
             infield.cursor = VISUAL_END
 
+    elif "copy" in action:
+        # TODO add highlight here
+        clip.copy(infield.value[start:end])
+
     elif any(o in action for o in ['change','delete']):
         # set up values
         left = infield.value[:start]
         right = infield.value[end:]
-        cursor = start
+        cursor = start 
 
         # only do these if changing
         if action == "change_in":
             # add space if last word is edited
-            if wordlist_len-1 == wordindex:
+            if is_in_last_word(start,infield.value):
                 left += ' '
                 cursor += 1
-            switch_mode("INSERT")
-        
-        elif action == "delete_in":
-            # store selected value
-            selected = infield.value[start:end]
-            clip.copy(selected)
- 
+            switch_mode("INSERT")  
             
-        infield.set_value(left+right,cursor)
-        infield.print()
+        elif action == "delete_in":
+            # store in clipboard
+            clip.copy(infield.value[start:end])
         
-
-
+        infield.set_value(left+right,cursor)
+        
 
 ## find start,end indices for type `param` in infield
 def get_indices(param):
-    valid = ["w","'",'"','[]','{}','()','<>']
+    valid = ["w","W","'",'"','[]','{}','()','<>']
 
     # set up start, end pairs
     for pair in valid:
@@ -476,18 +665,14 @@ def get_indices(param):
 
 
     # find word
-    if param == "w":
-        wordlist = []
-        buff = ""
+    if param in "wW":
+        ## `word`-s are separated by characters in `DELIMITERS`
+        if param == "w":
+            wordlist = split_by_delimiters(infield.value)
 
-        # create list separated by non-shitespace
-        for c in infield.value:
-            if c in "!@#$%^&*()[]{}|\\;':\",.<>/? \t":
-                wordlist.append(buff)
-                buff = ""
-            else:
-                buff += c
-        wordlist.append(buff)
+        ## `WORD`-s are separated by whitespaces
+        elif param == "W":
+            wordlist = infield.value.split(' ')
         start = 0
 
         # loop through words to find start, wordindex
@@ -497,10 +682,12 @@ def get_indices(param):
                 break
 
             # otherwise iterate characers
-            start += len(word+' ')
+            start += len(word)+1
 
         # get end
         end = start+len(wordlist[wordindex])
+
+
 
     # find in delimiters 
     else:
@@ -525,9 +712,8 @@ def get_indices(param):
         if not all([param_found,end_found]):
             return None
         
-    # position is redundant for now, but may be useful at some point
-    position = [len(wordlist),wordindex]
-    return start,end,position
+    return start,end
+
 
 
 
@@ -566,40 +752,11 @@ def find(key,offset=0,reverse=False):
 
 
 
-# UI
-
-## get and sort messages, add lines attribute
-def get_lines():
-    # TODO: this 0 might be too much in the future
-    messages_raw = get(0)
-    messages = []
-
-    # sort messages
-    for m in sorted(messages_raw,key=lambda x: x['time']):
-        # add representation of file 
-        if m['type'] == 'file':
-            m['message'] = f"`.{m['extension']}` file."
-
-        # decode message
-        elif m['type'] == 'text':
-            m['message'] = decode(m['message'])
-
-        # break message into lines
-        m['lines'] = []
-        #m['lines'].append(m['username'])
-        m['lines'] += break_line(m['message'],MESSAGE_BREAKLEN)
-
-        # add message to list
-        messages.append(m)
-
-    return messages
-
-
-
 
 # GLOBALS
 PATH = os.path.abspath(os.path.dirname(__file__))
 LOGFILE = os.path.join(PATH,'log')
+DELIMITERS = "!@#$%^&*()[]{}|\\;':\",.<>/? \t"
 
 WIDTH,HEIGHT = os.get_terminal_size()
 KEEP_GOING = True
@@ -632,18 +789,12 @@ if __name__ == "__main__":
     if DO_DEBUG:
         open(LOGFILE,'w').close()
 
-    ##  TODO: add x, y limit
-    infield = getch.InputField(pos=[0,HEIGHT-1],xlimit=5)
-
     ## clear screen
     print('\033[2J')
 
-    # input thread
-    threading.Thread(target=getch_loop).start()
-
     # set default mode
     switch_mode("ESCAPE")
+    infield = getch.InputField(pos=[0,HEIGHT-1],xlimit=5)
 
-    # main loop
-    while KEEP_GOING:
-        time.sleep(1)
+    # main input loop
+    getch_loop()
