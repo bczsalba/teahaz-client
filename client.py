@@ -30,6 +30,9 @@ def encode_binary(a):
 def decode(a):
     return base64.b64decode(a).decode('utf-8')
 
+
+
+
 # INTERNAL #
 
 ## send args to logfile
@@ -94,31 +97,22 @@ def is_in_last_word(index,string):
     last_word_index = len(string)-len(wordlist[-1])
     return (last_word_index <= index)
 
-
-        
-
-
-
-
-# BINDS #
-
 ## switch to input mode, set globals
 def switch_mode(target):
-    global MODE, VALID_KEYS, VIMKEYS
+    global MODE, VALID_KEYS, BINDS
 
-    ## dont switch to escape mode if not in VIMMODE
-    if not VIMMODE:
+    if VIMMODE:
+        BINDS = VIMBINDS
+
+    else:
         if target == "ESCAPE":
             target = "INSERT"
+        BINDS  = BASEBINDS
 
     MODE = target
-    VALID_KEYS = [key for key in BINDS[target].keys()]
-
-    ## get vim valid binds
-    VIMKEYS = [key for key in VIMBINDS[MODE].keys()]
-
-
+    VALID_KEYS = [key for key in BINDS[MODE].keys()]
     printTo(WIDTH-len(MODE),0,MODE,clear=1)
+
 
 
 
@@ -165,6 +159,7 @@ def get_lines():
 def UI_loop():
     while KEEP_GOING:
         time.sleep(1)
+
 
 
 
@@ -226,6 +221,7 @@ def send(message,mType='text'):
 
 
 
+
 # INPUT #
 
 ## key intercepter loop, separate thread
@@ -246,7 +242,7 @@ def getch_loop():
         
         # add key to buffer if key+buffer is in either key cluster
         elif MODE != "INSERT" and len(buff):
-            for v in VIMKEYS+VALID_KEYS:
+            for v in VALID_KEYS:
                 buffkeylen = len(buff+key)-1
                 if buff+key in v:
                     _buffkey_valid = True
@@ -275,11 +271,6 @@ def getch_loop():
         # currently inactive
         if key == "SIGTERM":
             handle_action('quit')
-
-        # check if key is a valid single key vimbind
-        elif VIMMODE and key in VIMBINDS[MODE]:
-            action = VIMBINDS[MODE][key]
-            handle_action(action)   
 
         # shortcuts
         elif key in VALID_KEYS:   
@@ -584,6 +575,7 @@ def handle_action(action):
 
 
 
+
 # ACTION HANDLER FUNCTIONS #
 
 ## do `action` in infield.value, using get_indices for start/end
@@ -636,7 +628,6 @@ def do_in(param, action):
         
         infield.set_value(left+right,cursor)
         
-
 ## find start,end indices for type `param` in infield
 def get_indices(param):
     valid = ["w","W","'",'"','[]','{}','()','<>']
@@ -713,9 +704,6 @@ def get_indices(param):
             return None
         
     return start,end
-
-
-
 
 ## find key, set cursor to index+offset
 def find(key,offset=0,reverse=False):
