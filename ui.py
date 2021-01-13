@@ -375,32 +375,31 @@ class Label:
 
 
 # TEST CODE #
-c = Container(width=70,height=6,pos=[1,1])
-p1 = Prompt(label="One:",value="fish")
-p2 = Prompt(label="Two:",value="pog")
-p3 = Prompt(label="Three:")
-p4 = Prompt(options=["exit program","abandon all hope","I'm feeling lucky","ye who enter here","have graduated"])
-l1 = Label(value="left",justify="left")
-l2 = Label(value="center",justify="center")
-l3 = Label(value="right",justify="right")
+if __name__ == "__main__":
+    c = Container(width=70,height=6,pos=[1,1])
+    p1 = Prompt(label="One:",value="fish")
+    p2 = Prompt(label="Two:",value="pog")
+    p3 = Prompt(label="Three:")
+    p4 = Prompt(options=["exit program","abandon all hope","I'm feeling lucky","ye who enter here","have graduated"])
+    l1 = Label(value="left",justify="left")
+    l2 = Label(value="center",justify="center")
+    l3 = Label(value="right",justify="right")
 
-c.add_elements([p1,p2,p3,p4,l1,l2,l3])
-
-
-TODO:
-    add padding to container
-    clean up code
-
-#v = repr(c)
-#print(v)
-for i in range(len(c.selectables)):
-    time.sleep(0.4)
-    c.select(i)
-    print(repr(c))
+    c.add_elements([p1,p2,p3,p4,l1,l2,l3])
 
 
+    TODO:
+        add padding to container
+        clean up code
+        fix selection uppercase
 
-#a = Container(height=25)
+    for i in range(len(c.selectables)):
+        time.sleep(0.4)
+        c.select(i)
+        print(repr(c))
 
 
-print(f'\033[{HEIGHT-10};0H')
+
+
+
+    print(f'\033[{HEIGHT-10};0H')
