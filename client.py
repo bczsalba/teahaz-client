@@ -1,7 +1,6 @@
 # :main= python3 %
 
 # IMPORTS
-import re
 import os
 import sys
 import json
@@ -12,7 +11,7 @@ import requests
 import threading
 from settings import *
 import pyperclip as clip
-from getch import clean_ansi,real_length,break_line
+from ui import clean_ansi,real_length,break_line,PIPE_OUTPUT
 
 
 

@@ -7,52 +7,6 @@ from contextlib import contextmanager
 
 
 
-# helpers
-def clean_ansi(s):
-    return re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]').sub('', s)
-
-def real_length(s):
-    return len(clean_ansi(s))
-
-def break_line(_inline,_len,_pad=0,_separator=' '):
-    if _len == None or _separator not in _inline:
-        return [_inline]
-
-    # check if line is over length provided
-    if real_length(_inline) > _len:
-        clean = clean_ansi(_inline)
-        current = ''
-        control = ''
-        lines = []
-        pad = lambda l: (_pad*' ' if len(l) else '')
-
-        for i,(clen,real) in enumerate(zip(clean.split(_separator),_inline.split(_separator))):
-            # dont add separator if no current
-            sep = (_separator if len(current) else "") 
-
-            # add string to line if not too long
-            if len(pad(lines)+control+_separator+clen) <= _len:
-                current += sep + real
-                control += sep + clen
-
-            # add current to lines
-            elif len(current):
-                lines.append(pad(lines)+current)
-                current = real
-                control = clen
-
-        # add leftover values
-        if len(current):
-            lines.append(pad(lines)+current)
-
-        return lines
-
-    # return original line in array
-    else:
-        return _inline.split('\n')
-
-
-
 # this needs to be here in order to have arrow keys registered
 # from https://github.com/kcsaff/getkey
 class OSReadWrapper(object):
