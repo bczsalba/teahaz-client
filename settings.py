@@ -49,6 +49,7 @@ VIMBINDS = {
         "v" :          "mode_visual",
         "V" :          "select_line",
         "i" :          "mode_insert",
+        "q" :          "quit",
         
         # GOTO
         "I" :          "goto_line_start",

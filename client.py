@@ -11,7 +11,7 @@ import requests
 import threading
 from settings import *
 import pyperclip as clip
-from ui import clean_ansi,real_length,break_line,PIPE_OUTPUT
+from ui import clean_ansi,real_length,break_line
 
 
 
@@ -230,7 +230,6 @@ def getch_loop():
     buff = ''
     while KEEP_GOING:
         key = getch.getch()
-        dbg('key:',key)
 
         # this lets other functions hijack the key output as parameters
         if PIPE_OUTPUT:
@@ -501,7 +500,30 @@ def handle_action(action):
             switch_mode("ESCAPE")
             return
         
+        elif action.endswith("uppercase") or action.endswith("lowercase"):
+            # get start,end
+            start = infield.selected_start
+            end = infield.selected_end
 
+            # get sides to use
+            selected = infield.value[start:end]
+            left = infield.value[:start]
+            right = infield.value[end:]
+
+            # do upper/lowecase
+            if action.endswith("uppercase"):
+                selected = selected.upper()
+
+            elif action.endswith("lowercase"):
+                selected = selected.lower()
+
+            # set new value
+            infield.set_value(left+selected+right,infield.cursor)
+            switch_mode("ESCAPE")
+            return
+            
+        
+        # update cursor
         infield.cursor = VISUAL_END
         infield.select(VISUAL_START,VISUAL_END)
 

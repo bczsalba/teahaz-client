@@ -5,7 +5,7 @@ import sys,os,time
 WIDTH,HEIGHT = os.get_terminal_size()
 
 # client global
-VERBOSE = 0
+VERBOSE = 1
 
 
 
@@ -71,13 +71,14 @@ class Container:
     said options are added to the indexes.
     """
 
-    def __init__(self,pos,border=['=','#'],width=None,height=None,dynamic_size=True,center_elements=True):
+    def __init__(self,pos,border=['=','#'],width=None,height=None,dynamic_size=True,center_elements=True,padding=0):
         # set up descriptory values
-        self.width = min(width,WIDTH)
+        self.width = min(width,WIDTH-2)
         self.height = min(height,HEIGHT)
         self.pos = pos
         self.elements = []
         self.selectables = []
+        self.padding = padding
 
         # set up real_height value
         if not height == None:
@@ -102,27 +103,23 @@ class Container:
 
         # print elements
         x,starty = self.pos
-        starty += 1
+        starty += 1+self.padding
         x += 2
 
         # vertically center elements
         if self._do_center_elements:
-            starty += (self.height-len(self.elements))//2
+            vertical_padding = (self.real_height-len(self.elements)-1)//2 - 1
+            starty += vertical_padding
 
         # print all elements
         extra_lines = 0
         for i,e in enumerate(self.elements):
-            # i wish i could explain why this works
-            if WIDTH > 70:
-                pad = max(17-(WIDTH-70),4)
-            else:
-                pad = 17
-
-            e.width = self.width - pad
+            e.width = self.width - 4
 
             # get lines from element
             lines = repr(e).split('\n')
 
+            # remove lines whos line_break returned empty
             if lines == [""]:
                 self.elements.remove(e)
                 for o in self.selectables:
@@ -130,16 +127,18 @@ class Container:
                         self.selectables.remove(o)
                 continue
 
-            diff = len(lines)-1
-            extra_lines += diff
+            diff = len(lines) - 1
+            new_real_height += diff
 
             for li,l in enumerate(lines):
                 line += f"\033[{starty+i+li};{x}H "+l
 
             starty += diff
 
-        if not self.real_height == new_real_height+extra_lines:
-            self.real_height += extra_lines
+        
+        if not self.real_height <= new_real_height:
+            self.height += vertical_padding
+            self.real_height = new_real_height
             self.get_border()
 
         # print border
@@ -163,7 +162,7 @@ class Container:
         # update self sizing
         if self.width == None or self._do_dynamic_size:
             # if element is too wide selt self width to it+pad
-            if element.width >= self.width:
+            if WIDTH-6 > element.width >= self.width:
                 self.width = element.width+3
 
             # if element is too tall set self height
@@ -187,6 +186,12 @@ class Container:
 
         # update real_height
         self.real_height += element.height
+
+        for _ in range(self.padding):
+            e = Label("")
+            self.elements.append(e)
+            self.real_height += e.height
+            self.height += e.height
 
         # update border
         self.get_border()
@@ -358,25 +363,31 @@ class Label:
         self._is_selected = False
 
     def __repr__(self):
+        lines = break_line(self.value,_len=self.width)
+
         if self.justify == "left":
-            line = self.value
+            # nothing needs to be done
+            pass
 
         elif self.justify == "center":
-            pad = ((self.width-real_length(self.value))//2)*' '
-            line = pad + self.value + pad
+            for i,l in enumerate(lines):
+                pad = ((self.width-real_length(l))//2)*' '
+                lines[i] = pad + l + pad
 
         elif self.justify == "right":
-            pad = (self.width-real_length(self.value))*' '
-            line = pad + self.value
+            for i,l in enumerate(lines):
+                pad = (self.width-real_length(l))*' '
+                lines[i] = pad + l
 
-        return line
+        self.height = len(lines)
+        return "\n".join(lines)
         
 
 
 
 # TEST CODE #
 if __name__ == "__main__":
-    c = Container(width=70,height=6,pos=[1,1])
+    c = Container(width=50,height=10,pos=[10,5],padding=0,dynamic_size=False)
     p1 = Prompt(label="One:",value="fish")
     p2 = Prompt(label="Two:",value="pog")
     p3 = Prompt(label="Three:")
@@ -385,19 +396,23 @@ if __name__ == "__main__":
     l2 = Label(value="center",justify="center")
     l3 = Label(value="right",justify="right")
 
-    c.add_elements([p1,p2,p3,p4,l1,l2,l3])
+    c.add_elements([l1,l2,l3])
+    c.add_elements(Label())
+    c.add_elements([p1,p2,p3])
+    c.add_elements(Label())
+    c.add_elements([p4])
 
 
+    """
     TODO:
-        add padding to container
-        clean up code
         fix selection uppercase
+    """
 
     for i in range(len(c.selectables)):
         time.sleep(0.4)
         c.select(i)
         print(repr(c))
-
+        #input()
 
 
 
