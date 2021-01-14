@@ -9,7 +9,6 @@ import getch
 import base64
 import requests
 import threading
-from settings import *
 import pyperclip as clip
 from ui import clean_ansi,real_length,break_line
 
@@ -33,6 +32,13 @@ def decode(a):
 
 
 # INTERNAL #
+
+def import_settings():
+    with open(os.path.join(PATH,'settings.json'),'r') as f:
+        settings = json.load(f)
+        for key,item in settings.items():
+            globals()[key] = item
+
 
 ## send args to logfile
 def dbg(*args):
@@ -764,6 +770,8 @@ def find(key,offset=0,reverse=False):
 
 # GLOBALS
 PATH = os.path.abspath(os.path.dirname(__file__))
+import_settings()
+
 LOGFILE = os.path.join(PATH,'log')
 DELIMITERS = "!@#$%^&*()[]{}|\\;':\",.<>/? \t"
 

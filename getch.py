@@ -318,6 +318,7 @@ class _GetchWindows:
         return msvcrt.getch()
 
 
+
 # clean namespace
 getch = _Getch()
 

@@ -5,7 +5,7 @@ import sys,os,time
 WIDTH,HEIGHT = os.get_terminal_size()
 
 # client global
-VERBOSE = 1
+VERBOSE = 0
 
 
 
@@ -71,25 +71,29 @@ class Container:
     said options are added to the indexes.
     """
 
-    def __init__(self,pos,border=['=','#'],width=None,height=None,dynamic_size=True,center_elements=True,padding=0):
+    def __init__(self,pos=None,border=['=','#'],width=None,height=None,dynamic_size=True,center_elements=True,padding=0):
         # set up descriptory values
-        self.width = min(width,WIDTH-2)
-        self.height = min(height,HEIGHT)
+        if not width == None:
+            self.width = min(width,WIDTH-2)
+        else:
+            self.width = 0
+
+        if not height == None:
+            self.height = min(height,HEIGHT)
+        else:
+            self.height = 0
+        self.real_height = self.height
+
+        if pos == None:
+            pos = [0,0]
         self.pos = pos
         self.elements = []
         self.selectables = []
         self.padding = padding
-
-        # set up real_height value
-        if not height == None:
-            self.real_height = height
-        else:
-            self.real_height = 1
-            self.height = 1
+        self.previous_pos = None
 
         # set up border
         self.borderchar_x,self.borderchar_y = border 
-        self.get_border()
 
         # set up flags
         self._do_dynamic_size = dynamic_size
@@ -101,19 +105,33 @@ class Container:
         line = ''
         new_real_height = self.height
 
+        # refresh border if position has changed
+        if not self.previous_pos == self.pos:
+            self.get_border()
+            self.wipe()
+
         # print elements
         x,starty = self.pos
-        starty += 1+self.padding
+        starty += 2
         x += 2
 
         # vertically center elements
         if self._do_center_elements:
-            vertical_padding = (self.real_height-len(self.elements)-1)//2 - 1
+            vertical_padding = max((self.real_height-len(self.elements))//2,0)
             starty += vertical_padding
 
         # print all elements
         extra_lines = 0
         for i,e in enumerate(self.elements):
+            if e.width > self.width-4:
+                if e.width >= WIDTH:
+                    if VERBOSE:
+                        raise Exception("Element width too high.")
+                    else:
+                        continue
+                elif self._do_dynamic_size:
+                    self.width = e.width + 4
+
             e.width = self.width - 4
 
             # get lines from element
@@ -137,8 +155,8 @@ class Container:
 
         
         if not self.real_height <= new_real_height:
-            self.height += vertical_padding
             self.real_height = new_real_height
+            self.height = new_real_height
             self.get_border()
 
         # print border
@@ -150,12 +168,14 @@ class Container:
             # write to stdout
             line += f'\033[{y};{x}H'+char
 
+        # update previous pos
+        self.previous_pos = self.pos
         return line
 
 
     # internal function to add elements
     def _add_element(self,element):
-        # set width for element if none is avaiable
+        # set width for element if none is available
         if element.width == None:
             element.width = self.width
 
@@ -168,6 +188,9 @@ class Container:
             # if element is too tall set self height
             if self.real_height+element.height >= self.height:
                 self.height = self.real_height+element.height
+
+        # run element to update its values
+        repr(element)
 
         # add to elements
         self.elements.append(element)
@@ -186,6 +209,7 @@ class Container:
 
         # update real_height
         self.real_height += element.height
+        self.height += element.height
 
         for _ in range(self.padding):
             e = Label("")
@@ -203,15 +227,15 @@ class Container:
         x1,y1 = px,py
         x1 += 1
         y1 += 1
-        x2 = px+self.width
-        y2 = py+self.real_height
+        x2 = px+self.width+1
+        y2 = py+self.real_height+2+self.padding
 
         self.border = []
-        for y in range(py+1,py+self.real_height):
+        for y in range(py+1,y2):
             self.border.append([x1,y,self.borderchar_y])
             self.border.append([x2,y,self.borderchar_y])
 
-        for x in range(px+1,px+self.width+1):
+        for x in range(px+1,x2+1):
             self.border.append([x,y1,self.borderchar_x])
             self.border.append([x,y2,self.borderchar_x])
 
@@ -238,16 +262,28 @@ class Container:
                 index = len(self.selectables)-1
         
         # go through selectables
+        target_element = self.selectables[index][0]
         for i,(e,sub_i) in enumerate(self.selectables):
             # check if current is the target
             if i == index:
                 e.select(sub_i)
                 
             # unselect element if 
-            elif not i in range(index,len(self.selectables)):
+            elif not target_element == self.selectables[i][0]:
                 e._is_selected = False
 
+    
+    # go through object, wipe ever character contained
+    def wipe(self,pos=None):
+        if pos == None:
+            pos = self.pos
 
+        px,py = pos
+        for y in range(py+1,py+self.height+2):
+            for x in range(px+1,px+self.width+2):
+                sys.stdout.write(f'\033[{y};{x}H ')
+
+        sys.stdout.flush()
 
 class Prompt:
     """ 
@@ -259,20 +295,22 @@ class Prompt:
     option is chosen, and the options given are disregarded.
     """
     
-    def __init__(self,width=None,options=None,label=None,value=""): 
+    def __init__(self,width=None,options=None,label=None,value="",padding=0): 
         # the existence of label decides the layout (<> []/[] [] [])
         if label:
             self.label = str(label)
+            self.width = real_length(self.label)+len(value)
         else:
             self.label = label
+            self.width = width
 
         # set up dimensions
         self.height = 1
-        self.width = width
 
         # set up instance variables
         self.selected_index = None
         self.options = options
+        self.padding = padding
         self.value = value
         
         # flags
@@ -286,10 +324,14 @@ class Prompt:
         if not self.label == None:
             highlight = ('\033[47m\033[30m' if self._is_selected else '')
 
-            left = self.label + (self.width-len(clean_ansi(self.label)) - 4 - real_length(self.value)) * " "
+            middle_pad = (self.width-len(clean_ansi(self.label)) - 4 - real_length(self.value) - self.padding )
+            middle_pad = max(4,middle_pad)
+
+            left = self.padding*" "+ self.label + middle_pad * " "
             right = highlight + f"[ {self.value} ]" + '\033[0;0m'
 
             line = left + right
+            self.width = max(self.width,real_length(line))
 
         # else print all options
         else:
@@ -309,7 +351,7 @@ class Prompt:
             
             for i,l in enumerate(lines):
                 l_len = real_length(l)
-                pad = ( (self.width-l_len)//2 ) * " "
+                pad = ( (self.width-l_len)//2 + self.padding ) * " "
                 lines[i] = pad + l + pad
                 
             # set new hight, return line
@@ -387,7 +429,7 @@ class Label:
 
 # TEST CODE #
 if __name__ == "__main__":
-    c = Container(width=50,height=10,pos=[10,5],padding=0,dynamic_size=False)
+    c = Container(width=50,height=None,pos=[10,5],padding=1,dynamic_size=False)
     p1 = Prompt(label="One:",value="fish")
     p2 = Prompt(label="Two:",value="pog")
     p3 = Prompt(label="Three:")
@@ -397,9 +439,9 @@ if __name__ == "__main__":
     l3 = Label(value="right",justify="right")
 
     c.add_elements([l1,l2,l3])
-    c.add_elements(Label())
+    #c.add_elements(Label())
     c.add_elements([p1,p2,p3])
-    c.add_elements(Label())
+    #c.add_elements(Label())
     c.add_elements([p4])
 
 
