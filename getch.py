@@ -43,7 +43,8 @@ class OSReadWrapper(object):
 
 class InputField:
     """ Example of use at the bottom of the file """
-    def __init__(self,pos=None,linecap=0,default="",xlimit=None,ylimit=None):
+
+    def __init__(self,pos=None,linecap=0,default="",xlimit=None,ylimit=None,print_at_start=False):
         # set up instance variables
         self.value = default
         self.cursor = len(self.value)
@@ -59,17 +60,19 @@ class InputField:
         # set position as needed
         if pos == None:
             _,tHeight = os.get_terminal_size()
-            self.x = 0
-            self.y = tHeight
+            self.pos = [0,tHeight]
         else:
-            self.x,self.y = pos
+            self.pos = pos
 
         # disable cursor
         self.set_cursor_visible(False)
-        # print
-        self.print()
 
-    def send(self,key):
+        if print_at_start:
+            # print
+            self.print()
+
+
+    def send(self,key,_do_print=True):
         # delete char before cursor
         if key == "BACKSPACE":
             if self.cursor > 0:
@@ -95,20 +98,16 @@ class InputField:
             pass
 
         else:
-            # TODO
-            if key == "ENTER":
-                if self.allow_multiline:
-                    key = "\n"
-                else:
-                    key = ""
+            if not (self.xlimit and len(self.value+key) > self.xlimit):
+                # add character at cursor
+                left = self.value[:self.cursor]
+                right = self.value[self.cursor:]
+                self.value = left+key+right
+                self.cursor += len(key)
 
-            # add character at cursor
-            left = self.value[:self.cursor]
-            right = self.value[self.cursor:]
-            self.value = left+key+right
-            self.cursor += len(key)
+        if _do_print:
+            self.print()
 
-        self.print()
 
     # enable/disable (terminal) cursor
     def set_cursor_visible(self,value):
@@ -117,12 +116,14 @@ class InputField:
         else:
             print('\033[?25l')
 
+
     # reset self.value
     def clear_value(self):
         self.wipe()
         self.value = ''
         self.cursor = len(self.value)
         self.print()
+
 
     # set value, cursor location, pass highlight
     def set_value(self,target,cursor=None,highlight=True,force_cursor=False,do_print=True):
@@ -140,17 +141,22 @@ class InputField:
         elif not cursor == None:
             self.cursor = cursor
 
+        self.width = len(self.value)
+
         if do_print:
             # print self
             self.print(highlight=highlight)
  
+
     # clear the space occupied by input currently
     def wipe(self):
-        sys.stdout.write(f'\033[{self.y};{self.x}H'+(len(self.value)+2)*' ')
+        x,y = self.pos
+        sys.stdout.write(f'\033[{y};{x}H'+(len(self.value)+2)*' ')
         sys.stdout.flush()
 
+
     # print self, flush and show highlight if set
-    def print(self,flush=True,highlight=True):
+    def print(self,return_line=False,flush=True,highlight=True):
         # set up two sides 
         left = self.value[:self.cursor]
         right = self.value[self.cursor+1:]
@@ -167,16 +173,22 @@ class InputField:
         # construct line
         line = left + highlighter + charUnderCursor + '\033[0m' + right
 
+        if return_line:
+            return line
+
+        x,y = self.pos
+
         # clear current
-        sys.stdout.write(f'\033[{self.y};{self.x}H' + ' '*(len(self.value)+2))
+        sys.stdout.write(f'\033[{y};{x}H' + ' '*(len(self.value)+2))
         # write to stdout
-        sys.stdout.write(f'\033[{self.y};{self.x}H'+line)
+        sys.stdout.write(f'\033[{y};{x}H'+line)
 
         # flush if needed
         if flush:
             sys.stdout.flush()
 
-    def select(self,start=None,end=None):
+
+    def visual(self,start=None,end=None):
         if start > end:
             temp = end
             end = start
@@ -204,9 +216,9 @@ class InputField:
         line = left+highlight+selected+'\033[0m'+right
 
         # write to stdout
-        sys.stdout.write(f'\033[{self.y};{self.x}H'+line)
+        x,y = self.pos
+        sys.stdout.write(f'\033[{y};{x}H'+line)
         sys.stdout.flush()
-
 
 
 class _Getch:

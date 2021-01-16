@@ -10,11 +10,12 @@ import base64
 import requests
 import threading
 import pyperclip as clip
-from ui import clean_ansi,real_length,break_line
+from ui import Container,Prompt,Label,italic,bold,underline,container_from_dict
+from ui import clean_ansi,real_length,break_line,WIDTH,HEIGHT
 
 
 
-# HELPERS
+# HELPERS #
 
 ### b64 encode
 def encode(a):
@@ -33,12 +34,35 @@ def decode(a):
 
 # INTERNAL #
 
+## import settings from json
 def import_settings():
+    global SETTINGS
+
     with open(os.path.join(PATH,'settings.json'),'r') as f:
-        settings = json.load(f)
-        for key,item in settings.items():
+        SETTINGS = json.load(f)
+        for key,item in SETTINGS.items():
             globals()[key] = item
 
+    if is_set('MODE'):
+        switch_mode(MODE)
+
+## edit setting in json (needed because lambda cannot do assignments)
+def edit_setting(key,value):
+    global SETTINGS
+
+    # get value if needed
+    if callable(value):
+        value = value()
+
+    # change setting
+    SETTINGS[key] = value
+
+    # write to file
+    with open(os.path.join(PATH,'settings.json'),'w') as f:
+        f.write(json.dumps(SETTINGS,indent=4))
+
+    # reimport settings
+    import_settings()
 
 ## send args to logfile
 def dbg(*args):
@@ -160,10 +184,75 @@ def get_lines():
 
     return messages
 
-## main UI loop
-def UI_loop():
-    while KEEP_GOING:
-        time.sleep(1)
+
+## input dialog class
+class InputDialog(Container):
+    def __init__(self,options=None,label_value='',label_justify="center",label_underpad=0,field_value='',**kwargs):
+        super().__init__(**kwargs)
+
+        # set up label class
+        self.label = Label(value=label_value,justify=label_justify)
+
+        # set up field depending on options given
+        self.options = options
+        if isinstance(options,list):
+            self.field = Prompt(options=options,width=20)
+        else:
+            self.field = InputDialogField(default=field_value,print_at_start=False)
+        
+        # add label
+        self.add_elements([self.label])
+
+        # add paddings under label
+        for _ in range(label_underpad):
+            self.add_elements(Label())
+
+        # add field
+        self.add_elements([self.field])
+        
+        # set xlimit of field
+        self.field.xlimit = self.width-3
+
+    def submit(self):
+        self.value = self.field.submit()
+        return self.value
+
+    def __repr__(self):
+        self.width = max(self.width,self.field.width)
+        self.get_border()
+        self.center()
+        self.wipe()
+
+        return super().__repr__()
+
+
+## field class for input dialog
+class InputDialogField(getch.InputField):
+    def __init__(self,**kwargs):
+        super().__init__(**kwargs)
+
+        self.width = len(self.value)
+        self.height = 1
+        self._is_selectable = False
+        self.options = None
+
+    # return text of self
+    def __repr__(self):
+        line = self.print(return_line=True)
+        return line
+
+    # return value
+    def submit(self):
+        return self.value
+    
+    # def send(self,*args,**kwargs):
+    #    key = args[0]
+    #    if key == "BACKSPACE" and len(self.value):
+    #        self.width -= 1
+    #    else:
+    #        self.width += 1
+
+    #    super().send(*args,**kwargs)
 
 
 
@@ -241,7 +330,9 @@ def getch_loop():
         if PIPE_OUTPUT:
             fun,args = PIPE_OUTPUT
             fun(key,**args)
-            PIPE_OUTPUT = None
+            
+            if not KEEP_PIPE:
+                PIPE_OUTPUT = None
             continue
         
         # add key to buffer if key+buffer is in either key cluster
@@ -531,7 +622,7 @@ def handle_action(action):
         
         # update cursor
         infield.cursor = VISUAL_END
-        infield.select(VISUAL_START,VISUAL_END)
+        infield.visual(VISUAL_START,VISUAL_END)
 
     # action done to end
     elif action.endswith('_end'):
@@ -542,7 +633,7 @@ def handle_action(action):
             elif action == "select_word_end":
                  start,end = get_indices('w')
                  VISUAL_END = end-1
-            infield.select(VISUAL_START,VISUAL_END)
+            infield.visual(VISUAL_START,VISUAL_END)
 
         elif action.startswith('delete') or action.startswith('change'):
             if action == "delete_line_end":
@@ -576,8 +667,13 @@ def handle_action(action):
             VISUAL_START = 0
             VISUAL_END = len(infield.value)
 
-            infield.select(VISUAL_START,VISUAL_END)
+            infield.visual(VISUAL_START,VISUAL_END)
             switch_mode("VISUAL")
+
+    # menu actions
+    elif action.startswith('menu_'):
+        # call menu handler
+        globals()[action]()
 
 
     
@@ -600,6 +696,115 @@ def handle_action(action):
         PIPE_OUTPUT = find,{'offset': -1, 'reverse': True}
 
 
+def handle_menu(key,menu,obj,prev=None):
+    global PIPE_OUTPUT
+
+    # settings menu related actions
+    if menu == "settings":
+
+        # choose a setting
+        if key == "ENTER":
+
+            # get selected child from obj
+            selected = obj.selected[0]
+
+            # decide if dialogue should be input or prompt type
+            if isinstance(selected.real_value,dict):
+                d = container_from_dict(selected.real_value,dbg('hi'),width=40)
+                PIPE_OUTPUT = handle_menu,{"menu": "settings","obj": d, "prev": [menu,obj.selected_index]}
+            
+            else:
+                value = selected.value
+                if value in ["True","False"]:
+                    options = [True, False]
+                    width = 30
+                else:
+                    options = None
+                    width = 40
+
+                # create opject
+                d = InputDialog(
+                        label_value=bold(selected.label+':'),
+                        label_underpad=1,
+                        options=options,
+                        field_value=selected.real_value,
+                        width=40,
+                )
+
+                # select the current value in prompt
+                if options:
+                    index = [str(o) for o in options].index(value)
+                    d.select(index)
+
+                # overwrite submit function
+                d.submit = lambda: edit_setting(selected.label,d.field.submit)
+
+
+                # set new pipes
+                PIPE_OUTPUT = handle_menu,{"menu": "input_dialog", "obj": d, "prev": [menu,obj.selected_index] }
+
+            # clear previous container from screen
+            obj.wipe()
+
+            # center and print new container
+            d.center()
+            print(d)
+            return 
+
+    # input dialogue actions
+    elif menu == "input_dialog":
+        # submit input, go to previous menu by sending ESC
+        if key == "ENTER":
+            obj.submit()
+            handle_menu("ESC",menu,obj,prev)
+
+        # quit input
+        elif key == "ESC":
+            obj.wipe()
+            
+            # go to previous menu
+            name, index = prev
+            new = globals()["menu_"+name](index)
+
+            # set new pipes
+            PIPE_OUTPUT = handle_menu,{"menu": name,"obj": new}
+            return
+
+        else:
+            if obj.options:
+                if key in "jl":
+                    obj.selected_index += 1
+
+                elif key in "hk":
+                    obj.selected_index -= 1
+
+                obj.select()
+                print(obj)
+
+            else:
+                obj.field.send(key)
+                print(obj)
+
+        return
+            
+
+    # universal to all menus
+    if len(obj.selectables):
+        selected = obj.selected_index
+        if key == "j":
+            obj.selected_index += 1
+        elif key == "k":
+            obj.selected_index -= 1
+
+    if key == "ESC":
+        PIPE_OUTPUT = None
+        obj.wipe()
+        infield.print()
+        return
+     
+    PIPE_OUTPUT = handle_menu,{"menu": menu,"obj": obj}
+    obj.select()
+    print(obj)
 
 
 
@@ -627,7 +832,7 @@ def do_in(param, action):
             VISUAL_END = end-1
 
         # update values
-        infield.select(VISUAL_START,VISUAL_END)
+        infield.visual(VISUAL_START,VISUAL_END)
         if not KEEP_CURSOR_AFTER_SELECT:
             infield.cursor = VISUAL_END
 
@@ -764,6 +969,33 @@ def find(key,offset=0,reverse=False):
     # print infield
     infield.print()
     
+def menu_settings(index=0):
+    global PIPE_OUTPUT,KEEP_PIPE
+
+    # open settings file
+    with open('settings.json','r') as f:
+        SETTINGS = json.load(f)
+        c = container_from_dict(SETTINGS)
+
+    # set pipes
+    PIPE_OUTPUT = handle_menu,{"menu": "settings","obj": c}
+    KEEP_PIPE = True
+
+    # clear infield from screen
+    infield.wipe()
+    
+    # do first selection
+    c.selected_index = index
+    c.select()
+
+    # center
+    c.center()
+
+    # print
+    print(c)
+    
+    return c
+
 
 
 
@@ -775,7 +1007,6 @@ import_settings()
 LOGFILE = os.path.join(PATH,'log')
 DELIMITERS = "!@#$%^&*()[]{}|\\;':\",.<>/? \t"
 
-WIDTH,HEIGHT = os.get_terminal_size()
 KEEP_GOING = True
 
 SESSION = requests.Session()
@@ -788,6 +1019,7 @@ VISUAL_END = 0
 
 PIPE_OUTPUT = None
 PIPE_ARGS = {}
+KEEP_PIPE = False
 
 # given by server
 COOKIE = "flamingoestothestore"
@@ -811,7 +1043,7 @@ if __name__ == "__main__":
 
     # set default mode
     switch_mode("ESCAPE")
-    infield = getch.InputField(pos=[0,HEIGHT-1],xlimit=5)
+    infield = getch.InputField(pos=[0,HEIGHT-1])
 
     # main input loop
     getch_loop()

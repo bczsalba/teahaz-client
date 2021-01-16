@@ -55,6 +55,54 @@ def break_line(_inline,_len,_pad=0,_separator=' '):
     else:
         return _inline.split('\n')
 
+def container_from_dict(dic,handler=None,**kwargs):
+    dic_c = Container(**kwargs)
+
+    for i,(key,item) in enumerate(dic.items()):
+
+        # read titles into labels
+        if "title" in key and key[-1].isdigit():
+            l = Label(value=italic(bold(item)),justify="left")
+            
+            # only pad if not the first element
+            if not i == 0:
+                pad = Label()
+                dic_c.add_elements(pad)
+
+            # add label to container
+            dic_c.add_elements(l)
+            continue
+
+        # avoid long items
+        if len(str(item)) > dic_c.width:
+            real_value = item
+            item = "..."
+        else:
+            real_value = item
+
+        # create, add prompt
+        p = Prompt(label=key,value=str(item),padding=4)
+        p.real_value = real_value
+
+        if callable(handler):
+            p.submit = handler
+
+        dic_c.add_elements(p)
+
+    return dic_c
+
+
+
+
+# COLORS #
+def bold(s):
+    return '\033[1m'+s+'\033[0m'
+
+def italic(s):
+    return '\033[3m'+s+'\033[0m'
+
+def underline(s):
+    return '\033[4m'+s+'\033[0m'
 
 
 
@@ -66,12 +114,12 @@ class Container:
     be automatically set when adding new elements.
 
     The `select` method goes through a list of this
-    object's selectable elements, which means that 
-    after adding a Prompt with multiple options all
-    said options are added to the indexes.
+    object's selectable elements, and instead of 
+    just using the object, the individual options
+    are stored.
     """
 
-    def __init__(self,pos=None,border=['=','#'],width=None,height=None,dynamic_size=True,center_elements=True,padding=0):
+    def __init__(self,pos=None,border='-|',width=None,height=None,dynamic_size=True,center_elements=True,padding=0):
         # set up descriptory values
         if not width == None:
             self.width = min(width,WIDTH-2)
@@ -88,8 +136,10 @@ class Container:
             pos = [0,0]
         self.pos = pos
         self.elements = []
+        self.selected = None
         self.selectables = []
         self.padding = padding
+        self.selected_index = 0
         self.previous_pos = None
 
         # set up border
@@ -98,17 +148,12 @@ class Container:
         # set up flags
         self._do_dynamic_size = dynamic_size
         self._do_center_elements = center_elements
-
+        
 
     # text representation of self
     def __repr__(self):
         line = ''
         new_real_height = self.height
-
-        # refresh border if position has changed
-        if not self.previous_pos == self.pos:
-            self.get_border()
-            self.wipe()
 
         # print elements
         x,starty = self.pos
@@ -117,7 +162,7 @@ class Container:
 
         # vertically center elements
         if self._do_center_elements:
-            vertical_padding = max((self.real_height-len(self.elements))//2,0)
+            vertical_padding = max((self.real_height-sum(e.height for e in self.elements))//2,0)
             starty += vertical_padding
 
         # print all elements
@@ -133,6 +178,7 @@ class Container:
                     self.width = e.width + 4
 
             e.width = self.width - 4
+            e.pos = [x+1,starty+i]
 
             # get lines from element
             lines = repr(e).split('\n')
@@ -149,6 +195,7 @@ class Container:
             new_real_height += diff
 
             for li,l in enumerate(lines):
+                line += f"\033[{starty+i+li};{x}H"+(real_length(l)+2)*' '
                 line += f"\033[{starty+i+li};{x}H "+l
 
             starty += diff
@@ -169,7 +216,6 @@ class Container:
             line += f'\033[{y};{x}H'+char
 
         # update previous pos
-        self.previous_pos = self.pos
         return line
 
 
@@ -193,7 +239,19 @@ class Container:
         repr(element)
 
         # add to elements
+        # update real_height
+        self.real_height += element.height
+        self.height += element.height
+
+        # add padding
+        for _ in range(self.padding):
+            e = Label("")
+            self.elements.append(e)
+            self.real_height += e.height
+            self.height += e.height
+
         self.elements.append(element)
+
 
         # add selectables
         if element._is_selectable:
@@ -206,16 +264,6 @@ class Container:
             # go through options, add element+index pairs
             for i in range(options):
                 self.selectables.append([element,i])
-
-        # update real_height
-        self.real_height += element.height
-        self.height += element.height
-
-        for _ in range(self.padding):
-            e = Label("")
-            self.elements.append(e)
-            self.real_height += e.height
-            self.height += e.height
 
         # update border
         self.get_border()
@@ -253,14 +301,24 @@ class Container:
 
 
     # select index in selectables list
-    def select(self,index):
+    def select(self,index=None):
+        if index == None:
+            index = self.selected_index
+
         # error if invalid index
-        if index >= len(self.selectables):
+        if index > len(self.selectables)-1:
             if VERBOSE:
                 raise Exception("Index is not in elements.")
             else:
                 index = len(self.selectables)-1
+
+        # avoid < 0 indexes
+        index = max(0,index)
         
+        # set instance variables
+        self.selected = self.selectables[index]
+        self.selected_index = index
+
         # go through selectables
         target_element = self.selectables[index][0]
         for i,(e,sub_i) in enumerate(self.selectables):
@@ -271,12 +329,15 @@ class Container:
             # unselect element if 
             elif not target_element == self.selectables[i][0]:
                 e._is_selected = False
-
+  
     
     # go through object, wipe ever character contained
     def wipe(self,pos=None):
         if pos == None:
             pos = self.pos
+
+        if self.pos == None:
+            return
 
         px,py = pos
         for y in range(py+1,py+self.height+2):
@@ -284,6 +345,20 @@ class Container:
                 sys.stdout.write(f'\033[{y};{x}H ')
 
         sys.stdout.flush()
+
+    
+    # transform self to new position
+    def move(self,pos):
+        self.pos = pos
+        self.wipe()
+        self.get_border()
+
+
+    def center(self,xoffset=0,yoffset=10):
+        x = (WIDTH-self.width-xoffset)//2
+        y = (HEIGHT-self.height-yoffset)//2
+        self.move([x,y])
+
 
 class Prompt:
     """ 
@@ -337,8 +412,11 @@ class Prompt:
         else:
             # set up line
             line = ''
-            for i,option in enumerate(self.options):
-                line += "  "+ self._get_option_highlight(i) + f"[ {option} ]" + '\33[0;0m'
+            if isinstance(self.options, list):
+                for i,option in enumerate(self.options):
+                    line += "  "+ self._get_option_highlight(i) + f"[ {option} ]" + '\33[0;0m'
+            else:
+                line = self.value
 
             # center all lines 
             lines = break_line(line,_len=self.width-3,_separator="  ")
@@ -351,7 +429,7 @@ class Prompt:
             
             for i,l in enumerate(lines):
                 l_len = real_length(l)
-                pad = ( (self.width-l_len)//2 + self.padding ) * " "
+                pad = ( (self.width-l_len)//2 + self.padding - 1) * " "
                 lines[i] = pad + l + pad
                 
             # set new hight, return line
@@ -375,14 +453,14 @@ class Prompt:
         self._is_selected = True
         self.selected_index = index
 
+        if isinstance(self.options,list):
+            self.value = self.options[index]
+        return self.value
+
 
     # method to overwrite
     def submit(self):
-        if VERBOSE:
-            raise Exception("Submit method needs to be implemented on a per-object basis.")
-        else:
-            return
-
+        return self.value
 
 
 class Label:
@@ -413,7 +491,7 @@ class Label:
 
         elif self.justify == "center":
             for i,l in enumerate(lines):
-                pad = ((self.width-real_length(l))//2)*' '
+                pad = ((self.width-real_length(l))//2+1)*' '
                 lines[i] = pad + l + pad
 
         elif self.justify == "right":
@@ -424,7 +502,6 @@ class Label:
         self.height = len(lines)
         return "\n".join(lines)
         
-
 
 
 # TEST CODE #
