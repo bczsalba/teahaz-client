@@ -10,8 +10,8 @@ import base64
 import requests
 import threading
 import pyperclip as clip
-from ui import Container,Prompt,Label,italic,bold,underline,container_from_dict
-from ui import clean_ansi,real_length,break_line,WIDTH,HEIGHT
+from pytermgui import clean_ansi,real_length,break_line,WIDTH,HEIGHT
+from pytermgui import Container,Prompt,Label,italic,bold,underline,container_from_dict
 
 
 
@@ -32,9 +32,13 @@ def decode(a):
 
 
 
+
+
+
 # INTERNAL #
 
-## import settings from json
+## settings
+### import settings from json
 def import_settings():
     global SETTINGS
 
@@ -49,22 +53,53 @@ def import_settings():
 ## edit setting in json (needed because lambda cannot do assignments)
 def edit_setting(key,value):
     global SETTINGS
+    global SETTINGS_DEPTH
 
     # get value if needed
+    okey = key
+    ovalue = value
+
+    setting = SETTINGS_DEPTH[-1]
+
+    # eval value if needed
     if callable(value):
         value = value()
 
-    # change setting
-    SETTINGS[key] = value
+
+    # find root of current part of dict
+    if len(SETTINGS_DEPTH) == 1:
+        one = SETTINGS_DEPTH[0]
+        root = SETTINGS
+
+    elif len(SETTINGS_DEPTH) == 2:
+        one,two = SETTINGS_DEPTH
+        root = SETTINGS[one]
+
+    elif len(SETTINGS_DEPTH) == 3:
+        one,two,three = SETTINGS_DEPTH
+        root = SETTINGS[one][two]
+    
+    # this shouldnt happen lol
+    else:
+        dbg(SETTINGS_DEPTH)
+
+
+    # apply change
+    root[setting] = value
+
 
     # write to file
     with open(os.path.join(PATH,'settings.json'),'w') as f:
         f.write(json.dumps(SETTINGS,indent=4))
 
+
     # reimport settings
     import_settings()
 
-## send args to logfile
+
+
+## miscellaneous
+### send args to logfile
 def dbg(*args):
     if not DO_DEBUG:
         return
@@ -73,20 +108,14 @@ def dbg(*args):
     with open(LOGFILE,'a') as f:
         f.write(s+'\n')
 
-## check if variable is in scope
-def is_set(var,scope=None):
-    if scope == None:
-        scope = globals()
-    return (var in scope and scope[var])
-
-## do `fun` after `ms` passes, nonblocking
+### do `fun` after `ms` passes, nonblocking
 def do_after(ms,fun,control='true',args={}):
     timed = lambda: (time.sleep(ms/1000),
                      fun(**args) if is_set(control) else 0)
 
     threading.Thread(target=timed).start()
 
-## merge two dicts together, on conflict overwrite one's values
+### merge two dicts together, on conflict overwrite one's values
 def merge(one,two):
     merged = one.copy()
     for key in two.keys():
@@ -94,7 +123,68 @@ def merge(one,two):
             merged[key][subkey] = value
     return merged
 
-## split `s` by delimiters defined in `DELIMITERS`, return array of words
+### look up key in dict by value
+def reverse_dict_lookup(d,value):
+    keys = list(d.keys())
+    values = list(d.values())
+
+    index = values.index(value)
+    return keys[index]
+
+## variables
+### check if variable is in scope
+def is_set(var,scope=None):
+    if scope == None:
+        scope = globals()
+    return (var in scope and scope[var])
+
+## switch to input mode, set globals
+def switch_mode(target):
+    global MODE, VALID_KEYS, BINDS
+
+    if VIMMODE:
+        BINDS = VIMBINDS
+
+    else:
+        if target == "ESCAPE":
+            target = "INSERT"
+        BINDS  = BASEBINDS
+
+    MODE = target
+    VALID_KEYS = [v for k,v in BINDS[MODE].items() if not "ui__title" in k]
+    printTo(WIDTH-len(MODE),0,MODE,clear=1)
+
+### add caller of ui element to ui trace
+def add_to_trace(arr):
+    global UI_TRACE
+
+    for o in UI_TRACE:
+        name = o[0].__name__
+        if name.startswith('menu') and name == arr[0].__name__:
+            found = True
+            break
+    else:
+        found = False
+
+    if not found:
+        UI_TRACE.append(arr)
+
+### redirect getch_loop to `fun` with `args`
+def set_pipe(fun,arg,keep=None):
+    global PIPE_OUTPUT, KEEP_PIPE
+
+    PIPE_OUTPUT = fun,arg
+    dbg(arg.get('page'))
+    if not keep == None:
+        KEEP_PIPE = keep
+
+### return current index of object
+def get_index(obj):
+    return obj.selected_index
+
+
+## editing
+### split `s` by delimiters defined in `DELIMITERS`, return array of words
 def split_by_delimiters(s,return_indices=False):
     # set up variables
     wordlist = []
@@ -120,32 +210,92 @@ def split_by_delimiters(s,return_indices=False):
     else:
         return wordlist
 
-## return True if the given `index` is part of the last word in the strong
+### return True if the given `index` is part of the last word in the strong
 def is_in_last_word(index,string):
     wordlist = split_by_delimiters(string)
     last_word_index = len(string)-len(wordlist[-1])
     return (last_word_index <= index)
 
-## switch to input mode, set globals
-def switch_mode(target):
-    global MODE, VALID_KEYS, BINDS
 
-    if VIMMODE:
-        BINDS = VIMBINDS
 
-    else:
-        if target == "ESCAPE":
-            target = "INSERT"
-        BINDS  = BASEBINDS
 
-    MODE = target
-    VALID_KEYS = [key for key in BINDS[MODE].keys()]
-    printTo(WIDTH-len(MODE),0,MODE,clear=1)
 
 
 
 
 # UI #
+
+## input dialog class
+class InputDialog(Container):
+    def __init__(self,options=None,label_value='',label_justify="center",label_underpad=0,field_value='',dialog_type=None,**kwargs):
+        super().__init__(**kwargs)
+
+        # set up label class
+        self.label = Label(value=label_value,justify=label_justify)
+
+        # set up field depending on options given
+        self.options = options
+        self.dialog_type = dialog_type
+
+        if self.dialog_type == None:
+            if isinstance(options,list):
+                self.dialog_type = "prompt"
+            else:
+                self.dialog_type = "field"
+            #self.dialog_type = "field"
+
+
+        if self.dialog_type == "prompt":
+            self.field = Prompt(options=options,width=20)
+        
+        elif self.dialog_type in ["field","binding"]:
+            self.field = InputDialogField(default=field_value,print_at_start=False)
+
+        # add label
+        self.add_elements([self.label])
+
+        # add paddings under label
+        for _ in range(label_underpad):
+            self.add_elements(Label())
+
+        # add field
+        self.add_elements([self.field])
+        
+        # set xlimit of field
+        self.field.xlimit = self.width-3
+
+    def submit(self):
+        self.value = self.field.submit()
+        return self.value
+
+    def __repr__(self):
+        self.width = max(self.width,self.field.width)
+        self.get_border()
+        self.center()
+        self.wipe()
+
+        return super().__repr__()
+
+## field class for input dialog
+class InputDialogField(getch.InputField):
+    def __init__(self,**kwargs):
+        super().__init__(**kwargs)
+
+        self.width = len(self.value)
+        self.height = 1
+        self._is_selectable = False
+        self.options = None
+
+    # return text of self
+    def __repr__(self):
+        line = self.print(return_line=True)
+        return line
+
+    # return value
+    def submit(self):
+        return self.value
+
+
 
 ## print s to coordinates, clear space for it if needed
 def printTo(x=0,y=0,s='',clear=False):
@@ -185,74 +335,199 @@ def get_lines():
     return messages
 
 
-## input dialog class
-class InputDialog(Container):
-    def __init__(self,options=None,label_value='',label_justify="center",label_underpad=0,field_value='',**kwargs):
-        super().__init__(**kwargs)
+## handle action but for menus
+def handle_menu(key,obj,page=0):
+    global PIPE_OUTPUT,UI_TRACE
 
-        # set up label class
-        self.label = Label(value=label_value,justify=label_justify)
+    if isinstance(obj,list):
+        objects = obj
+        obj = obj[page]
 
-        # set up field depending on options given
-        self.options = options
-        if isinstance(options,list):
-            self.field = Prompt(options=options,width=20)
+    # go up one menu using trace 
+    if key == "ESC":
+        obj.wipe()
+
+        # go up the trace
+        UI_TRACE.pop(-1)
+        if len(SETTINGS_DEPTH):
+            SETTINGS_DEPTH.pop(-1)
+        fun,args,new = UI_TRACE[-1]
+
+        # create copy so the original dict isnt overwritten
+        kwargs = args.copy()
+
+        dbg('a',kwargs.get('dict_index'),fun)
+
+        # execute trace
+        fun(**kwargs) 
+        return
+
+    # do actions specific to input dialog
+    if isinstance(obj,InputDialog):
+        # submit input
+        if key == "ENTER":
+            # edit setting
+            new = obj.submit()
+            edit_setting(obj.setting,new)
+
+            # edit previous ui to show changes
+            fun,kwargs,newobj = UI_TRACE[-2]
+            if not kwargs.get('selected') == None:
+                # set new value
+                kwargs['selected'].value = new
+
+                # set new real_value
+                kwargs['selected'].real_value[obj.setting] = new
+
+            # go back
+            handle_menu("ESC",obj)
+            return
+
+        # send key to field
+        elif isinstance(obj.field,InputDialogField):
+            obj.field.send(key)
+
+        # navigate prompt
         else:
-            self.field = InputDialogField(default=field_value,print_at_start=False)
-        
-        # add label
-        self.add_elements([self.label])
+            if key in ["h","ARROW_LEFT"]:
+                obj.selected_index -= 1
+            elif key in ["l","ARROW_RIGHT"]:
+                obj.selected_index += 1
+            obj.select()
 
-        # add paddings under label
-        for _ in range(label_underpad):
-            self.add_elements(Label())
+        print(obj)
+        return
 
-        # add field
-        self.add_elements([self.field])
-        
-        # set xlimit of field
-        self.field.xlimit = self.width-3
+    elif key == "ENTER":
+        obj.wipe()
 
-    def submit(self):
-        self.value = self.field.submit()
-        return self.value
+        # get obj and index
+        selected,_,index = obj.selected
 
-    def __repr__(self):
-        self.width = max(self.width,self.field.width)
-        self.get_border()
-        self.center()
-        self.wipe()
+        # set previous trace element index
+        UI_TRACE[-1][1]['index'] = index
 
-        return super().__repr__()
+        # add to depth
+        SETTINGS_DEPTH.append(selected.label)
+
+        # create menu
+        d = create_submenu(selected)
+
+        # select current option if possible
+        if hasattr(d,'options') and d.options:
+            d.selected_index = [o for o in d.options].index(selected.real_value)
+            d.select()
+
+        # print
+        d.select()
+        print(d)
+        return
+      
+
+    elif key in "hjkl" or key.startswith("ARROW"):
+        if key in ["j","ARROW_DOWN"]:
+            obj.selected_index += 1
+
+        elif key in ["k","ARROW_DOWN"]:
+            obj.selected_index -= 1
+
+        elif is_set('objects',locals()):
+            obj.wipe()
+            if key in ["h","ARROW_LEFT"]:
+                new = max(0,page-1)
+
+            elif key in ["l","ARROW_RIGHT"]:
+                new = min(len(objects)-1,page+1)
+
+            obj = objects[new]
+            set_pipe(handle_menu,{"obj": objects, "page": new})
+            UI_TRACE[-1][1]['dict_index'] = new
 
 
-## field class for input dialog
-class InputDialogField(getch.InputField):
-    def __init__(self,**kwargs):
-        super().__init__(**kwargs)
 
-        self.width = len(self.value)
-        self.height = 1
-        self._is_selectable = False
-        self.options = None
 
-    # return text of self
-    def __repr__(self):
-        line = self.print(return_line=True)
-        return line
+    obj.select()
+    print(obj)
 
-    # return value
-    def submit(self):
-        return self.value
+## return to normal input
+def return_to_infield(*args,**kwargs):
+    global PIPE_OUTPUT,KEEP_PIPE
     
-    # def send(self,*args,**kwargs):
-    #    key = args[0]
-    #    if key == "BACKSPACE" and len(self.value):
-    #        self.width -= 1
-    #    else:
-    #        self.width += 1
+    os.system('cls' if os.name == 'nt' else 'clear')
+    infield.print()
+    PIPE_OUTPUT = None
+    KEEP_PIPE = False
+    
+## settings menu caller
+def menu_settings(index=0):
+    global PIPE_OUTPUT,KEEP_PIPE,UI_TRACE
 
-    #    super().send(*args,**kwargs)
+    # open settings file
+    with open('settings.json','r') as f:
+        SETTINGS = json.load(f)
+        c = container_from_dict(SETTINGS)[0]
+
+    # clear infield from screen
+    infield.wipe()
+    
+    # set pipes
+    set_pipe(handle_menu,{"obj": c},keep=True)
+    add_to_trace([menu_settings,{'index': lambda obj: obj.selected_index}, c])
+
+    # print
+    c.center()
+    c.selected_index = (0 if index==None else index) 
+    c.select()
+    print(c)
+    
+    return c
+
+## submenu caller
+def create_submenu(selected,index=None,dict_index=0):
+    global PIPE_OUTPUT
+
+    if isinstance(selected.real_value,dict):
+        dicts = container_from_dict(selected.real_value)
+        d = dicts[dict_index]
+        d.selected_index = (0 if index==None else index) 
+        if len(d.selectables):
+            d.select()
+
+    else:
+        if isinstance(selected.real_value,bool):
+            options = [True,False]
+        else:
+            options = None
+
+        d = InputDialog(
+                    label_value=bold(selected.label+':'),
+                    label_underpad=1,
+                    options=options,
+                    field_value=str(selected.real_value),
+                    width=40
+        )
+
+        d.setting = selected.label
+        d.real_value = selected.real_value
+        dicts = [d]
+
+    for dic in dicts:
+        dic.setting = selected.label
+        dic.real_value = selected.real_value
+        dic.center()
+
+    d = dicts[dict_index]
+    print(d)
+
+    set_pipe(handle_menu,{'obj': dicts, 'page': dict_index})
+    if index == None:
+        add_to_trace([create_submenu,{'selected': selected, 'index': 0, 'dict_index': dict_index}, d])
+
+    return d
+
+
+
+
 
 
 
@@ -369,7 +644,7 @@ def getch_loop():
 
         # shortcuts
         elif key in VALID_KEYS:   
-            action = BINDS[MODE][key]
+            action = reverse_dict_lookup(BINDS[MODE],key)
             handle_action(action)
 
         # INSERT mode: inputs
@@ -680,131 +955,21 @@ def handle_action(action):
     ## PIPES
     ### action_in actions
     elif action.endswith("_in"):
-        PIPE_OUTPUT = do_in,{'action': action}
+        set_pipe(do_in,{'action': action})
     
     ### find & till
     elif action == "find":
-        PIPE_OUTPUT = find,{}
+        set_pipe(find,{})
 
     elif action == "find_reverse":
-        PIPE_OUTPUT = find,{'reverse': True}
+        set_pipe(find,{'reverse': True})
     
     elif action == "till":
-        PIPE_OUTPUT = find,{'offset': -1}
+        set_pipe(find,{'offset': -1})
 
     elif action == "till_reverse":
-        PIPE_OUTPUT = find,{'offset': -1, 'reverse': True}
+        set_pipe(find,{'offset': -1, 'reverse': True})
 
-
-def handle_menu(key,menu,obj,prev=None):
-    global PIPE_OUTPUT
-
-    # settings menu related actions
-    if menu == "settings":
-
-        # choose a setting
-        if key == "ENTER":
-
-            # get selected child from obj
-            selected = obj.selected[0]
-
-            # decide if dialogue should be input or prompt type
-            if isinstance(selected.real_value,dict):
-                d = container_from_dict(selected.real_value,dbg('hi'),width=40)
-                PIPE_OUTPUT = handle_menu,{"menu": "settings","obj": d, "prev": [menu,obj.selected_index]}
-            
-            else:
-                value = selected.value
-                if value in ["True","False"]:
-                    options = [True, False]
-                    width = 30
-                else:
-                    options = None
-                    width = 40
-
-                # create opject
-                d = InputDialog(
-                        label_value=bold(selected.label+':'),
-                        label_underpad=1,
-                        options=options,
-                        field_value=selected.real_value,
-                        width=40,
-                )
-
-                # select the current value in prompt
-                if options:
-                    index = [str(o) for o in options].index(value)
-                    d.select(index)
-
-                # overwrite submit function
-                d.submit = lambda: edit_setting(selected.label,d.field.submit)
-
-
-                # set new pipes
-                PIPE_OUTPUT = handle_menu,{"menu": "input_dialog", "obj": d, "prev": [menu,obj.selected_index] }
-
-            # clear previous container from screen
-            obj.wipe()
-
-            # center and print new container
-            d.center()
-            print(d)
-            return 
-
-    # input dialogue actions
-    elif menu == "input_dialog":
-        # submit input, go to previous menu by sending ESC
-        if key == "ENTER":
-            obj.submit()
-            handle_menu("ESC",menu,obj,prev)
-
-        # quit input
-        elif key == "ESC":
-            obj.wipe()
-            
-            # go to previous menu
-            name, index = prev
-            new = globals()["menu_"+name](index)
-
-            # set new pipes
-            PIPE_OUTPUT = handle_menu,{"menu": name,"obj": new}
-            return
-
-        else:
-            if obj.options:
-                if key in "jl":
-                    obj.selected_index += 1
-
-                elif key in "hk":
-                    obj.selected_index -= 1
-
-                obj.select()
-                print(obj)
-
-            else:
-                obj.field.send(key)
-                print(obj)
-
-        return
-            
-
-    # universal to all menus
-    if len(obj.selectables):
-        selected = obj.selected_index
-        if key == "j":
-            obj.selected_index += 1
-        elif key == "k":
-            obj.selected_index -= 1
-
-    if key == "ESC":
-        PIPE_OUTPUT = None
-        obj.wipe()
-        infield.print()
-        return
-     
-    PIPE_OUTPUT = handle_menu,{"menu": menu,"obj": obj}
-    obj.select()
-    print(obj)
 
 
 
@@ -969,38 +1134,10 @@ def find(key,offset=0,reverse=False):
     # print infield
     infield.print()
     
-def menu_settings(index=0):
-    global PIPE_OUTPUT,KEEP_PIPE
-
-    # open settings file
-    with open('settings.json','r') as f:
-        SETTINGS = json.load(f)
-        c = container_from_dict(SETTINGS)
-
-    # set pipes
-    PIPE_OUTPUT = handle_menu,{"menu": "settings","obj": c}
-    KEEP_PIPE = True
-
-    # clear infield from screen
-    infield.wipe()
-    
-    # do first selection
-    c.selected_index = index
-    c.select()
-
-    # center
-    c.center()
-
-    # print
-    print(c)
-    
-    return c
 
 
 
-
-
-# GLOBALS
+# GLOBALS #
 PATH = os.path.abspath(os.path.dirname(__file__))
 import_settings()
 
@@ -1020,6 +1157,9 @@ VISUAL_END = 0
 PIPE_OUTPUT = None
 PIPE_ARGS = {}
 KEEP_PIPE = False
+
+UI_TRACE = []
+SETTINGS_DEPTH = []
 
 # given by server
 COOKIE = "flamingoestothestore"
@@ -1044,6 +1184,8 @@ if __name__ == "__main__":
     # set default mode
     switch_mode("ESCAPE")
     infield = getch.InputField(pos=[0,HEIGHT-1])
+
+    add_to_trace([return_to_infield,{'_': '"'},''])
 
     # main input loop
     getch_loop()

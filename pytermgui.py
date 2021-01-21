@@ -1,5 +1,5 @@
-# fuck
 import sys,os,time
+
 
 # these two should be imported from here in client
 WIDTH,HEIGHT = os.get_terminal_size()
@@ -55,54 +55,126 @@ def break_line(_inline,_len,_pad=0,_separator=' '):
     else:
         return _inline.split('\n')
 
-def container_from_dict(dic,handler=None,**kwargs):
+def container_from_dict(dic,**kwargs):
     dic_c = Container(**kwargs)
+    dicts = [dic_c]
+    reverse_items = False
+    handler = None
+
+    if False:
+        options = {
+                "dialog_type": None,
+                "reverse_items": False
+        }
+
+        try:
+            from pytermconf import GROUPS
+        except ImportError as e:
+            if VERBOSE:
+                raise e
+
+
 
     for i,(key,item) in enumerate(dic.items()):
+        # look for flag groups, UNUSED
+        if key == "ui__group":
+            if "GROUPS" in locals() and item in GROUPS.keys():
+                for key,value in GROUPS[item].items():
+                    options[key] = value
+            continue
 
         # read titles into labels
-        if "title" in key and key[-1].isdigit():
+        elif "ui__title" in key and key[-1].isdigit():
+            # get next title element
+            for next_title,k in enumerate(list(dic.keys())[i:]):
+                if k.startswith('ui__title') and k[-1].isdigit():
+                    break
+
             l = Label(value=italic(bold(item)),justify="left")
+            height_with_segment = dicts[-1].height + next_title*(1+dicts[-1].padding)+15
+
+            if height_with_segment > HEIGHT:
+                dicts.append(Container(**kwargs))
+                dicts[-1].add_elements(l)
+                continue
+
+
+
             
             # only pad if not the first element
             if not i == 0:
                 pad = Label()
-                dic_c.add_elements(pad)
+                dicts[-1].add_elements(pad)
 
             # add label to container
-            dic_c.add_elements(l)
+            dicts[-1].add_elements(l)
             continue
 
-        # avoid long items
-        if len(str(item)) > dic_c.width:
-            real_value = item
-            item = "..."
-        else:
-            real_value = item
+        elif key == "ui__reverse_items":
+            reverse_items = True
+            continue
+
+        # reverse meanings of key & item
+        if reverse_items:
+            temp = key
+            key = item
+            item = temp
+
+        # set real value (not str())
+        real_value = item
+
+        # ignore empty dicts
+        if isinstance(item,dict):
+            if len(item.keys()) == 0:
+                continue
+            else:
+                item = "..."
+
 
         # create, add prompt
-        p = Prompt(label=key,value=str(item),padding=4)
+        p = Prompt(label=str(key),value=str(item),padding=4)
         p.real_value = real_value
 
-        if callable(handler):
-            p.submit = handler
 
-        dic_c.add_elements(p)
+        # add prompt to dict
+        if dicts[-1].height + p.height > WIDTH-15:
+            dicts.append(Container(**kwargs))
 
-    return dic_c
+        dicts[-1].add_elements(p)
+
+
+    # avoid long items
+    do_tabline = len(dicts) > 1
+    for i,d in enumerate(dicts):
+        for e in d.elements:
+            if isinstance(e,Prompt):
+                item = e.value
+                label = e.label
+
+                if len(str(item)+str(label)) > min(d.width-10,WIDTH-5):
+                    e.value = "..."
+
+        if do_tabline:
+            tabline = Prompt(options=[n for n in range(len(dicts))])
+            tabline.select(i)
+            tabline._is_selectable = False
+            d.add_elements([Label(),tabline])
+
+    return dicts
 
 
 
 
 # COLORS #
 def bold(s):
-    return '\033[1m'+s+'\033[0m'
+    return '\033[1m'+str(s)+'\033[0m'
 
 def italic(s):
-    return '\033[3m'+s+'\033[0m'
+    return '\033[3m'+str(s)+'\033[0m'
 
 def underline(s):
-    return '\033[4m'+s+'\033[0m'
+    return '\033[4m'+str(s)+'\033[0m'
+
 
 
 
@@ -252,7 +324,6 @@ class Container:
 
         self.elements.append(element)
 
-
         # add selectables
         if element._is_selectable:
             # set options for range
@@ -263,7 +334,7 @@ class Container:
 
             # go through options, add element+index pairs
             for i in range(options):
-                self.selectables.append([element,i])
+                self.selectables.append([element,i,len(self.selectables)+i])
 
         # update border
         self.get_border()
@@ -306,6 +377,9 @@ class Container:
             index = self.selected_index
 
         # error if invalid index
+        if len(self.selectables) == 0:
+            return
+
         if index > len(self.selectables)-1:
             if VERBOSE:
                 raise Exception("Index is not in elements.")
@@ -321,7 +395,7 @@ class Container:
 
         # go through selectables
         target_element = self.selectables[index][0]
-        for i,(e,sub_i) in enumerate(self.selectables):
+        for i,(e,sub_i,_) in enumerate(self.selectables):
             # check if current is the target
             if i == index:
                 e.select(sub_i)
@@ -354,7 +428,13 @@ class Container:
         self.get_border()
 
 
-    def center(self,xoffset=0,yoffset=10):
+    # center container
+    def center(self,xoffset=0,yoffset=5):
+        if HEIGHT//2 < self.height-yoffset:
+            yoffset = 0
+        if WIDTH//2 < self.width-xoffset:
+            xoffset = 0
+
         x = (WIDTH-self.width-xoffset)//2
         y = (HEIGHT-self.height-yoffset)//2
         self.move([x,y])
