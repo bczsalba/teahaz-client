@@ -129,7 +129,7 @@ def container_from_dict(dic,**kwargs):
 
 
         # create, add prompt
-        p = Prompt(label=CONTAINER_LABEL_STYLE(str(key)),value=CONTAINER_VALUE_STYLE(str(item)),padding=4)
+        p = Prompt(real_label=str(key),label=CONTAINER_LABEL_STYLE(str(key)),value=CONTAINER_VALUE_STYLE(str(item)),padding=4)
         p.real_value = real_value
 
 
@@ -499,14 +499,20 @@ class Prompt:
     option is chosen, and the options given are disregarded.
     """
     
-    def __init__(self,width=None,options=None,label=None,value="",padding=0,highlight_style=None): 
+    def __init__(self,width=None,options=None,label=None,real_label=None,value="",padding=0,highlight_style=None): 
         # the existence of label decides the layout (<> []/[] [] [])
         if label:
             self.label = str(label)
-            self.width = real_length(self.label)+real_length(value)
+            if real_label == None:
+                self.real_label = clean_ansi(self.label)
+            else:
+                self.real_label = real_label
+
+            self.width = real_length(self.real_label)+real_length(value)
         else:
             self.label = label
             self.width = width
+            self.real_label = label
 
         # set up dimensions
         self.height = 1

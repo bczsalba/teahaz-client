@@ -90,6 +90,7 @@ def edit_setting(key,value):
     # apply change
     root[setting] = value
 
+    dbg(setting,value)
 
     # write to file
     with open(os.path.join(PATH,'settings.json'),'w') as f:
@@ -359,8 +360,6 @@ def handle_menu(key,obj,page=0):
         # create copy so the original dict isnt overwritten
         kwargs = args.copy()
 
-        dbg('a',kwargs.get('dict_index'),fun)
-
         # execute trace
         fun(**kwargs) 
         return
@@ -411,7 +410,7 @@ def handle_menu(key,obj,page=0):
         UI_TRACE[-1][1]['index'] = index
 
         # add to depth
-        SETTINGS_DEPTH.append(selected.label)
+        SETTINGS_DEPTH.append(selected.real_label)
 
         # create menu
         d = create_submenu(selected)
@@ -510,12 +509,12 @@ def create_submenu(selected,index=None,dict_index=0):
                     width=40
         )
 
-        d.setting = selected.label
+        d.setting = selected.real_label
         d.real_value = selected.real_value
         dicts = [d]
 
     for dic in dicts:
-        dic.setting = selected.label
+        dic.setting = selected.real_label
         dic.real_value = selected.real_value
         dic.center()
 
@@ -527,10 +526,6 @@ def create_submenu(selected,index=None,dict_index=0):
         add_to_trace([create_submenu,{'selected': selected, 'index': 0, 'dict_index': dict_index}, d])
 
     return d
-
-
-
-
 
 
 
@@ -1183,7 +1178,7 @@ if __name__ == "__main__":
 
     # set pytermgui styles
     pytermgui.set_style('container_title',lambda item: bold(italic(color(item.upper(),'38;5;64'))+':'))
-    pytermgui.set_style('container_label',lambda item: (color(item.lower(),'38;5;243')+':'))
+    pytermgui.set_style('container_label',lambda item: (color(item.lower(),'38;5;243')))
     pytermgui.set_style('container_value',lambda item: (color(item.lower(),'38;5;218')))
     pytermgui.set_style('prompt_highlight',lambda item: highlight(item,'38;5;176'))
     pytermgui.set_style('tabbar_highlight',lambda item: highlight(item,'38;5;69'))
