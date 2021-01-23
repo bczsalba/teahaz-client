@@ -1,16 +1,14 @@
 import sys,os,time
 
 
-# these two should be imported from here in client
-WIDTH,HEIGHT = os.get_terminal_size()
-
-# client global
-VERBOSE = 0
-
-
-
 
 # HELPERS #
+def set_style(key,value):
+    if not callable(value):
+        return Exception("Style value needs to be callable.")
+
+    globals()[key.upper()+'_STYLE'] = value
+
 def clean_ansi(s):
     import re
     return re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]').sub('', s)
@@ -74,7 +72,6 @@ def container_from_dict(dic,**kwargs):
                 raise e
 
 
-
     for i,(key,item) in enumerate(dic.items()):
         # look for flag groups, UNUSED
         if key == "ui__group":
@@ -90,7 +87,7 @@ def container_from_dict(dic,**kwargs):
                 if k.startswith('ui__title') and k[-1].isdigit():
                     break
 
-            l = Label(value=italic(bold(item)),justify="left")
+            l = Label(value=CONTAINER_TITLE_STYLE(item),justify="left")
             height_with_segment = dicts[-1].height + next_title*(1+dicts[-1].padding)+15
 
             if height_with_segment > HEIGHT:
@@ -132,7 +129,7 @@ def container_from_dict(dic,**kwargs):
 
 
         # create, add prompt
-        p = Prompt(label=str(key),value=str(item),padding=4)
+        p = Prompt(label=CONTAINER_LABEL_STYLE(str(key)),value=CONTAINER_VALUE_STYLE(str(item)),padding=4)
         p.real_value = real_value
 
 
@@ -151,11 +148,11 @@ def container_from_dict(dic,**kwargs):
                 item = e.value
                 label = e.label
 
-                if len(str(item)+str(label)) > min(d.width-10,WIDTH-5):
+                if real_length(str(item)+str(label)) > min(d.width-10,WIDTH-5):
                     e.value = "..."
 
         if do_tabline:
-            tabline = Prompt(options=[n for n in range(len(dicts))])
+            tabline = Prompt(options=[n for n in range(len(dicts))],highlight_style=TABBAR_HIGHLIGHT_STYLE)
             tabline.select(i)
             tabline._is_selectable = False
             d.add_elements([Label(),tabline])
@@ -175,6 +172,15 @@ def italic(s):
 def underline(s):
     return '\033[4m'+str(s)+'\033[0m'
 
+def highlight(s,fg='30'):
+    return color(clean_ansi(s),['47',fg])
+
+def color(s,col):
+    if isinstance(col,list):
+        col = ';'.join(col)
+
+    return f'\033[{col}m'+str(s)+'\033[0m'
+
 
 
 
@@ -191,22 +197,26 @@ class Container:
     are stored.
     """
 
-    def __init__(self,pos=None,border='-|',width=None,height=None,dynamic_size=True,center_elements=True,padding=0):
-        # set up descriptory values
+    def __init__(self,pos=None,border='|-',width=None,height=None,dynamic_size=True,center_elements=True,padding=0):
+        # sanitize width
         if not width == None:
             self.width = min(width,WIDTH-2)
         else:
             self.width = 0
 
+        # sanitize height
         if not height == None:
             self.height = min(height,HEIGHT)
         else:
             self.height = 0
         self.real_height = self.height
 
+        # set default position
         if pos == None:
             pos = [0,0]
         self.pos = pos
+
+        # set up values
         self.elements = []
         self.selected = None
         self.selectables = []
@@ -215,7 +225,7 @@ class Container:
         self.previous_pos = None
 
         # set up border
-        self.borderchar_x,self.borderchar_y = border 
+        self.set_borders(border)
 
         # set up flags
         self._do_dynamic_size = dynamic_size
@@ -339,7 +349,44 @@ class Container:
         # update border
         self.get_border()
 
+
+    # set border values
+    def set_borders(self,border):
+        if len(border) == 1:
+            self.borders = [border,border,border,border]
+        elif len(border) == 2:
+            sides,topbottom = border
+            self.borders = [sides,topbottom,sides,topbottom]
+        elif len(border) == 3:
+            left,top,right = border
+            self.borders = [left,top,right,top]
+        elif len(border) == 4:
+            self.borders = border
     
+    
+    # set border corners
+    #TODO
+    def set_corner(self,corner,value):
+        self.get_border()
+
+        # get values
+        if corner in ["TOP_LEFT",0]:
+            char = self.borders[1]
+            side = "left"
+
+        elif corner in ["TOP_RIGHT",1]:
+            char = self.border[1]
+            side = "right"
+
+        elif corner in ["BOTTOM_LEFT",2]:
+            char = self.border[3]
+            side = "right"
+
+        elif corner in ["BOTTOM_RIGHT",3]:
+            char = self.border[3]
+            side = "right"
+
+
     # get list of border coordinates
     def get_border(self):
         px,py = self.pos
@@ -349,14 +396,16 @@ class Container:
         x2 = px+self.width+1
         y2 = py+self.real_height+2+self.padding
 
+        left,top,right,bottom = self.borders
+
         self.border = []
         for y in range(py+1,y2):
-            self.border.append([x1,y,self.borderchar_y])
-            self.border.append([x2,y,self.borderchar_y])
+            self.border.append([x1,y,left])
+            self.border.append([x2,y,right])
 
         for x in range(px+1,x2+1):
-            self.border.append([x,y1,self.borderchar_x])
-            self.border.append([x,y2,self.borderchar_x])
+            self.border.append([x,y1,top])
+            self.border.append([x,y2,bottom])
 
 
     # wrapper for _add_element to make bulk adding easier
@@ -450,11 +499,11 @@ class Prompt:
     option is chosen, and the options given are disregarded.
     """
     
-    def __init__(self,width=None,options=None,label=None,value="",padding=0): 
+    def __init__(self,width=None,options=None,label=None,value="",padding=0,highlight_style=None): 
         # the existence of label decides the layout (<> []/[] [] [])
         if label:
             self.label = str(label)
-            self.width = real_length(self.label)+len(value)
+            self.width = real_length(self.label)+real_length(value)
         else:
             self.label = label
             self.width = width
@@ -464,6 +513,12 @@ class Prompt:
 
         # set up instance variables
         self.selected_index = None
+        if highlight_style == None or not callable(highlight_style):
+
+            self.highlight_style = PROMPT_HIGHLIGHT_STYLE
+        else:
+            self.highlight_style = highlight_style
+
         self.options = options
         self.padding = padding
         self.value = value
@@ -477,13 +532,13 @@ class Prompt:
     def __repr__(self):
         # if there is a label do <label> [ ]
         if not self.label == None:
-            highlight = ('\033[47m\033[30m' if self._is_selected else '')
+            highlight = (self.highlight_style if self._is_selected else lambda item: item)
 
-            middle_pad = (self.width-len(clean_ansi(self.label)) - 4 - real_length(self.value) - self.padding )
+            middle_pad = (self.width-real_length(self.label)) - 4 - real_length(self.value) - self.padding
             middle_pad = max(4,middle_pad)
 
             left = self.padding*" "+ self.label + middle_pad * " "
-            right = highlight + f"[ {self.value} ]" + '\033[0;0m'
+            right = highlight(f"[ {self.value} ]")
 
             line = left + right
             self.width = max(self.width,real_length(line))
@@ -494,7 +549,7 @@ class Prompt:
             line = ''
             if isinstance(self.options, list):
                 for i,option in enumerate(self.options):
-                    line += "  "+ self._get_option_highlight(i) + f"[ {option} ]" + '\33[0;0m'
+                    line += "  "+ self._get_option_highlight(i)(f"[ {option} ]")
             else:
                 line = self.value
 
@@ -522,9 +577,9 @@ class Prompt:
     # get highlight value for index in options
     def _get_option_highlight(self,index):
         if self._is_selected and self.selected_index == index:
-            highlight = '\033[47m\033[30m'
+            highlight = self.highlight_style
         else:
-            highlight = ''
+            highlight = lambda item: item
         return highlight
 
 
@@ -584,9 +639,32 @@ class Label:
         
 
 
+
+# GLOBALS #
+
+# global width & height -- refreshed at every new object creation
+WIDTH,HEIGHT = os.get_terminal_size()
+
+# styles
+CONTAINER_TITLE_STYLE = lambda item: italic(bold(item))
+CONTAINER_LABEL_STYLE = lambda item: item
+CONTAINER_VALUE_STYLE = lambda item: item
+
+GLOBAL_HIGHLIGHT_STYLE = highlight
+PROMPT_HIGHLIGHT_STYLE = GLOBAL_HIGHLIGHT_STYLE
+CURSOR_HIGHLIGHT_STYLE = GLOBAL_HIGHLIGHT_STYLE
+TABBAR_HIGHLIGHT_STYLE = GLOBAL_HIGHLIGHT_STYLE
+
+# client global
+VERBOSE = 0
+
+
+
+
 # TEST CODE #
 if __name__ == "__main__":
     c = Container(width=50,height=None,pos=[10,5],padding=1,dynamic_size=False)
+    c.set_borders([bold('|'),bold('-')])
     p1 = Prompt(label="One:",value="fish")
     p2 = Prompt(label="Two:",value="pog")
     p3 = Prompt(label="Three:")

@@ -8,10 +8,13 @@ import time
 import getch
 import base64
 import requests
+import pytermgui
 import threading
 import pyperclip as clip
-from pytermgui import clean_ansi,real_length,break_line,WIDTH,HEIGHT
-from pytermgui import Container,Prompt,Label,italic,bold,underline,container_from_dict
+from pytermgui import WIDTH,HEIGHT
+from pytermgui import clean_ansi,real_length,break_line
+from pytermgui import italic,bold,underline,color,highlight
+from pytermgui import Container,Prompt,Label,container_from_dict
 
 
 
@@ -1177,6 +1180,14 @@ BASE_DATA = {
 if __name__ == "__main__":
     if DO_DEBUG:
         open(LOGFILE,'w').close()
+
+    # set pytermgui styles
+    pytermgui.set_style('container_title',lambda item: bold(italic(color(item.upper(),'38;5;64'))+':'))
+    pytermgui.set_style('container_label',lambda item: (color(item.lower(),'38;5;243')+':'))
+    pytermgui.set_style('container_value',lambda item: (color(item.lower(),'38;5;218')))
+    pytermgui.set_style('prompt_highlight',lambda item: highlight(item,'38;5;176'))
+    pytermgui.set_style('tabbar_highlight',lambda item: highlight(item,'38;5;69'))
+    
 
     ## clear screen
     print('\033[2J')
