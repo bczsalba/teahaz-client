@@ -82,6 +82,7 @@
             "select_line_end": "$",
             "select_word_end": "w",
             "select_in": "i",
+            "find": "f",
             "selection_replace": "r",
             "selection_delete": "x",
             "selection_cut": "d",

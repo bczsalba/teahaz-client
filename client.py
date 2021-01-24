@@ -716,6 +716,7 @@ def handle_action(action):
 
 
 
+
     ## CATEGORIES
     # mode switching
     if action.startswith('mode_'):
@@ -828,7 +829,7 @@ def handle_action(action):
         infield.print()
 
     # visual mode
-    elif action.startswith('selection_'):
+    elif action.startswith('selection_') and not 'replace' in action:
         if action == "selection_right":
             VISUAL_END = min(VISUAL_END+1,len(infield.value)-1)
 
@@ -968,6 +969,11 @@ def handle_action(action):
     elif action == "till_reverse":
         set_pipe(find,{'offset': -1, 'reverse': True})
 
+    elif "replace" in action:
+        if len(infield.value):
+            set_pipe(replace,{'action': action})
+
+
 
 
 
@@ -1102,7 +1108,7 @@ def get_indices(param):
 
 ## find key, set cursor to index+offset
 def find(key,offset=0,reverse=False):
-    global infield
+    global infield,VISUAL_END
 
     # set variables
     value = infield.value
@@ -1130,8 +1136,31 @@ def find(key,offset=0,reverse=False):
         infield.cursor = infield.cursor + offset + found + 1
 
     # print infield
-    infield.print()
+    if MODE == "VISUAL":
+        VISUAL_END = infield.cursor
+        infield.visual(infield.selected_start,infield.cursor)
+    else:
+        infield.print()
     
+def replace(key,action):
+    dbg('action',action)
+    val = infield.value
+
+    if action == 'replace':
+        val = list(val)
+        val[infield.cursor] = key
+        val = ''.join(val)
+
+    elif action == "selection_replace":
+        length = infield.selected_end - infield.selected_start
+        left = val[:infield.selected_start]
+        right = val[infield.selected_end:]
+
+        val = left+length*key+right
+        switch_mode('ESCAPE')
+
+    infield.set_value(val,infield.cursor)
+
 
 
 
@@ -1179,7 +1208,7 @@ if __name__ == "__main__":
     # set pytermgui styles
     pytermgui.set_style('container_title',lambda item: bold(italic(color(item.upper(),'38;5;64'))+':'))
     pytermgui.set_style('container_label',lambda item: (color(item.lower(),'38;5;243')))
-    pytermgui.set_style('container_value',lambda item: (color(item.lower(),'38;5;218')))
+    pytermgui.set_style('container_value',lambda item: (color(item,'38;5;218')))
     pytermgui.set_style('prompt_highlight',lambda item: highlight(item,'38;5;176'))
     pytermgui.set_style('tabbar_highlight',lambda item: highlight(item,'38;5;69'))
     

@@ -3,6 +3,9 @@ import sys,os,time
 
 
 # HELPERS #
+def clr():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
 def set_style(key,value):
     if not callable(value):
         return Exception("Style value needs to be callable.")
@@ -234,6 +237,24 @@ class Container:
 
     # text representation of self
     def __repr__(self):
+        global WIDTH,HEIGHT
+
+        nWIDTH,nHEIGHT = os.get_terminal_size()
+        if not [WIDTH,HEIGHT] == [nWIDTH,nHEIGHT]:
+            clr()
+            xdiff = (nWIDTH-WIDTH)//2
+            ydiff = nHEIGHT-HEIGHT
+
+            WIDTH,HEIGHT = nWIDTH,nHEIGHT
+
+            self.pos[0] += xdiff
+            #self.pos[1] += ydiff
+
+            self.width = min(self.width,WIDTH-2)
+            self.height = min(self.height,HEIGHT)
+            self.get_border()
+        #self.center()
+
         line = ''
         new_real_height = self.height
 
@@ -692,7 +713,7 @@ if __name__ == "__main__":
     """
 
     for i in range(len(c.selectables)):
-        time.sleep(0.4)
+        time.sleep(0.8)
         c.select(i)
         print(repr(c))
         #input()
