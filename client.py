@@ -1147,11 +1147,13 @@ def replace(key,action):
     val = infield.value
 
     if action == 'replace':
+        # replace character at cursor
         val = list(val)
         val[infield.cursor] = key
         val = ''.join(val)
 
     elif action == "selection_replace":
+        # replace characters in selected range
         length = infield.selected_end - infield.selected_start
         left = val[:infield.selected_start]
         right = val[infield.selected_end:]
@@ -1159,6 +1161,7 @@ def replace(key,action):
         val = left+length*key+right
         switch_mode('ESCAPE')
 
+    # set new value
     infield.set_value(val,infield.cursor)
 
 
@@ -1209,8 +1212,9 @@ if __name__ == "__main__":
     pytermgui.set_style('container_title',lambda item: bold(italic(color(item.upper(),'38;5;64'))+':'))
     pytermgui.set_style('container_label',lambda item: (color(item.lower(),'38;5;243')))
     pytermgui.set_style('container_value',lambda item: (color(item,'38;5;218')))
-    pytermgui.set_style('prompt_highlight',lambda item: highlight(item,'38;5;176'))
+    pytermgui.set_style('prompt_highlight',lambda item: highlight(item,'38;5;57'))
     pytermgui.set_style('tabbar_highlight',lambda item: highlight(item,'38;5;69'))
+    pytermgui.set_style('container_border',[bold(v) for v in ['ab']])
     
 
     ## clear screen

@@ -200,7 +200,7 @@ class Container:
     are stored.
     """
 
-    def __init__(self,pos=None,border='|-',width=None,height=None,dynamic_size=True,center_elements=True,padding=0):
+    def __init__(self,pos=None,border=None,width=None,height=None,dynamic_size=True,center_elements=True,padding=0):
         # sanitize width
         if not width == None:
             self.width = min(width,WIDTH-2)
@@ -228,6 +228,8 @@ class Container:
         self.previous_pos = None
 
         # set up border
+        if border == None:
+            border = CONTAINER_BORDER_STYLE
         self.set_borders(border)
 
         # set up flags
@@ -676,6 +678,7 @@ WIDTH,HEIGHT = os.get_terminal_size()
 CONTAINER_TITLE_STYLE = lambda item: italic(bold(item))
 CONTAINER_LABEL_STYLE = lambda item: item
 CONTAINER_VALUE_STYLE = lambda item: item
+CONTAINER_BORDER_STYLE = "|-"
 
 GLOBAL_HIGHLIGHT_STYLE = highlight
 PROMPT_HIGHLIGHT_STYLE = GLOBAL_HIGHLIGHT_STYLE
