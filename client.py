@@ -483,7 +483,7 @@ def menu_settings(index=0):
     c.center()
     c.selected_index = (0 if index==None else index) 
     c.select()
-    #c.width = min(WIDTH-5,c.width)
+    c.width = min(WIDTH-5,c.width)
     print(c)
     
     return c
@@ -493,7 +493,7 @@ def create_submenu(selected,index=None,dict_index=0):
     global PIPE_OUTPUT
 
     if isinstance(selected.real_value,dict):
-        dicts = container_from_dict(selected.real_value)
+        dicts = container_from_dict(selected.real_value,width=WIDTH-5)
         d = dicts[dict_index]
         d.selected_index = (0 if index==None else index) 
         if len(d.selectables):
@@ -506,7 +506,7 @@ def create_submenu(selected,index=None,dict_index=0):
             options = None
 
         d = InputDialog(
-                    label_value=bold(selected.label+':'),
+                    label_value=bold(selected.real_label+':'),
                     label_underpad=1,
                     options=options,
                     field_value=str(selected.real_value),
@@ -524,7 +524,6 @@ def create_submenu(selected,index=None,dict_index=0):
 
     d = dicts[dict_index]
     d.select()
-    #d.width = min(WIDTH-5,d.width)
     print(d)
 
     set_pipe(handle_menu,{'obj': dicts, 'page': dict_index})

@@ -144,7 +144,7 @@ def container_from_dict(dic,padding=4,**kwargs):
                 item = e.value
                 label = e.label
 
-                if real_length(str(item)+str(label)) > (1/2)*d.width:
+                if real_length(str(item)+str(label))+1 > (2/3)*d.width:
                     e.value = '...'
                     e.width -= real_length(item)-3
                     
@@ -271,6 +271,7 @@ class Container:
     def __repr__(self):
         global WIDTH,HEIGHT
 
+        # TODO: detect need for centering (maybe?)
         nWIDTH,nHEIGHT = os.get_terminal_size()
         if not [WIDTH,HEIGHT] == [nWIDTH,nHEIGHT]:
             clr()
@@ -280,7 +281,6 @@ class Container:
             WIDTH,HEIGHT = nWIDTH,nHEIGHT
 
             self.pos[0] += xdiff
-            #self.pos[1] += ydiff
 
             self.width = min(self.width,WIDTH-5)
             self.height = min(self.height,HEIGHT)
@@ -302,6 +302,7 @@ class Container:
         # print all elements
         extra_lines = 0
         for i,e in enumerate(self.elements):
+            # correct size
             if e.width > self.width-4:
                 if e.width >= WIDTH:
                     continue
@@ -645,7 +646,7 @@ class Prompt:
             highlight = (self.highlight_style if self._is_selected else lambda item: item)
 
             middle_pad = (self.width-real_length(label)) - len(start+end) - real_length(value) - self.padding
-            middle_pad = max(4,middle_pad)
+            middle_pad = max(2,middle_pad)
 
             left = self.padding*" " + label + middle_pad*" "
             right = highlight(f"{start}{value}{end}")
