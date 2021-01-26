@@ -303,6 +303,7 @@ class InputDialogField(getch.InputField):
 
 ## print s to coordinates, clear space for it if needed
 def printTo(x=0,y=0,s='',clear=False):
+    return
     # clear the len of string with 1 margin on both sides
     if clear:
         print(f'\033[{y};0H'+'\033[K')
@@ -468,6 +469,8 @@ def menu_settings(index=0):
     with open('settings.json','r') as f:
         SETTINGS = json.load(f)
         c = container_from_dict(SETTINGS)[0]
+    c.set_corner(1,'SETTINGS')
+
 
     # clear infield from screen
     infield.wipe()
@@ -1214,7 +1217,8 @@ if __name__ == "__main__":
     pytermgui.set_style('container_value',lambda item: (color(item,'38;5;218')))
     pytermgui.set_style('prompt_highlight',lambda item: highlight(item,'38;5;57'))
     pytermgui.set_style('tabbar_highlight',lambda item: highlight(item,'38;5;69'))
-    pytermgui.set_style('container_border',[bold(v) for v in ['ab']])
+    pytermgui.set_style('container_border_chars',[bold(v) for v in '|-'])
+    pytermgui.set_style('prompt_delimiter_style',['< ',' >'])
     
 
     ## clear screen

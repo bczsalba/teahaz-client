@@ -7,10 +7,12 @@ def clr():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 def set_style(key,value):
-    if not callable(value):
-        return Exception("Style value needs to be callable.")
+    key = key.upper()
 
-    globals()[key.upper()+'_STYLE'] = value
+    if key in globals():
+        globals()[key] = value
+    else:
+        globals()[key+'_STYLE'] = value
 
 def clean_ansi(s):
     import re
@@ -56,49 +58,35 @@ def break_line(_inline,_len,_pad=0,_separator=' '):
     else:
         return _inline.split('\n')
 
-def container_from_dict(dic,**kwargs):
+# generate list of containers from dict
+# padding sets how much text should be indented under titles
+#
+# returns a list of Container objects, len() > 1 if the 
+# container height wouldn't fit the screen
+def container_from_dict(dic,padding=4,**kwargs):
     dic_c = Container(**kwargs)
     dicts = [dic_c]
     reverse_items = False
     handler = None
-
-    if False:
-        options = {
-                "dialog_type": None,
-                "reverse_items": False
-        }
-
-        try:
-            from pytermconf import GROUPS
-        except ImportError as e:
-            if VERBOSE:
-                raise e
-
+    current_padding = 1
 
     for i,(key,item) in enumerate(dic.items()):
-        # look for flag groups, UNUSED
-        if key == "ui__group":
-            if "GROUPS" in locals() and item in GROUPS.keys():
-                for key,value in GROUPS[item].items():
-                    options[key] = value
-            continue
-
         # read titles into labels
-        elif "ui__title" in key and key[-1].isdigit():
+        if "ui__title" in key and key[-1].isdigit():
             # get next title element
             for next_title,k in enumerate(list(dic.keys())[i:]):
                 if k.startswith('ui__title') and k[-1].isdigit():
                     break
 
-            l = Label(value=CONTAINER_TITLE_STYLE(item),justify="left")
+            l = Label(value=item,justify="left")
+            l.set_style('value',CONTAINER_TITLE_STYLE)
+
             height_with_segment = dicts[-1].height + next_title*(1+dicts[-1].padding)+15
 
             if height_with_segment > HEIGHT:
                 dicts.append(Container(**kwargs))
                 dicts[-1].add_elements(l)
                 continue
-
-
 
             
             # only pad if not the first element
@@ -108,6 +96,9 @@ def container_from_dict(dic,**kwargs):
 
             # add label to container
             dicts[-1].add_elements(l)
+
+            # set new padding value
+            current_padding = padding
             continue
 
         elif key == "ui__reverse_items":
@@ -132,7 +123,9 @@ def container_from_dict(dic,**kwargs):
 
 
         # create, add prompt
-        p = Prompt(real_label=str(key),label=CONTAINER_LABEL_STYLE(str(key)),value=CONTAINER_VALUE_STYLE(str(item)),padding=4)
+        p = Prompt(real_label=str(key),label=str(key),value=str(item),padding=current_padding)
+        p.set_style('label',CONTAINER_LABEL_STYLE)
+        p.set_style('value',CONTAINER_VALUE_STYLE)
         p.real_value = real_value
 
 
@@ -151,8 +144,8 @@ def container_from_dict(dic,**kwargs):
                 item = e.value
                 label = e.label
 
-                if real_length(str(item)+str(label)) > min(d.width-10,WIDTH-5):
-                    e.value = "..."
+                if real_length(str(item)+str(label)) > (1/2)*d.width:
+                    e.value = '...'
 
         if do_tabline:
             tabline = Prompt(options=[n for n in range(len(dicts))],highlight_style=TABBAR_HIGHLIGHT_STYLE)
@@ -198,6 +191,13 @@ class Container:
     object's selectable elements, and instead of 
     just using the object, the individual options
     are stored.
+
+    Styles:
+          GROUP      KEY
+        - Label      value_style  : style of labels
+        - Prompt     label_style  : prompt left
+        - Prompt     value_style  : prompt right
+        - Container  corner_style : style for corners
     """
 
     def __init__(self,pos=None,border=None,width=None,height=None,dynamic_size=True,center_elements=True,padding=0):
@@ -221,21 +221,42 @@ class Container:
 
         # set up values
         self.elements = []
+        self.styles = {}
         self.selected = None
         self.selectables = []
         self.padding = padding
         self.selected_index = 0
         self.previous_pos = None
+        self.corners = [[],[],[],[]]
+        self.corner_style = lambda c: c
 
         # set up border
         if border == None:
-            border = CONTAINER_BORDER_STYLE
-        self.set_borders(border)
+            self.border_chars = CONTAINER_BORDER_CHARS
+        self.border_style = CONTAINER_BORDER_STYLE
+        self.set_borders(self.border_chars)
 
         # set up flags
         self._do_dynamic_size = dynamic_size
         self._do_center_elements = center_elements
         
+
+    # set style for element type `group`
+    def set_style(self,group,key,value):
+        # non group items
+        if group == type(self):
+            setattr(self,key+'_style',value)
+            return
+
+        if not group in self.styles.keys():
+            self.styles[group] = []
+
+        self.styles[group].append([key,value])
+
+        for e in self.elements:
+            if type(e) == group:
+                e.set_style(key,value)
+
 
     # text representation of self
     def __repr__(self):
@@ -309,7 +330,7 @@ class Container:
         if not self.real_height <= new_real_height:
             self.real_height = new_real_height
             self.height = new_real_height
-            self.get_border()
+        self.get_border()
 
         # print border
         py = None
@@ -385,29 +406,67 @@ class Container:
             self.borders = [left,top,right,top]
         elif len(border) == 4:
             self.borders = border
-    
+
     
     # set border corners
-    #TODO
-    def set_corner(self,corner,value):
-        self.get_border()
+    def set_corner(self,corner,value,offset=0):
+        if not hasattr(self,'border'):
+            self.get_border()
 
         # get values
         if corner in ["TOP_LEFT",0]:
-            char = self.borders[1]
+            char = self.border[1]
             side = "left"
+            index = 0
 
         elif corner in ["TOP_RIGHT",1]:
             char = self.border[1]
             side = "right"
+            index = 1
 
         elif corner in ["BOTTOM_LEFT",2]:
             char = self.border[3]
-            side = "right"
+            side = "left"
+            index = 2
 
         elif corner in ["BOTTOM_RIGHT",3]:
             char = self.border[3]
             side = "right"
+            index = 3
+
+        # get & replace indexes
+        px,py = self.pos
+
+        ## get x
+        if side == 'right':
+            startx = px+self.width+2 - real_length(value) - offset
+        elif side == 'left':
+            startx = px+1 + offset
+
+        ## get y
+        if char == self.border[1]:
+            y = py+1
+        elif char == self.border[3]:
+            y = py+self.real_height+2+self.padding
+
+        # insert new
+        new = []
+        for x,char in zip(range(startx,startx+real_length(value)),value):
+            new.append([x,y,self.corner_style(char)])
+
+        # filter duplicates
+        coords = [[x,y] for x,y,_ in self.border]
+        newcoords = [[x,y] for x,y,_ in new]
+
+        for i,c in enumerate(self.border):
+            x,y,_ = c
+
+            if [x,y] in newcoords:
+                newindex = newcoords.index([x,y])
+                self.border.pop(i)
+                self.border.insert(i,new[newindex])
+
+        self.corners[index] = [corner,value,offset]
 
 
     # get list of border coordinates
@@ -419,7 +478,7 @@ class Container:
         x2 = px+self.width+1
         y2 = py+self.real_height+2+self.padding
 
-        left,top,right,bottom = self.borders
+        left,top,right,bottom = [self.border_style(a) for a in self.borders]
 
         self.border = []
         for y in range(py+1,y2):
@@ -429,6 +488,12 @@ class Container:
         for x in range(px+1,x2+1):
             self.border.append([x,y1,top])
             self.border.append([x,y2,bottom])
+
+        for c in self.corners:
+            if not len(c):
+                continue
+            corner,value,offset = c
+            self.set_corner(corner,value,offset)
 
 
     # wrapper for _add_element to make bulk adding easier
@@ -520,9 +585,15 @@ class Prompt:
 
     If there is a label given during construction the first 
     option is chosen, and the options given are disregarded.
+
+    Styles:
+        - highlight_style : used for highlighting
+        - label_style     : used for labels in type1 of prompt
+        - value_style     : used for values (between [ and ],
+                            non-inclusive.
     """
     
-    def __init__(self,width=None,options=None,label=None,real_label=None,value="",padding=0,highlight_style=None): 
+    def __init__(self,width=None,options=None,label=None,real_label=None,value="",padding=0): 
         # the existence of label decides the layout (<> []/[] [] [])
         if label:
             self.label = str(label)
@@ -542,15 +613,15 @@ class Prompt:
 
         # set up instance variables
         self.selected_index = None
-        if highlight_style == None or not callable(highlight_style):
-
-            self.highlight_style = PROMPT_HIGHLIGHT_STYLE
-        else:
-            self.highlight_style = highlight_style
-
         self.options = options
         self.padding = padding
         self.value = value
+
+        # styles
+        self.highlight_style = PROMPT_HIGHLIGHT_STYLE
+        self.label_style = PROMPT_LABEL_STYLE
+        self.value_style = PROMPT_VALUE_STYLE
+        self.delimiter_style = PROMPT_DELIMITER_STYLE
         
         # flags
         self._is_selectable = True
@@ -559,15 +630,19 @@ class Prompt:
 
     # return string representation of self
     def __repr__(self):
+        start,end = self.delimiter_style
         # if there is a label do <label> [ ]
         if not self.label == None:
+            label = self.label_style(self.label)
+            value = self.value_style(self.value)
+
             highlight = (self.highlight_style if self._is_selected else lambda item: item)
 
-            middle_pad = (self.width-real_length(self.label)) - 4 - real_length(self.value) - self.padding
+            middle_pad = (self.width-real_length(label)) - len(start+end) - real_length(value) - self.padding
             middle_pad = max(4,middle_pad)
 
-            left = self.padding*" "+ self.label + middle_pad * " "
-            right = highlight(f"[ {self.value} ]")
+            left = self.padding*" " + label + middle_pad*" "
+            right = highlight(f"{start}{value}{end}")
 
             line = left + right
             self.width = max(self.width,real_length(line))
@@ -578,9 +653,10 @@ class Prompt:
             line = ''
             if isinstance(self.options, list):
                 for i,option in enumerate(self.options):
-                    line += "  "+ self._get_option_highlight(i)(f"[ {option} ]")
+                    option = self.value_style(option)
+                    line += "  "+ self._get_option_highlight(i)(f"{start}{option}{end}")
             else:
-                line = self.value
+                line = self.value_style(self.value)
 
             # center all lines 
             lines = break_line(line,_len=self.width-3,_separator="  ")
@@ -622,12 +698,23 @@ class Prompt:
         return self.value
 
 
+    # set style
+    def set_style(self,key,value):
+        setattr(self,key+'_style',value)
+
+
     # method to overwrite
     def submit(self):
         return self.value
 
 
 class Label:
+    """ 
+    A simple, non-selectable object for printing text
+
+    Styles:
+        - value_style : style for string value of label
+    """
     def __init__(self,value="",justify="center",width=None):
         # values
         self.value = value
@@ -640,6 +727,7 @@ class Label:
             self.width = real_length(self.value)+3
 
         self.justify = justify
+        self.value_style = LABEL_VALUE_STYLE
 
 
         # flags
@@ -647,11 +735,11 @@ class Label:
         self._is_selected = False
 
     def __repr__(self):
-        lines = break_line(self.value,_len=self.width)
+        lines = break_line(self.value_style(self.value),_len=self.width)
 
         if self.justify == "left":
             # nothing needs to be done
-            pass
+            lines[0] = ' '+lines[0]
 
         elif self.justify == "center":
             for i,l in enumerate(lines):
@@ -666,6 +754,9 @@ class Label:
         self.height = len(lines)
         return "\n".join(lines)
         
+    # set style of key to value
+    def set_style(self,key,value):
+        setattr(self,key+'_style',value)
 
 
 
@@ -675,53 +766,82 @@ class Label:
 WIDTH,HEIGHT = os.get_terminal_size()
 
 # styles
-CONTAINER_TITLE_STYLE = lambda item: italic(bold(item))
-CONTAINER_LABEL_STYLE = lambda item: item
-CONTAINER_VALUE_STYLE = lambda item: item
-CONTAINER_BORDER_STYLE = "|-"
-
+## other
 GLOBAL_HIGHLIGHT_STYLE = highlight
-PROMPT_HIGHLIGHT_STYLE = GLOBAL_HIGHLIGHT_STYLE
 CURSOR_HIGHLIGHT_STYLE = GLOBAL_HIGHLIGHT_STYLE
 TABBAR_HIGHLIGHT_STYLE = GLOBAL_HIGHLIGHT_STYLE
+
+# container
+CONTAINER_BORDER_CHARS = "|-"
+CONTAINER_BORDER_STYLE = lambda item: item
+CONTAINER_LABEL_STYLE = lambda item: item
+CONTAINER_VALUE_STYLE = lambda item: item
+CONTAINER_CORNER_STYLE = lambda char: char
+CONTAINER_TITLE_STYLE = lambda item: italic(bold(item))
+
+## prompt
+PROMPT_LABEL_STYLE = lambda item: item
+PROMPT_VALUE_STYLE = lambda item: item
+PROMPT_DELIMITER_STYLE = '[]'
+PROMPT_HIGHLIGHT_STYLE = GLOBAL_HIGHLIGHT_STYLE
+
+## label
+LABEL_VALUE_STYLE = lambda item: item
+
 
 # client global
 VERBOSE = 0
 
 
 
-
 # TEST CODE #
 if __name__ == "__main__":
-    c = Container(width=50,height=None,pos=[10,5],padding=1,dynamic_size=False)
-    c.set_borders([bold('|'),bold('-')])
-    p1 = Prompt(label="One:",value="fish")
-    p2 = Prompt(label="Two:",value="pog")
-    p3 = Prompt(label="Three:")
-    p4 = Prompt(options=["exit program","abandon all hope","I'm feeling lucky","ye who enter here","have graduated"])
-    l1 = Label(value="left",justify="left")
-    l2 = Label(value="center",justify="center")
-    l3 = Label(value="right",justify="right")
+    import json,requests
 
-    c.add_elements([l1,l2,l3])
-    #c.add_elements(Label())
-    c.add_elements([p1,p2,p3])
-    #c.add_elements(Label())
-    c.add_elements([p4])
+    r = requests.get('https://online.sprinter.hu/terkep/data.json')
+    d = r.json()
+    d = d[0]
+        
+    c = container_from_dict(d)[0]
+    c.set_corner(0,'example using sprinter json')
+    c.set_corner(3,'pytermgui')
+    c.set_style(Container,'corner',lambda a: color(a,'38;5;141'))
+    c.set_style(Container,'border',lambda a: color(a,'38;5;220'))
+    c.set_style(Prompt,'label',lambda a: color(a,'38;5;103'))
+    c.set_style(Prompt,'value',lambda a: color(a,'38;5;61'))
+    c.set_style(Prompt,'delimiter',['< ',' >'])
+    c.set_borders('|_|-')
+    c.select(3)
+    c.width = 50
+    c.center()
+    print(c)
+    #c = Container(width=50,height=None,pos=[10,5],padding=1,dynamic_size=False)
+    #c.set_borders([bold('|'),bold('-')])
+    #p1 = Prompt(label="One:",value="fish")
+    #p2 = Prompt(label="Two:",value="pog")
+    #p3 = Prompt(label="Three:")
+    ##p4 = Prompt(options=["exit program","abandon all hope","I'm feeling lucky","ye who enter here","have graduated"])
+    #l1 = Label(value="left",justify="left")
+    #l2 = Label(value="center",justify="center")
+    #l3 = Label(value="right",justify="right")
 
+    #c.add_elements([l1,l2,l3])
+    ###c.add_elements(Label())
+    #c.add_elements([p1,p2,p3])
+    #c.set_corner('TOP_LEFT','corners',5)
+    #c.set_corner('TOP_RIGHT','are now',5)
+    #c.set_corner('BOTTOM_LEFT','fully',5)
+    #c.set_corner('BOTTOM_RIGHT','adjustable',5)
+    #c.select(2)
+    ###c.add_elements(Label())
+    ##c.add_elements([p4])
 
-    """
-    TODO:
-        fix selection uppercase
-    """
-
-    for i in range(len(c.selectables)):
-        time.sleep(0.8)
-        c.select(i)
-        print(repr(c))
-        #input()
-
-
-
+    #c.set_style(Label,"value",lambda item: color(bold(item),'38;5;141'))
+    #c.set_style(Prompt,"value",lambda item: italic(item))
+    #c.set_style(Prompt,"label",lambda item: 'label'+bold(item))
+    #c.set_style(Prompt,'highlight', lambda item: highlight(item,'38;5;98'))
+    #c.set_style(Container,'corner', lambda c: color(c,'38;5;196'))
+    #p3.value = "what"
+    #print(c)
 
     print(f'\033[{HEIGHT-10};0H')
