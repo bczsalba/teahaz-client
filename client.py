@@ -483,6 +483,7 @@ def menu_settings(index=0):
     c.center()
     c.selected_index = (0 if index==None else index) 
     c.select()
+    c.width = min(WIDTH-5,c.width)
     print(c)
     
     return c
@@ -522,6 +523,7 @@ def create_submenu(selected,index=None,dict_index=0):
         dic.center()
 
     d = dicts[dict_index]
+    d.width = min(WIDTH-5,d.width)
     print(d)
 
     set_pipe(handle_menu,{'obj': dicts, 'page': dict_index})

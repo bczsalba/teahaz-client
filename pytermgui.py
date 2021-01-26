@@ -74,16 +74,16 @@ def container_from_dict(dic,padding=4,**kwargs):
         # read titles into labels
         if "ui__title" in key and key[-1].isdigit():
             # get next title element
-            for next_title,k in enumerate(list(dic.keys())[i:]):
+            for next_title,k in enumerate(list(dic.keys())[i+1:]):
                 if k.startswith('ui__title') and k[-1].isdigit():
                     break
 
             l = Label(value=item,justify="left")
             l.set_style('value',CONTAINER_TITLE_STYLE)
 
-            height_with_segment = dicts[-1].height + next_title*(1+dicts[-1].padding)+15
-
-            if height_with_segment > HEIGHT:
+            height_with_segment = dicts[-1].real_height + next_title*(1+dicts[-1].padding)+5
+            
+            if height_with_segment > HEIGHT-5:
                 dicts.append(Container(**kwargs))
                 dicts[-1].add_elements(l)
                 continue
@@ -130,7 +130,7 @@ def container_from_dict(dic,padding=4,**kwargs):
 
 
         # add prompt to dict
-        if dicts[-1].height + p.height > WIDTH-15:
+        if dicts[-1].height + p.height > HEIGHT-5:
             dicts.append(Container(**kwargs))
 
         dicts[-1].add_elements(p)
@@ -148,7 +148,8 @@ def container_from_dict(dic,padding=4,**kwargs):
                     e.value = '...'
 
         if do_tabline:
-            tabline = Prompt(options=[n for n in range(len(dicts))],highlight_style=TABBAR_HIGHLIGHT_STYLE)
+            tabline = Prompt(options=[n for n in range(len(dicts))])
+            tabline.set_style('highlight',TABBAR_HIGHLIGHT_STYLE)
             tabline.select(i)
             tabline._is_selectable = False
             d.add_elements([Label(),tabline])
@@ -815,33 +816,4 @@ if __name__ == "__main__":
     c.width = 50
     c.center()
     print(c)
-    #c = Container(width=50,height=None,pos=[10,5],padding=1,dynamic_size=False)
-    #c.set_borders([bold('|'),bold('-')])
-    #p1 = Prompt(label="One:",value="fish")
-    #p2 = Prompt(label="Two:",value="pog")
-    #p3 = Prompt(label="Three:")
-    ##p4 = Prompt(options=["exit program","abandon all hope","I'm feeling lucky","ye who enter here","have graduated"])
-    #l1 = Label(value="left",justify="left")
-    #l2 = Label(value="center",justify="center")
-    #l3 = Label(value="right",justify="right")
-
-    #c.add_elements([l1,l2,l3])
-    ###c.add_elements(Label())
-    #c.add_elements([p1,p2,p3])
-    #c.set_corner('TOP_LEFT','corners',5)
-    #c.set_corner('TOP_RIGHT','are now',5)
-    #c.set_corner('BOTTOM_LEFT','fully',5)
-    #c.set_corner('BOTTOM_RIGHT','adjustable',5)
-    #c.select(2)
-    ###c.add_elements(Label())
-    ##c.add_elements([p4])
-
-    #c.set_style(Label,"value",lambda item: color(bold(item),'38;5;141'))
-    #c.set_style(Prompt,"value",lambda item: italic(item))
-    #c.set_style(Prompt,"label",lambda item: 'label'+bold(item))
-    #c.set_style(Prompt,'highlight', lambda item: highlight(item,'38;5;98'))
-    #c.set_style(Container,'corner', lambda c: color(c,'38;5;196'))
-    #p3.value = "what"
-    #print(c)
-
-    print(f'\033[{HEIGHT-10};0H')
+    input()
