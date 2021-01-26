@@ -146,6 +146,14 @@ def container_from_dict(dic,padding=4,**kwargs):
 
                 if real_length(str(item)+str(label)) > (1/2)*d.width:
                     e.value = '...'
+                    e.width -= real_length(item)-3
+                    
+                    new_length = real_length(e.value+e.label)+e.padding+13
+                    if new_length > d.width:
+                        e.label = e.label[:d.width-new_length-5]+'...'
+
+                    e.width -= abs(d.width-new_length-5)
+
 
         if do_tabline:
             tabline = Prompt(options=[n for n in range(len(dicts))])
@@ -274,10 +282,9 @@ class Container:
             self.pos[0] += xdiff
             #self.pos[1] += ydiff
 
-            self.width = min(self.width,WIDTH-2)
+            self.width = min(self.width,WIDTH-5)
             self.height = min(self.height,HEIGHT)
             self.get_border()
-        #self.center()
 
         line = ''
         new_real_height = self.height
@@ -297,12 +304,10 @@ class Container:
         for i,e in enumerate(self.elements):
             if e.width > self.width-4:
                 if e.width >= WIDTH:
-                    if VERBOSE:
-                        raise Exception("Element width too high.")
-                    else:
-                        continue
+                    continue
+
                 elif self._do_dynamic_size:
-                    self.width = e.width + 4
+                    self.width = min(WIDTH-4,e.width + 3)
 
             e.width = self.width - 4
             e.pos = [x+1,starty+i]

@@ -7,8 +7,8 @@
     "USERNAME": "lilac",
     "ui__title3": "bindings",
     "ESCAPE_KEY": "ESC",
-    "VIMMODE": true,
-    "KEEP_CURSOR_AFTER_SELECT": true,
+    "VIMMODE": false,
+    "KEEP_CURSOR_AFTER_SELECT": false,
     "BASEBINDS": {
         "ESCAPE": {},
         "INSERT": {
