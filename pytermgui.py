@@ -58,17 +58,24 @@ def break_line(_inline,_len,_pad=0,_separator=' '):
     else:
         return _inline.split('\n')
 
+
+
+# EXAMPLES #
+
 # generate list of containers from dict
 # padding sets how much text should be indented under titles
 #
 # returns a list of Container objects, len() > 1 if the 
 # container height wouldn't fit the screen
 def container_from_dict(dic,padding=4,**kwargs):
-    dic_c = Container(**kwargs)
+    width = min(30,int(WIDTH*(2/3)))
+
+    dic_c = Container(**kwargs,width=width)
     dicts = [dic_c]
     reverse_items = False
     handler = None
     current_padding = 1
+    prompt_options = None
 
     for i,(key,item) in enumerate(dic.items()):
         # read titles into labels
@@ -84,7 +91,7 @@ def container_from_dict(dic,padding=4,**kwargs):
             height_with_segment = dicts[-1].real_height + next_title*(1+dicts[-1].padding)+5
             
             if height_with_segment > HEIGHT-5:
-                dicts.append(Container(**kwargs))
+                dicts.append(Container(**kwargs,width=width))
                 dicts[-1].add_elements(l)
                 continue
 
@@ -101,6 +108,10 @@ def container_from_dict(dic,padding=4,**kwargs):
             current_padding = padding
             continue
 
+        elif key == "ui__prompt_options":
+            prompt_options = item
+            continue
+
         elif key == "ui__reverse_items":
             reverse_items = True
             continue
@@ -115,15 +126,25 @@ def container_from_dict(dic,padding=4,**kwargs):
         real_value = item
 
         # ignore empty dicts
-        if isinstance(item,dict):
-            if len(item.keys()) == 0:
+        if type(item) in [dict,list]:
+            if isinstance(item,dict):
+                length = len(item.keys())
+            else:
+                length = len(item)
+
+            if length == 0:
                 continue
             else:
                 item = "..."
+        
+        elif prompt_options:
+            item = '...'
 
 
         # create, add prompt
         p = Prompt(real_label=str(key),label=str(key),value=str(item),padding=current_padding)
+        p.ui__options = prompt_options
+        prompt_options = None
         p.set_style('label',CONTAINER_LABEL_STYLE)
         p.set_style('value',CONTAINER_VALUE_STYLE)
         p.real_value = real_value
@@ -131,7 +152,7 @@ def container_from_dict(dic,padding=4,**kwargs):
 
         # add prompt to dict
         if dicts[-1].height + p.height > HEIGHT-5:
-            dicts.append(Container(**kwargs))
+            dicts.append(Container(**kwargs,width=width))
 
         dicts[-1].add_elements(p)
 
@@ -140,19 +161,30 @@ def container_from_dict(dic,padding=4,**kwargs):
     do_tabline = len(dicts) > 1
     for i,d in enumerate(dicts):
         for e in d.elements:
+            # labels shouldnt be applicable
             if isinstance(e,Prompt):
                 item = e.value
                 label = e.label
 
+                # check if combined is more than 2 thirds of total width
                 if real_length(str(item)+str(label))+1 > (2/3)*d.width:
-                    e.value = '...'
-                    e.width -= real_length(item)-3
-                    
-                    new_length = real_length(e.value+e.label)+e.padding+13
-                    if new_length > d.width:
-                        e.label = e.label[:d.width-new_length-5]+'...'
+                    if e.width <= WIDTH*(2/3):
+                        d.width = e.width+10
+                        repr(d)
 
-                    e.width -= abs(d.width-new_length-5)
+                    else:
+                        e.value = '...'
+                        e.width -= real_length(item)-3
+                        
+                        # get new length
+                        new_length = real_length(e.value+e.label)+e.padding+13
+
+                        # change label if new width is still too high
+                        if new_length > d.width:
+                            e.label = e.label[:d.width-new_length-5]+'...'
+
+                        # update element
+                        e.width -= abs(d.width-new_length-5)
 
 
         if do_tabline:
@@ -212,13 +244,13 @@ class Container:
     def __init__(self,pos=None,border=None,width=None,height=None,dynamic_size=True,center_elements=True,padding=0):
         # sanitize width
         if not width == None:
-            self.width = min(width,WIDTH-2)
+            self.width = min(width,WIDTH)
         else:
             self.width = 0
 
         # sanitize height
         if not height == None:
-            self.height = min(height,HEIGHT)
+            self.height = min(height,HEIGHT-2)
         else:
             self.height = 0
         self.real_height = self.height
@@ -241,9 +273,9 @@ class Container:
 
         # set up border
         if border == None:
-            self.border_chars = CONTAINER_BORDER_CHARS
+            border = CONTAINER_BORDER_CHARS
         self.border_style = CONTAINER_BORDER_STYLE
-        self.set_borders(self.border_chars)
+        self.set_borders(border)
 
         # set up flags
         self._do_dynamic_size = dynamic_size
@@ -273,7 +305,7 @@ class Container:
 
         # TODO: detect need for centering (maybe?)
         nWIDTH,nHEIGHT = os.get_terminal_size()
-        if not [WIDTH,HEIGHT] == [nWIDTH,nHEIGHT]:
+        if 0 and not [WIDTH,HEIGHT] == [nWIDTH,nHEIGHT]:
             clr()
             xdiff = (nWIDTH-WIDTH)//2
             ydiff = nHEIGHT-HEIGHT
@@ -295,7 +327,7 @@ class Container:
         x += 2
 
         # vertically center elements
-        if self._do_center_elements:
+        if 0 and self._do_center_elements:
             vertical_padding = max((self.real_height-sum(e.height for e in self.elements))//2,0)
             starty += vertical_padding
 
@@ -303,7 +335,7 @@ class Container:
         extra_lines = 0
         for i,e in enumerate(self.elements):
             # correct size
-            if e.width > self.width-4:
+            if 0 and e.width > self.width-4:
                 if e.width >= WIDTH:
                     continue
 
@@ -341,7 +373,8 @@ class Container:
 
         # print border
         py = None
-        for x,y,char in self.border:
+        from client import dbg
+        for x,y,char in self.border[:]:
             # set previous y
             py = y
 
@@ -468,6 +501,7 @@ class Container:
         for i,c in enumerate(self.border):
             x,y,_ = c
 
+            from client import dbg
             if [x,y] in newcoords:
                 newindex = newcoords.index([x,y])
                 self.border.pop(i)
@@ -486,15 +520,14 @@ class Container:
         y2 = py+self.real_height+2+self.padding
 
         left,top,right,bottom = [self.border_style(a) for a in self.borders]
-
         self.border = []
         for y in range(py+1,y2):
             self.border.append([x1,y,left])
             self.border.append([x2,y,right])
 
         for x in range(px+1,x2+1):
-            self.border.append([x,y1,top])
             self.border.append([x,y2,bottom])
+            self.border.append([x,y1,top])
 
         for c in self.corners:
             if not len(c):
@@ -637,7 +670,16 @@ class Prompt:
 
     # return string representation of self
     def __repr__(self):
-        start,end = self.delimiter_style
+        delimiters = []
+        for i,v in enumerate(self.delimiter_style):
+            if i % 2 == 0:
+                delimiters.append(v+' ')
+            else:
+                delimiters.append(' '+v)
+
+        start,end = delimiters[:2]
+
+        
         # if there is a label do <label> [ ]
         if not self.label == None:
             label = self.label_style(self.label)
@@ -722,7 +764,7 @@ class Label:
     Styles:
         - value_style : style for string value of label
     """
-    def __init__(self,value="",justify="center",width=None):
+    def __init__(self,value="",justify="center",width=None,padding=1):
         # values
         self.value = value
         self.height = 1
@@ -734,6 +776,7 @@ class Label:
             self.width = real_length(self.value)+3
 
         self.justify = justify
+        self.padding = padding
         self.value_style = LABEL_VALUE_STYLE
 
 
@@ -746,7 +789,7 @@ class Label:
 
         if self.justify == "left":
             # nothing needs to be done
-            lines[0] = ' '+lines[0]
+            lines[0] = self.padding*' '+lines[0]
 
         elif self.justify == "center":
             for i,l in enumerate(lines):

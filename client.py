@@ -11,6 +11,7 @@ import requests
 import pytermgui
 import threading
 import pyperclip as clip
+from importlib import reload
 from pytermgui import WIDTH,HEIGHT
 from pytermgui import clean_ansi,real_length,break_line
 from pytermgui import italic,bold,underline,color,highlight
@@ -43,7 +44,7 @@ def decode(a):
 ## settings
 ### import settings from json
 def import_settings():
-    global SETTINGS
+    global SETTINGS,COLORS
 
     with open(os.path.join(PATH,'settings.json'),'r') as f:
         SETTINGS = json.load(f)
@@ -52,6 +53,9 @@ def import_settings():
 
     if is_set('MODE'):
         switch_mode(MODE)
+
+    current_colorscheme = SETTINGS['COLORSCHEME']
+    COLORS = SETTINGS['COLORSCHEMES'][current_colorscheme]
 
 ## edit setting in json (needed because lambda cannot do assignments)
 def edit_setting(key,value):
@@ -90,8 +94,6 @@ def edit_setting(key,value):
     # apply change
     root[setting] = value
 
-    dbg(setting,value)
-
     # write to file
     with open(os.path.join(PATH,'settings.json'),'w') as f:
         f.write(json.dumps(SETTINGS,indent=4))
@@ -100,6 +102,14 @@ def edit_setting(key,value):
     # reimport settings
     import_settings()
 
+    if setting == "SEAMLESS_MODE":
+        infield.wipe()
+        if SEAMLESS_MODE:
+            BORDERS.wipe()
+        else:
+            print(BORDERS)
+        
+    infield.pos = get_infield_pos(SEAMLESS_MODE)
 
 
 ## miscellaneous
@@ -135,6 +145,7 @@ def reverse_dict_lookup(d,value):
     index = values.index(value)
     return keys[index]
 
+
 ## variables
 ### check if variable is in scope
 def is_set(var,scope=None):
@@ -156,7 +167,8 @@ def switch_mode(target):
 
     MODE = target
     VALID_KEYS = [v for k,v in BINDS[MODE].items() if not "ui__title" in k]
-    printTo(WIDTH-len(MODE),0,MODE,clear=1)
+    x,y = infield.pos
+    printTo(x,y+1,MODE,clear=1)
 
 ### add caller of ui element to ui trace
 def add_to_trace(arr):
@@ -178,7 +190,6 @@ def set_pipe(fun,arg,keep=None):
     global PIPE_OUTPUT, KEEP_PIPE
 
     PIPE_OUTPUT = fun,arg
-    dbg(arg.get('page'))
     if not keep == None:
         KEEP_PIPE = keep
 
@@ -233,9 +244,11 @@ def is_in_last_word(index,string):
 class InputDialog(Container):
     def __init__(self,options=None,label_value='',label_justify="center",label_underpad=0,field_value='',dialog_type=None,**kwargs):
         super().__init__(**kwargs)
-
+        gui = pytermgui.__dict__
+        
         # set up label class
         self.label = Label(value=label_value,justify=label_justify)
+        self.label.set_style('value',gui['CONTAINER_TITLE_STYLE'])
 
         # set up field depending on options given
         self.options = options
@@ -251,9 +264,12 @@ class InputDialog(Container):
 
         if self.dialog_type == "prompt":
             self.field = Prompt(options=options,width=20)
+            self.field.set_style('value',gui['CONTAINER_VALUE_STYLE'])
+            self.field.set_style('label',gui['CONTAINER_LABEL_STYLE'])
         
         elif self.dialog_type in ["field","binding"]:
             self.field = InputDialogField(default=field_value,print_at_start=False)
+            self.field.set_style('value',gui['CONTAINER_VALUE_STYLE'])
 
         # add label
         self.add_elements([self.label])
@@ -290,10 +306,15 @@ class InputDialogField(getch.InputField):
         self._is_selectable = False
         self.options = None
 
+        self.value_style = lambda item: item
+
     # return text of self
     def __repr__(self):
-        line = self.print(return_line=True)
+        line = self.value_style(self.print(return_line=True))
         return line
+    
+    def set_style(self,key,value):
+        setattr(self,key+'_style',value)
 
     # return value
     def submit(self):
@@ -303,12 +324,8 @@ class InputDialogField(getch.InputField):
 
 ## print s to coordinates, clear space for it if needed
 def printTo(x=0,y=0,s='',clear=False):
-    return
     # clear the len of string with 1 margin on both sides
-    if clear:
-        print(f'\033[{y};0H'+'\033[K')
-    else:
-        print(f'\033[{y};{x-1}H'+(len(s)+2)*' ')
+    print(f'\033[{y};{x-1}H'+(len(s)+2)*' ')
 
     # print
     print(f'\033[{y};{x}H'+s)
@@ -339,6 +356,9 @@ def get_lines():
 
     return messages
 
+def get_infield_pos(seamless):
+    x,y = BORDERS.pos
+    return ([3,HEIGHT-2] if seamless else [x+4,y+BORDERS.height-1])
 
 ## handle action but for menus
 def handle_menu(key,obj,page=0):
@@ -447,8 +467,6 @@ def handle_menu(key,obj,page=0):
             UI_TRACE[-1][1]['dict_index'] = new
 
 
-
-
     obj.select()
     print(obj)
 
@@ -456,7 +474,7 @@ def handle_menu(key,obj,page=0):
 def return_to_infield(*args,**kwargs):
     global PIPE_OUTPUT,KEEP_PIPE
     
-    os.system('cls' if os.name == 'nt' else 'clear')
+    #os.system('cls' if os.name == 'nt' else 'clear')
     infield.print()
     PIPE_OUTPUT = None
     KEEP_PIPE = False
@@ -493,7 +511,7 @@ def create_submenu(selected,index=None,dict_index=0):
     global PIPE_OUTPUT
 
     if isinstance(selected.real_value,dict):
-        dicts = container_from_dict(selected.real_value,width=WIDTH-5)
+        dicts = container_from_dict(selected.real_value)
         d = dicts[dict_index]
         d.selected_index = (0 if index==None else index) 
         if len(d.selectables):
@@ -502,11 +520,13 @@ def create_submenu(selected,index=None,dict_index=0):
     else:
         if isinstance(selected.real_value,bool):
             options = [True,False]
+        elif isinstance(selected.ui__options,list):
+            options = selected.ui__options
         else:
             options = None
 
         d = InputDialog(
-                    label_value=bold(selected.real_label+':'),
+                    label_value=selected.real_label,
                     label_underpad=1,
                     options=options,
                     field_value=str(selected.real_value),
@@ -628,18 +648,18 @@ def getch_loop():
             if _buffkey_valid:
                 key = buff+key
                 buff = key
-                printTo(WIDTH-5,4,'multi',clear=1)
+                #printTo(WIDTH-5,4,'multi',clear=1)
 
             # "reset" key
             else:
                 buff = key
-                printTo(WIDTH-6,4,'single',clear=1)
+                #printTo(WIDTH-6,4,'single',clear=1)
         
         # reset buffer
         else:
             buff = key
 
-        printTo(WIDTH-len(key),3,key,clear=1)
+        #printTo(WIDTH-len(key),3,key,clear=1)
 
         # currently inactive
         if key == "SIGTERM":
@@ -666,7 +686,7 @@ def getch_loop():
 def handle_action(action):
     global KEEP_GOING,PIPE_OUTPUT,PIPE_ARGS,VISUAL_START,VISUAL_END,infield
 
-    printTo(WIDTH-len(action),2,action,clear=1)
+    #printTo(WIDTH-len(action),2,action,clear=1)
     
 
 
@@ -1214,21 +1234,37 @@ if __name__ == "__main__":
         open(LOGFILE,'w').close()
 
     # set pytermgui styles
-    pytermgui.set_style('container_title',lambda item: bold(italic(color(item.upper(),'38;5;64'))+':'))
-    pytermgui.set_style('container_label',lambda item: (color(item.lower(),'38;5;243')))
-    pytermgui.set_style('container_value',lambda item: (color(item,'38;5;218')))
+    # 229 60 72
+    pytermgui.set_style('container_title',lambda item: bold(color(item.upper(),COLORS['title'])+':'))
+    pytermgui.set_style('container_label',lambda item: (color(item.lower(),COLORS['label'])))
+    pytermgui.set_style('container_value',lambda item: (color(item,COLORS['value'])))
+    pytermgui.set_style('container_border',lambda item: (color(item,COLORS['border'])))
     pytermgui.set_style('prompt_highlight',lambda item: highlight(item,'38;5;57'))
     pytermgui.set_style('tabbar_highlight',lambda item: highlight(item,'38;5;69'))
-    pytermgui.set_style('container_border_chars',[bold(v) for v in '|-'])
-    pytermgui.set_style('prompt_delimiter_style',['< ',' >'])
+    pytermgui.set_style('container_border_chars',[bold(v) for v in COLORS['border_chars']])
+    pytermgui.set_style('prompt_delimiter_style',COLORS['prompt_delimiters'])
     
 
     ## clear screen
     print('\033[2J')
 
+    BORDERS = Container(width=int(WIDTH*(5/6)),height=HEIGHT-2,center_elements=False,dynamic_size=False)
+    BORDERS.set_borders('|^|=')
+    BORDERS.set_style(Container,'border',lambda c: bold(color(c,'38;5;241')))
+    BORDERS.set_style(Container,'corner',BORDERS.border_style)
+    BORDERS.set_corner(0,' .-^^')
+    BORDERS.set_corner(1,'^^-. ')
+    BORDERS.set_corner(2,' \'==')
+    BORDERS.set_corner(2,' \'-==')
+    BORDERS.set_corner(3,'==-\' ')
+    BORDERS.add_elements(Label(value='teaház',justify='center'))
+    BORDERS.center()
+    if not SEAMLESS_MODE:
+        print(BORDERS)
+
     # set default mode
+    infield = getch.InputField(pos=get_infield_pos(SEAMLESS_MODE))
     switch_mode("ESCAPE")
-    infield = getch.InputField(pos=[0,HEIGHT-1])
 
     add_to_trace([return_to_infield,{'_': '"'},''])
 

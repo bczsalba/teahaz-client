@@ -1,14 +1,38 @@
 {
     "ui__title1": "global",
+    "ui__prompt_options": [
+        true,
+        false
+    ],
     "DO_DEBUG": true,
-    "ui__title2": "messaging",
+    "SEAMLESS_MODE": true,
+    "ui__title2": "colors",
+    "COLORSCHEME": "normal",
+    "COLORSCHEMES": {
+        "normal": {
+            "ui__title1": "colors",
+            "title": "38;5;210",
+            "label": "38;5;250",
+            "value": "38;5;72",
+            "border": "38;5;60",
+            "ui__title2": "highlights",
+            "ui__title3": "characters",
+            "border_chars": "|-",
+            "ui__prompt_options": [
+                "<>",
+                "[]"
+            ],
+            "prompt_delimiters": "[]"
+        }
+    },
+    "ui__title3": "messaging",
     "URL": "https://github.com/bczsalba/asztal",
     "ROOMID": "conversations",
     "USERNAME": "lilac",
-    "ui__title3": "bindings",
+    "ui__title4": "bindings",
     "ESCAPE_KEY": "ESC",
-    "VIMMODE": false,
-    "KEEP_CURSOR_AFTER_SELECT": false,
+    "VIMMODE": true,
+    "KEEP_CURSOR_AFTER_SELECT": true,
     "BASEBINDS": {
         "ESCAPE": {},
         "INSERT": {
