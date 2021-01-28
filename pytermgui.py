@@ -139,7 +139,7 @@ def container_from_dict(dic,padding=4,**kwargs):
 
         # create, add prompt
         p = Prompt(real_label=str(key),label=str(key),value=str(item),padding=current_padding)
-        p.ui__options = prompt_options
+        p.__ui_options = prompt_options
         prompt_options = None
         p.set_style('label',CONTAINER_LABEL_STYLE)
         p.set_style('value',CONTAINER_VALUE_STYLE)
@@ -821,12 +821,6 @@ class Label:
         self.height = len(lines)
         return "\n".join(lines)
         
-    def wipe(self):
-        xstart,y = self.pos
-        for x in range(xstart,real_length(self.value)):
-            sys.stdout.write(f'\033[{y};{x}H ')
-        sys.stdout.flush()
-            
     # set style of key to value
     def set_style(self,key,value):
         setattr(self,key+'_style',value)

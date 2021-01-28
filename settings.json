@@ -1,10 +1,10 @@
 {
     "ui__title1": "global",
     "ui__prompt_options__debug": [
-        true,
-        false
+        "hey",
+        "bye"
     ],
-    "DO_DEBUG": true,
+    "DO_DEBUG": "hey",
     "ui__prompt_options__seamless": [
         true,
         false
@@ -42,7 +42,7 @@
         true,
         false
     ],
-    "VIMMODE": true,
+    "VIMMODE": false,
     "ui__prompt_options__keep_cursor": [
         true,
         false
@@ -70,6 +70,7 @@
     "VIMBINDS": {
         "ESCAPE": {
             "ui__title1": "modes & misc",
+            "menu_settings": "CTRL_/",
             "mode_visual": "v",
             "mode_insert": "i",
             "select_line": "V",
@@ -103,9 +104,7 @@
             "ui__title4": "clipboard",
             "paste": "p",
             "copy_line": "yy",
-            "delete_line": "dd",
-            "ui__title5": "menus",
-            "menu_settings": "CTRL_/"
+            "delete_line": "dd"
         },
         "INSERT": {
             "mode_escape": "ESC",
@@ -113,21 +112,23 @@
             "menu_settings": "CTRL_/"
         },
         "VISUAL": {
+            "ui__title1": "modes & misc",
             "mode_escape": "ESC",
+            "menu_settings": "CTRL_/",
+            "ui__title2": "movement",
             "selection_left": "h",
             "selection_right": "l",
-            "selection_lowercase": "u",
-            "selection_uppercase": "U",
             "select_line_end": "$",
             "select_word_end": "w",
             "select_in": "i",
             "find": "f",
-            "selection_copy": "y",
+            "ui__title3": "editing",
+            "selection_lowercase": "u",
+            "selection_uppercase": "U",
             "selection_replace": "r",
             "selection_delete": "x",
             "selection_cut": "d",
-            "copy": "y",
-            "menu_settings": "CTRL_/"
+            "selection_copy": "y"
         }
     }
 }

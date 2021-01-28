@@ -11,7 +11,6 @@ import requests
 import pytermgui
 import threading
 import pyperclip as clip
-from importlib import reload
 from pytermgui import WIDTH,HEIGHT
 from pytermgui import clean_ansi,real_length,break_line
 from pytermgui import italic,bold,underline,color,highlight
@@ -172,7 +171,6 @@ def switch_mode(target):
         print(f'\033[{y};{x}H'+repr(MODE_LABEL))
 
     VALID_KEYS = [v for k,v in BINDS[MODE].items() if not k.startswith('ui__')]
-    #printTo(x,y+1,MODE,clear=1)
 
 ### add caller of ui element to ui trace
 def add_to_trace(arr):
@@ -380,6 +378,7 @@ def handle_menu(key,obj,page=0):
         if len(SETTINGS_DEPTH):
             SETTINGS_DEPTH.pop(-1)
         fun,args,new = UI_TRACE[-1]
+        dbg(fun,args)
 
         # create copy so the original dict isnt overwritten
         kwargs = args.copy()
@@ -450,16 +449,24 @@ def handle_menu(key,obj,page=0):
         return
       
     elif key == " ":
-        selected,_,_ = obj.selected
-        dbg(selected.__dict__)
-        if selected.options and len(selected.options) == 2:
-            if selected.selected_index == 0:
-                selected.selected_index = 1
-            else:
-                selected.selected_index = 0
+        selected,_,index = obj.selected
+        if selected.__ui_options and len(selected.__ui_options) == 2:
+            if not globals().get(selected.real_label) == None:
+                # add to depth
+                SETTINGS_DEPTH.append(selected.real_label)
+                old_index = selected.__ui_options.index(globals()[selected.real_label])
+                if old_index == 0:
+                    new_index = 1
+                else:
+                    new_index = 0
 
-            edit_setting(selected.setting,selected.options[selected.selected_index])
-            handle_menu('',obj)
+                edit_setting(selected.real_label,selected.__ui_options[new_index])
+                fun,args,obj = UI_TRACE[-1]
+                args['index'] = index
+
+                kwargs = args.copy()
+                fun(**kwargs)
+                SETTINGS_DEPTH.pop(-1)
             return
 
     elif key in "hjkl" or key.startswith("ARROW"):
@@ -496,9 +503,6 @@ def return_to_infield(*args,**kwargs):
     
 ## settings menu caller
 def menu_settings(index=0,dict_index=0):
-    global PIPE_OUTPUT,KEEP_PIPE,UI_TRACE
-
-    # open settings file
     with open(os.path.join(PATH,'settings.json'),'r') as f:
         SETTINGS = json.load(f)
         objects = container_from_dict(SETTINGS)
@@ -526,8 +530,6 @@ def menu_settings(index=0,dict_index=0):
 
 ## submenu caller
 def create_submenu(selected,index=None,dict_index=0):
-    global PIPE_OUTPUT
-
     if isinstance(selected.real_value,dict):
         dicts = container_from_dict(selected.real_value)
         d = dicts[dict_index]
@@ -536,8 +538,8 @@ def create_submenu(selected,index=None,dict_index=0):
             d.select()
 
     else:
-        if isinstance(selected.ui__options,list):
-            options = selected.ui__options
+        if isinstance(selected.__ui_options,list):
+            options = selected.__ui_options
         else:
             options = None
 
