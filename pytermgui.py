@@ -624,9 +624,14 @@ class Container:
     # - called during __repr__ element loop
     def _handle_long_element(self,e):
         if hasattr(e,'label') and hasattr(e,'value'):
-            if real_length(str(e.value))+4 > self.width*(1/2):
-                e.value = '...'
-
+            # check value length
+            if real_length(str(e.value))+4 > self.width*(1/3):
+                # check if self can be extended
+                if e.width+10 < WIDTH*(2/3) and e.width < self.width:
+                    self.width = e.width+10
+                else:
+                    e.value = '...'
+                
             if real_length(str(e.label))+4 > self.width*(1/2):
                 e.label = str(e.label)[:int(self.width*(1/3))-3]+'...'
 

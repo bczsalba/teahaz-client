@@ -1249,6 +1249,8 @@ if __name__ == "__main__":
     if DO_DEBUG:
         open(LOGFILE,'w').close()
 
+    dbg('starting teahaz at size',str(WIDTH),str(HEIGHT))
+
     # set pytermgui styles
     # 229 60 72
     pytermgui.set_style('container_title',lambda item: bold(color(item.upper(),COLORS['title'])+':'))
