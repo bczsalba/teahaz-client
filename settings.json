@@ -1,12 +1,18 @@
 {
     "ui__title1": "global",
-    "ui__prompt_options": [
+    "ui__prompt_options__debug": [
         true,
         false
     ],
     "DO_DEBUG": true,
-    "SEAMLESS_MODE": true,
+    "ui__prompt_options__seamless": [
+        true,
+        false
+    ],
     "ui__title2": "colors",
+    "ui__prompt_options__colorscheme": [
+        "normal"
+    ],
     "COLORSCHEME": "normal",
     "COLORSCHEMES": {
         "normal": {
@@ -22,7 +28,7 @@
                 "<>",
                 "[]"
             ],
-            "prompt_delimiters": "[]"
+            "prompt_delimiters": "<>"
         }
     },
     "ui__title3": "messaging",
@@ -31,7 +37,15 @@
     "USERNAME": "lilac",
     "ui__title4": "bindings",
     "ESCAPE_KEY": "ESC",
+    "ui__prompt_options__vimmode": [
+        true,
+        false
+    ],
     "VIMMODE": true,
+    "ui__prompt_options__keep_cursor": [
+        true,
+        false
+    ],
     "KEEP_CURSOR_AFTER_SELECT": true,
     "BASEBINDS": {
         "ESCAPE": {},

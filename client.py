@@ -101,15 +101,7 @@ def edit_setting(key,value):
 
     # reimport settings
     import_settings()
-
-    if setting == "SEAMLESS_MODE":
-        infield.wipe()
-        if SEAMLESS_MODE:
-            BORDERS.wipe()
-        else:
-            print(BORDERS)
-        
-    infield.pos = get_infield_pos(SEAMLESS_MODE)
+    infield.pos = get_infield_pos()
 
 
 ## miscellaneous
@@ -166,9 +158,21 @@ def switch_mode(target):
         BINDS  = BASEBINDS
 
     MODE = target
-    VALID_KEYS = [v for k,v in BINDS[MODE].items() if not "ui__title" in k]
     x,y = infield.pos
-    printTo(x,y+1,MODE,clear=1)
+    x -= 1
+    y += 1
+    if target == "ESCAPE":
+        xstart = x
+        for x in range(xstart,real_length(repr(MODE_LABEL))+2):
+            sys.stdout.write(f'\033[{y};{x}H ')
+        sys.stdout.flush()
+
+    else:
+        MODE_LABEL.value = bold('-- '+target.upper()+' --')
+        print(f'\033[{y};{x}H'+repr(MODE_LABEL))
+
+    VALID_KEYS = [v for k,v in BINDS[MODE].items() if not k.startswith('ui__')]
+    #printTo(x,y+1,MODE,clear=1)
 
 ### add caller of ui element to ui trace
 def add_to_trace(arr):
@@ -356,9 +360,8 @@ def get_lines():
 
     return messages
 
-def get_infield_pos(seamless):
-    x,y = BORDERS.pos
-    return ([3,HEIGHT-2] if seamless else [x+4,y+BORDERS.height-1])
+def get_infield_pos():
+    return ([3,HEIGHT-2])
 
 ## handle action but for menus
 def handle_menu(key,obj,page=0):
@@ -480,31 +483,34 @@ def return_to_infield(*args,**kwargs):
     KEEP_PIPE = False
     
 ## settings menu caller
-def menu_settings(index=0):
+def menu_settings(index=0,dict_index=0):
     global PIPE_OUTPUT,KEEP_PIPE,UI_TRACE
 
     # open settings file
-    with open('settings.json','r') as f:
+    with open(os.path.join(PATH,'settings.json'),'r') as f:
         SETTINGS = json.load(f)
-        c = container_from_dict(SETTINGS)[0]
-    c.set_corner(1,'SETTINGS')
+        objects = container_from_dict(SETTINGS)
+        
+    for o in objects:
+        o.set_corner(1,'SETTINGS')
+        o.width = min(WIDTH-5,o.width)
+        o.center()
 
+    c = objects[dict_index]
 
     # clear infield from screen
     infield.wipe()
     
     # set pipes
-    set_pipe(handle_menu,{"obj": c},keep=True)
-    add_to_trace([menu_settings,{'index': lambda obj: obj.selected_index}, c])
+    set_pipe(handle_menu,{"obj": objects, 'page': dict_index},keep=True)
+    add_to_trace([menu_settings,{'index': lambda obj: obj.selected_index, 'dict_index': dict_index}, c])
 
     # print
-    c.center()
     c.selected_index = (0 if index==None else index) 
     c.select()
-    c.width = min(WIDTH-5,c.width)
     print(c)
     
-    return c
+    return objects
 
 ## submenu caller
 def create_submenu(selected,index=None,dict_index=0):
@@ -518,9 +524,7 @@ def create_submenu(selected,index=None,dict_index=0):
             d.select()
 
     else:
-        if isinstance(selected.real_value,bool):
-            options = [True,False]
-        elif isinstance(selected.ui__options,list):
+        if isinstance(selected.ui__options,list):
             options = selected.ui__options
         else:
             options = None
@@ -530,7 +534,7 @@ def create_submenu(selected,index=None,dict_index=0):
                     label_underpad=1,
                     options=options,
                     field_value=str(selected.real_value),
-                    width=40
+                    width=45
         )
 
         d.setting = selected.real_label
@@ -1230,6 +1234,18 @@ BASE_DATA = {
 
 # TEMP MAIN
 if __name__ == "__main__":
+    ## clear screen
+    print('\033[2J')
+
+    if WIDTH < 37:
+        w = Container(height=3)
+        w.add_elements(Label(value=bold(color('Window width too low!','38;5;196')),justify='center'))
+        w.add_elements(Label(value=italic(color('A minimum of 37 columns are required for teahaz.','38;5;244')),justify='left'))
+        print(w)
+        for _ in range(HEIGHT-w.height):
+            print()
+        sys.exit(1)
+
     if DO_DEBUG:
         open(LOGFILE,'w').close()
 
@@ -1245,25 +1261,13 @@ if __name__ == "__main__":
     pytermgui.set_style('prompt_delimiter_style',COLORS['prompt_delimiters'])
     
 
-    ## clear screen
-    print('\033[2J')
-
-    BORDERS = Container(width=int(WIDTH*(5/6)),height=HEIGHT-2,center_elements=False,dynamic_size=False)
-    BORDERS.set_borders('|^|=')
-    BORDERS.set_style(Container,'border',lambda c: bold(color(c,'38;5;241')))
-    BORDERS.set_style(Container,'corner',BORDERS.border_style)
-    BORDERS.set_corner(0,' .-^^')
-    BORDERS.set_corner(1,'^^-. ')
-    BORDERS.set_corner(2,' \'==')
-    BORDERS.set_corner(2,' \'-==')
-    BORDERS.set_corner(3,'==-\' ')
-    BORDERS.add_elements(Label(value='teaház',justify='center'))
-    BORDERS.center()
-    if not SEAMLESS_MODE:
-        print(BORDERS)
-
     # set default mode
-    infield = getch.InputField(pos=get_infield_pos(SEAMLESS_MODE))
+    infield = getch.InputField(pos=get_infield_pos())
+    
+    MODE_LABEL = Label('-- ESCAPE --',justify='left')
+    x,y = get_infield_pos()
+    MODE_LABEL.pos = [x,y+5]
+    
     switch_mode("ESCAPE")
 
     add_to_trace([return_to_infield,{'_': '"'},''])

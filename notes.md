@@ -1,4 +1,3 @@
 - fix multiple pages not resizing after size change
 - add new Label() for insert/visual mode
-- add [] selection type to `container_from_dict`
 - FUTURE: gtk plugin

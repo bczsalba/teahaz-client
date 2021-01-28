@@ -68,7 +68,7 @@ def break_line(_inline,_len,_pad=0,_separator=' '):
 # returns a list of Container objects, len() > 1 if the 
 # container height wouldn't fit the screen
 def container_from_dict(dic,padding=4,**kwargs):
-    width = min(30,int(WIDTH*(2/3)))
+    width = min(40,int(WIDTH*(2/3)))
 
     dic_c = Container(**kwargs,width=width)
     dicts = [dic_c]
@@ -79,7 +79,7 @@ def container_from_dict(dic,padding=4,**kwargs):
 
     for i,(key,item) in enumerate(dic.items()):
         # read titles into labels
-        if "ui__title" in key and key[-1].isdigit():
+        if key.startswith("ui__title"):
             # get next title element
             for next_title,k in enumerate(list(dic.keys())[i+1:]):
                 if k.startswith('ui__title') and k[-1].isdigit():
@@ -108,7 +108,7 @@ def container_from_dict(dic,padding=4,**kwargs):
             current_padding = padding
             continue
 
-        elif key == "ui__prompt_options":
+        elif key.startswith("ui__prompt_options"):
             prompt_options = item
             continue
 
@@ -126,19 +126,15 @@ def container_from_dict(dic,padding=4,**kwargs):
         real_value = item
 
         # ignore empty dicts
-        if type(item) in [dict,list]:
-            if isinstance(item,dict):
-                length = len(item.keys())
-            else:
-                length = len(item)
-
+        if isinstance(item,dict):
+            length = len(item.keys())
             if length == 0:
                 continue
             else:
                 item = "..."
         
-        elif prompt_options:
-            item = '...'
+        #if prompt_options:
+            #item = '...'
 
 
         # create, add prompt
@@ -160,31 +156,31 @@ def container_from_dict(dic,padding=4,**kwargs):
     # avoid long items
     do_tabline = len(dicts) > 1
     for i,d in enumerate(dicts):
-        for e in d.elements:
-            # labels shouldnt be applicable
-            if isinstance(e,Prompt):
-                item = e.value
-                label = e.label
+        #for e in d.elements:
+        #    # labels shouldnt be applicable
+        #    if isinstance(e,Prompt):
+        #        item = e.value
+        #        label = e.label
+        #        values = str(item)+str(label)
 
-                # check if combined is more than 2 thirds of total width
-                if real_length(str(item)+str(label))+1 > (2/3)*d.width:
-                    if e.width <= WIDTH*(2/3):
-                        d.width = e.width+10
-                        repr(d)
+        #        # check if combined is more than 2 thirds of total width
+        #        if real_length(values)+e.padding*2+4 <= (2/3)*WIDTH:
+        #            d.width = e.width+10
+        #            repr(d)
 
-                    else:
-                        e.value = '...'
-                        e.width -= real_length(item)-3
-                        
-                        # get new length
-                        new_length = real_length(e.value+e.label)+e.padding+13
+        #        else:
+        #            e.value = '...'
+        #            e.width -= real_length(item)-3
+        #            
+        #            # get new length
+        #            new_length = real_length(str(e.value)+str(e.label))+e.padding*2+4
 
-                        # change label if new width is still too high
-                        if new_length > d.width:
-                            e.label = e.label[:d.width-new_length-5]+'...'
+        #            # change label if new width is still too high
+        #            if new_length > d.width*(2/3):
+        #                e.label = e.label[:d.width-new_length-5]+'...'
 
-                        # update element
-                        e.width -= abs(d.width-new_length-5)
+        #            # update element
+        #            e.width -= abs(d.width-new_length-5)
 
 
         if do_tabline:
@@ -261,13 +257,15 @@ class Container:
         self.pos = pos
 
         # set up values
+        self.previous_pos = None
+        self.padding = padding
+
         self.elements = []
-        self.styles = {}
         self.selected = None
         self.selectables = []
-        self.padding = padding
         self.selected_index = 0
-        self.previous_pos = None
+
+        self.styles = {}
         self.corners = [[],[],[],[]]
         self.corner_style = lambda c: c
 
@@ -280,6 +278,7 @@ class Container:
         # set up flags
         self._do_dynamic_size = dynamic_size
         self._do_center_elements = center_elements
+        self._is_centered = False
         
 
     # set style for element type `group`
@@ -305,18 +304,10 @@ class Container:
 
         # TODO: detect need for centering (maybe?)
         nWIDTH,nHEIGHT = os.get_terminal_size()
-        if 0 and not [WIDTH,HEIGHT] == [nWIDTH,nHEIGHT]:
-            clr()
-            xdiff = (nWIDTH-WIDTH)//2
-            ydiff = nHEIGHT-HEIGHT
-
+        if not [WIDTH,HEIGHT] == [nWIDTH,nHEIGHT]:
             WIDTH,HEIGHT = nWIDTH,nHEIGHT
+            self._window_size_changed()
 
-            self.pos[0] += xdiff
-
-            self.width = min(self.width,WIDTH-5)
-            self.height = min(self.height,HEIGHT)
-            self.get_border()
 
         line = ''
         new_real_height = self.height
@@ -327,22 +318,19 @@ class Container:
         x += 2
 
         # vertically center elements
-        if 0 and self._do_center_elements:
+        if self._do_center_elements:
             vertical_padding = max((self.real_height-sum(e.height for e in self.elements))//2,0)
             starty += vertical_padding
 
         # print all elements
         extra_lines = 0
         for i,e in enumerate(self.elements):
-            # correct size
-            if 0 and e.width > self.width-4:
-                if e.width >= WIDTH:
-                    continue
-
-                elif self._do_dynamic_size:
-                    self.width = min(WIDTH-4,e.width + 3)
-
+            self.width = min(max(self.width,e.width+4),WIDTH-4)
             e.width = self.width - 4
+
+            # call event
+            self._handle_long_element(e)
+
             e.pos = [x+1,starty+i]
 
             # get lines from element
@@ -394,7 +382,7 @@ class Container:
         # update self sizing
         if self.width == None or self._do_dynamic_size:
             # if element is too wide selt self width to it+pad
-            if WIDTH-6 > element.width >= self.width:
+            if WIDTH-5 > element.width >= self.width:
                 self.width = element.width+3
 
             # if element is too tall set self height
@@ -607,6 +595,7 @@ class Container:
 
     # center container
     def center(self,xoffset=0,yoffset=5):
+        self._is_centered = True
         if HEIGHT//2 < self.height-yoffset:
             yoffset = 0
         if WIDTH//2 < self.width-xoffset:
@@ -616,6 +605,30 @@ class Container:
         y = (HEIGHT-self.height-yoffset)//2
         self.move([x,y])
 
+
+    # EVENT: window size changed
+    # - checked for during __repr__
+    def _window_size_changed(self):
+        clr()
+
+        self.width = min(self.width,WIDTH-5)
+        self.height = min(self.height,HEIGHT)
+
+        if self._is_centered:
+            self.center()
+
+        self.get_border()
+
+
+    # EVENT: check for long elements, handle them
+    # - called during __repr__ element loop
+    def _handle_long_element(self,e):
+        if hasattr(e,'label') and hasattr(e,'value'):
+            if real_length(str(e.value))+4 > self.width*(1/2):
+                e.value = '...'
+
+            if real_length(str(e.label))+4 > self.width*(1/2):
+                e.label = str(e.label)[:int(self.width*(1/3))-3]+'...'
 
 class Prompt:
     """ 
@@ -756,7 +769,6 @@ class Prompt:
     def submit(self):
         return self.value
 
-
 class Label:
     """ 
     A simple, non-selectable object for printing text
@@ -804,6 +816,12 @@ class Label:
         self.height = len(lines)
         return "\n".join(lines)
         
+    def wipe(self):
+        xstart,y = self.pos
+        for x in range(xstart,real_length(self.value)):
+            sys.stdout.write(f'\033[{y};{x}H ')
+        sys.stdout.flush()
+            
     # set style of key to value
     def set_style(self,key,value):
         setattr(self,key+'_style',value)
