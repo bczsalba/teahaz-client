@@ -1,0 +1,14 @@
+- insert label should only show outside of menu
+
+- add to escape
+    [x] `^`
+    [x] `$` 
+    [x] `a` 
+    [ ] `s` 
+    [x] `0`
+
+- add to visual
+    [ ] `^`
+    [ ] `0`
+
+- add goto_line_up & goto_line_down

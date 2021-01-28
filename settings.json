@@ -42,7 +42,7 @@
         true,
         false
     ],
-    "VIMMODE": false,
+    "VIMMODE": true,
     "ui__prompt_options__keep_cursor": [
         true,
         false
@@ -73,12 +73,17 @@
             "menu_settings": "CTRL_/",
             "mode_visual": "v",
             "mode_insert": "i",
+            "mode_insert+1": "a",
             "select_line": "V",
             "quit": "q",
             "message_send": "ENTER",
             "ui__title2": "navigation",
-            "goto_line_start": "I",
-            "goto_line_end": "A",
+            "goto_line_0th": "0",
+            "goto_line_-1st": "$",
+            "goto_line_start": "^",
+            "goto_line_start_i": "I",
+            "goto_line_end": "g_",
+            "goto_line_end_i": "A",
             "goto_cursor_left": "h",
             "goto_cursor_right": "l",
             "_goto_line_down": "j",

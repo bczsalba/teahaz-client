@@ -769,6 +769,10 @@ def handle_action(action):
         if action.upper() == MODE:
             return
 
+        if action.endswith('+1'):
+            infield.cursor += 1
+            action = action[:-2]
+
         # if going into escape mode move cursor 
         if action == "escape" and len(infield.value) and MODE != "VISUAL" and infield.cursor > 0:
             infield.cursor -= 1
@@ -794,14 +798,37 @@ def handle_action(action):
         action = action.replace('goto_','')
 
 
-        # horizontal jumping
-        if action == "line_start":
-            insert = True
+        # horizontal jumping blank
+        if action == "line_0th":
             infield.cursor = 0 
 
-        elif action == "line_end":
-            insert = True
-            infield.cursor = len(infield.value)
+        elif action == "line_-1st":
+            infield.cursor = len(infield.value)-1
+
+        # horizontal jumping non-blank
+        elif "line_start" in action:
+            i = 0
+            for i,c in enumerate(infield.value):
+                if not c == " ":
+                    break
+
+            if action.endswith('_i'):
+                insert = True
+
+            infield.cursor = i
+
+        elif "line_end" in action:
+            i = 0
+            for i,c in enumerate(reversed(infield.value)):
+                if not c == " ":
+                    break
+
+            if action.endswith('_i'):
+                insert = True
+            else:
+                i += 1
+
+            infield.cursor = real_length(infield.value)-i
 
 
         # horizontal movement
