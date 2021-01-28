@@ -454,7 +454,7 @@ def handle_menu(key,obj,page=0):
         if key in ["j","ARROW_DOWN"]:
             obj.selected_index += 1
 
-        elif key in ["k","ARROW_DOWN"]:
+        elif key in ["k","ARROW_UP"]:
             obj.selected_index -= 1
 
         elif is_set('objects',locals()):
