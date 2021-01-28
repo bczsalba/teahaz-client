@@ -414,7 +414,7 @@ class Container:
             else:
                 options = len(element.options)
 
-            # go through options, add element+index pairs
+            # go through options, add element+index_in_element,index_in_container
             for i in range(options):
                 self.selectables.append([element,i,len(self.selectables)+i])
 
@@ -627,7 +627,7 @@ class Container:
             # check value length
             if real_length(str(e.value))+4 > self.width*(1/3):
                 # check if self can be extended
-                if e.width+10 < WIDTH*(2/3) and e.width < self.width:
+                if e.width+10 < WIDTH*(1/2) and e.width < self.width:
                     self.width = e.width+10
                 else:
                     e.value = '...'
@@ -885,7 +885,6 @@ if __name__ == "__main__":
     c.set_style(Prompt,'delimiter',['< ',' >'])
     c.set_borders('|_|-')
     c.select(3)
-    c.width = 50
     c.center()
     print(c)
     input()

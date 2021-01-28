@@ -449,6 +449,18 @@ def handle_menu(key,obj,page=0):
         print(d)
         return
       
+    elif key == " ":
+        selected,_,_ = obj.selected
+        dbg(selected.__dict__)
+        if selected.options and len(selected.options) == 2:
+            if selected.selected_index == 0:
+                selected.selected_index = 1
+            else:
+                selected.selected_index = 0
+
+            edit_setting(selected.setting,selected.options[selected.selected_index])
+            handle_menu('',obj)
+            return
 
     elif key in "hjkl" or key.startswith("ARROW"):
         if key in ["j","ARROW_DOWN"]:
@@ -1237,6 +1249,10 @@ if __name__ == "__main__":
     ## clear screen
     print('\033[2J')
 
+    if DO_DEBUG:
+        open(LOGFILE,'w').close()
+    dbg('starting teahaz at size',str(WIDTH),str(HEIGHT))
+
     if WIDTH < 37:
         w = Container(height=3)
         w.add_elements(Label(value=bold(color('Window width too low!','38;5;196')),justify='center'))
@@ -1246,13 +1262,9 @@ if __name__ == "__main__":
             print()
         sys.exit(1)
 
-    if DO_DEBUG:
-        open(LOGFILE,'w').close()
 
-    dbg('starting teahaz at size',str(WIDTH),str(HEIGHT))
 
     # set pytermgui styles
-    # 229 60 72
     pytermgui.set_style('container_title',lambda item: bold(color(item.upper(),COLORS['title'])+':'))
     pytermgui.set_style('container_label',lambda item: (color(item.lower(),COLORS['label'])))
     pytermgui.set_style('container_value',lambda item: (color(item,COLORS['value'])))
@@ -1267,6 +1279,7 @@ if __name__ == "__main__":
     infield = getch.InputField(pos=get_infield_pos())
     
     MODE_LABEL = Label('-- ESCAPE --',justify='left')
+    MODE_LABEL.set_style('value',lambda item: color(item,COLORS['mode_indicator']))
     x,y = get_infield_pos()
     MODE_LABEL.pos = [x,y+5]
     
