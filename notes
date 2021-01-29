@@ -3,14 +3,14 @@
 
 # FEATURES CHECKLIST
 - multiline:
-    * fix endless insert tags after `dd` and `ESC` `i`
-    * fix visual_goto_up/down not working
+    * [ ] fix endless insert tags after `dd` and `ESC` `i`
+    * [ ] fix visual_goto_up/down not working
 
 - add to escape
-    [ ] `s` 
+    * [ ] `s` 
 
 - profiles menu
-    [ ] generate prompts for options
-    [ ] add settings/saving handler (maybe using edit_setting)
+    * [ ] generate prompts for options
+    * [ ] add settings/saving handler (maybe using edit_setting)
 
 - FUTURE: gtk plugin
