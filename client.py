@@ -157,9 +157,12 @@ def switch_mode(target):
         BINDS  = BASEBINDS
 
     MODE = target
-    x,y = infield.pos
+    x,y = get_infield_pos(return_offset=1)
     x -= 1
     y += 1
+    if infield.line_offset:
+        y += infield.line_offset
+
     if target == "ESCAPE":
         xstart = x
         for x in range(xstart,real_length(repr(MODE_LABEL))+2):
@@ -358,8 +361,19 @@ def get_lines():
 
     return messages
 
-def get_infield_pos():
-    return ([3,HEIGHT-2])
+def get_infield_pos(return_offset=False):
+    if 'infield' in globals().keys() and len(infield.value):
+        offset = (len(infield.value)+2)//WIDTH
+
+        if not infield.line_offset == offset:
+            infield.wipe()
+
+        infield.line_offset = offset
+
+    else:
+        offset = 0
+
+    return [3,HEIGHT-2-offset]
 
 ## handle action but for menus
 def handle_menu(key,obj,page=0):
@@ -671,13 +685,11 @@ def getch_loop():
             # "reset" key
             else:
                 buff = key
-                #printTo(WIDTH-6,4,'single',clear=1)
         
         # reset buffer
         else:
             buff = key
 
-        #printTo(WIDTH-len(key),3,key,clear=1)
 
         # currently inactive
         if key == "SIGTERM":
@@ -697,15 +709,18 @@ def getch_loop():
             # send key to inputfield to handle
             infield.send(key)
 
+            x,y = infield.pos
+            infield.pos = get_infield_pos()
+
             # print inputfield
             infield.print() 
+
+        infield.pos = get_infield_pos()
 
 ## act on action
 def handle_action(action):
     global KEEP_GOING,PIPE_OUTPUT,PIPE_ARGS,VISUAL_START,VISUAL_END,infield
 
-    #printTo(WIDTH-len(action),2,action,clear=1)
-    
 
 
     ## INLINE ACTIONS
@@ -797,13 +812,18 @@ def handle_action(action):
         # filter out start of string
         action = action.replace('goto_','')
 
+        if MODE == "VISUAL":
+            cursor = VISUAL_END
+        else:
+            cursor = infield.cursor
+
 
         # horizontal jumping blank
         if action == "line_0th":
-            infield.cursor = 0 
+            cursor = 0 
 
         elif action == "line_-1st":
-            infield.cursor = len(infield.value)-1
+            cursor = len(infield.value)-1
 
         # horizontal jumping non-blank
         elif "line_start" in action:
@@ -815,7 +835,7 @@ def handle_action(action):
             if action.endswith('_i'):
                 insert = True
 
-            infield.cursor = i
+            cursor = i
 
         elif "line_end" in action:
             i = 0
@@ -828,28 +848,36 @@ def handle_action(action):
             else:
                 i += 1
 
-            infield.cursor = real_length(infield.value)-i
+            cursor = real_length(infield.value)-i
 
+        elif "line_up" in action:
+            startx,_ = infield.pos
+            if len(infield.value) > WIDTH - startx:
+                cursor -= WIDTH
+
+        elif "line_down" in action:
+            if len(infield.value) >= WIDTH+infield.cursor:
+                cursor += WIDTH
 
         # horizontal movement
         elif action == "cursor_left":
             if len(infield.value):
-                infield.cursor = max(0,infield.cursor-1)
+                cursor = max(0,cursor-1)
                 insert = False 
 
         elif action == "cursor_right":
             if len(infield.value):
-                infield.cursor = min(len(infield.value)-1,infield.cursor+1)
+                cursor = min(len(infield.value)-1,cursor+1)
                 insert = False 
 
     
         # go to start of text
         elif action == "text_start":
-            infield.cursor = 0
+            cursor = 0
 
         # go to end of text
         elif action == "text_end":
-            infield.cursor = len(infield.value)
+            cursor = len(infield.value)
 
         # navigate in `word`-s and `WORD`-s
         elif action.startswith('word') or action.startswith('WORD'):
@@ -883,7 +911,7 @@ def handle_action(action):
                 if i == len(words)-1:
                     return
 
-                infield.cursor = index+1
+                cursor = index+1
 
             # go to previous 
             elif action.endswith("_prev"):
@@ -891,12 +919,23 @@ def handle_action(action):
                     return
 
                 word = words[i-1]
-                infield.cursor = indices[i-1]-len(word)
+                cursor = indices[i-1]-len(word)
+
 
         # switch mode, print
+        if MODE == "VISUAL":
+            VISUAL_END = cursor
+            infield.visual(VISUAL_START,VISUAL_END)
+
+            if not KEEP_CURSOR_AFTER_SELECT:
+                infield.cursor = cursor
+        else:
+            infield.cursor = cursor
+            infield.print()
+        
         if insert:
             switch_mode('INSERT')
-        infield.print()
+
 
     # visual mode
     elif action.startswith('selection_') and not 'replace' in action:
@@ -906,21 +945,30 @@ def handle_action(action):
         elif action == "selection_left":
             VISUAL_END = max(VISUAL_END-1,0)
 
-        elif action == "selection_delete":
+        elif action.endswith('delete') or action.endswith('change'):
             # split up value to not include selected
             if infield.selected_start == infield.selected_end:
                 handle_action('character_delete')
-                switch_mode('ESCAPE')
+
+                if action.endswith('change'):
+                    switch_mode('ESCAPE')
+                else:
+                    switch_mode('INSERT')
                 return
+
             else:
                 left = infield.value[:infield.selected_start]
                 right = infield.value[infield.selected_end:]
 
-            # set value
-            infield.set_value(left+right,infield.selected_start)
-
             # switch mode
-            switch_mode('ESCAPE')
+            if action.endswith('delete'):
+                switch_mode('ESCAPE')
+            else:
+                switch_mode('INSERT')
+
+            # set value
+            infield.set_value(left+right)
+
             return
 
         elif action.endswith("cut") or action.endswith("copy"):
@@ -946,6 +994,9 @@ def handle_action(action):
             start = infield.selected_start
             end = infield.selected_end
 
+            if start == end:
+                end += 1
+
             # get sides to use
             selected = infield.value[start:end]
             left = infield.value[:start]
@@ -970,6 +1021,7 @@ def handle_action(action):
 
     # action done to end
     elif action.endswith('_end'):
+        # selection
         if action.startswith('select'):
             if action == "select_line_end":
                 VISUAL_END = len(infield.value)-1
@@ -979,13 +1031,24 @@ def handle_action(action):
                  VISUAL_END = end-1
             infield.visual(VISUAL_START,VISUAL_END)
 
+        # delete/change
         elif action.startswith('delete') or action.startswith('change'):
-            if action == "delete_line_end":
+            if action == "delete_line_end" or action == "change_line_end":
                 end = len(infield.value)
                 selected = infield.value[infield.cursor:end]
                 clip.copy(selected)
 
-                infield.set_value(infield.value[:infield.cursor])
+                if action.startswith('change'):
+                    cursor = infield.cursor + 1
+                    # TODO: this space should get removed with the next input
+                    space = ' '
+                    switch_mode('INSERT')
+                else:
+                    cursor = infield.cursor+1
+                    space = ''
+
+                infield.set_value(infield.value[:infield.cursor]+space,cursor)
+                infield.line_offset = None
 
             elif action.endswith("_word_end"):
                 indices = get_indices('w')
@@ -1306,6 +1369,7 @@ if __name__ == "__main__":
 
     # set default mode
     infield = getch.InputField(pos=get_infield_pos())
+    infield.line_offset = None
     
     MODE_LABEL = Label('-- ESCAPE --',justify='left')
     MODE_LABEL.set_style('value',lambda item: color(item,COLORS['mode_indicator']))
