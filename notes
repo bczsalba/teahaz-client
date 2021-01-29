@@ -1,23 +1,16 @@
+# BUGS
 - insert label should only show outside of menu
 
+# FEATURES CHECKLIST
 - multiline:
-    * fix endless insert tags after `dd` and `ESC``i`
+    * fix endless insert tags after `dd` and `ESC` `i`
     * fix visual_goto_up/down not working
 
-- fix sebi bugs
-
 - add to escape
-    [x] `^`
-    [x] `$` 
-    [x] `a` 
     [ ] `s` 
-    [x] `0`
-    [x] `C`
-    [x] `c`
 
-- add to visual
-    [x] `^`
-    [x] `0`
-    [x] `c`
+- profiles menu
+    [ ] generate prompts for options
+    [ ] add settings/saving handler (maybe using edit_setting)
 
-- add goto_line_up & goto_line_down
+- FUTURE: gtk plugin

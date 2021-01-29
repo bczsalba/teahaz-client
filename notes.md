@@ -1,3 +1,0 @@
-- fix multiple pages not resizing after size change
-- add new Label() for insert/visual mode
-- FUTURE: gtk plugin

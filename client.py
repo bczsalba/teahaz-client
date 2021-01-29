@@ -584,6 +584,27 @@ def create_submenu(selected,index=None,dict_index=0):
 
     return d
 
+def test_ui(index=0,dict_index=0):
+    LOGIN_SCREEN = {
+            "ui__title1": "login to teahaz",
+            "ui__prompt_options_serverlist": [],
+            "server": "gyulaiak",
+            "username": "",
+            "password": ""
+            }
+
+    
+    servers = ["server1","the gang","gyulaiak"]
+
+    dicts = container_from_dict(LOGIN_SCREEN)
+    d = dicts[dict_index]
+    d.select(index)
+    d.center()
+    print(d)
+    
+    set_pipe(handle_menu,{'obj': dicts, 'page': dict_index},keep=True)
+    add_to_trace([test_ui,{'dict_index': dict_index, 'index': index}, d])
+
 
 
 
@@ -650,11 +671,14 @@ def send(message,mType='text'):
 
 ## key intercepter loop, separate thread
 def getch_loop(): 
-    global PIPE_OUTPUT
+    global PIPE_OUTPUT,infield
 
     buff = ''
     while KEEP_GOING:
         key = getch.getch()
+
+        # TODO: `dd`+n*(`ESC`+`i`) is buggy as shit
+        infield.pos = get_infield_pos()
 
         # this lets other functions hijack the key output as parameters
         if PIPE_OUTPUT:
@@ -715,7 +739,6 @@ def getch_loop():
             # print inputfield
             infield.print() 
 
-        infield.pos = get_infield_pos()
 
 ## act on action
 def handle_action(action):
@@ -729,6 +752,9 @@ def handle_action(action):
         print('\033[?25h')
         KEEP_GOING = 0
         sys.exit()
+
+    elif action == "test_ui":
+        test_ui()
 
     # message binds
     elif action == "message_send":
@@ -1068,7 +1094,7 @@ def handle_action(action):
     elif action.endswith('_line'):
         if action == "delete_line":
             clip.copy(infield.value)
-            infield.set_value('')       
+            infield.set_value('')
 
         elif action == "select_line":
             VISUAL_START = 0
