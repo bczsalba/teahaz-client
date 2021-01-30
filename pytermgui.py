@@ -76,6 +76,7 @@ def container_from_dict(dic,padding=4,**kwargs):
     handler = None
     current_padding = 1
     prompt_options = None
+    datafile = None
 
     for i,(key,item) in enumerate(dic.items()):
         # read titles into labels
@@ -116,6 +117,22 @@ def container_from_dict(dic,padding=4,**kwargs):
             reverse_items = True
             continue
 
+        elif key.startswith("ui__prompt"):
+            options = item
+            p = Prompt(options=options)
+            p.set_style('value',CONTAINER_VALUE_STYLE)
+            dicts[-1].add_elements(p)
+            continue
+
+        elif key == "ui__file":
+            datafile = item
+            continue
+            
+        
+        elif key.startswith("ui__padding"):
+            dicts[-1].add_elements(Label())
+            continue
+
         # reverse meanings of key & item
         if reverse_items:
             temp = key
@@ -131,11 +148,8 @@ def container_from_dict(dic,padding=4,**kwargs):
             if length == 0:
                 continue
             else:
-                item = "..."
+                item = "->"
         
-        #if prompt_options:
-            #item = '...'
-
 
         # create, add prompt
         p = Prompt(real_label=str(key),label=str(key),value=str(item),padding=current_padding)
@@ -144,6 +158,9 @@ def container_from_dict(dic,padding=4,**kwargs):
         p.set_style('label',CONTAINER_LABEL_STYLE)
         p.set_style('value',CONTAINER_VALUE_STYLE)
         p.real_value = real_value
+        p.__ui_keys = []
+        
+        # this is used to keep track of path taken for writing changes to a file
 
 
         # add prompt to dict
@@ -153,35 +170,13 @@ def container_from_dict(dic,padding=4,**kwargs):
         dicts[-1].add_elements(p)
 
 
-    # avoid long items
     do_tabline = len(dicts) > 1
     for i,d in enumerate(dicts):
-        #for e in d.elements:
-        #    # labels shouldnt be applicable
-        #    if isinstance(e,Prompt):
-        #        item = e.value
-        #        label = e.label
-        #        values = str(item)+str(label)
-
-        #        # check if combined is more than 2 thirds of total width
-        #        if real_length(values)+e.padding*2+4 <= (2/3)*WIDTH:
-        #            d.width = e.width+10
-        #            repr(d)
-
-        #        else:
-        #            e.value = '...'
-        #            e.width -= real_length(item)-3
-        #            
-        #            # get new length
-        #            new_length = real_length(str(e.value)+str(e.label))+e.padding*2+4
-
-        #            # change label if new width is still too high
-        #            if new_length > d.width*(2/3):
-        #                e.label = e.label[:d.width-new_length-5]+'...'
-
-        #            # update element
-        #            e.width -= abs(d.width-new_length-5)
-
+        d.__ui_keys = []
+        if not datafile == None:
+            for e in d.elements:
+                e.file = datafile
+            d.file = datafile
 
         if do_tabline:
             tabline = Prompt(options=[n for n in range(len(dicts))])
@@ -648,7 +643,7 @@ class Prompt:
         - highlight_style : used for highlighting
         - label_style     : used for labels in type1 of prompt
         - value_style     : used for values (between [ and ],
-                            non-inclusive.
+                            non-inclusive.)
     """
     
     def __init__(self,width=None,options=None,label=None,real_label=None,value="",padding=0): 
@@ -721,7 +716,7 @@ class Prompt:
             if isinstance(self.options, list):
                 for i,option in enumerate(self.options):
                     option = self.value_style(option)
-                    line += "  "+ self._get_option_highlight(i)(f"{start}{option}{end}")
+                    line += self._get_option_highlight(i)(f"{start}{option}{end}")+'  '
             else:
                 line = self.value_style(self.value)
 
@@ -736,7 +731,7 @@ class Prompt:
             
             for i,l in enumerate(lines):
                 l_len = real_length(l)
-                pad = ( (self.width-l_len)//2 + self.padding - 1) * " "
+                pad = ( (self.width-l_len)//2 + self.padding + 2) * " "
                 lines[i] = pad + l + pad
                 
             # set new hight, return line

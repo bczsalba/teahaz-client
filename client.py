@@ -57,50 +57,61 @@ def import_settings():
     COLORS = SETTINGS['COLORSCHEMES'][current_colorscheme]
 
 ## edit setting in json (needed because lambda cannot do assignments)
-def edit_setting(key,value):
-    global SETTINGS
-    global SETTINGS_DEPTH
+def edit_json(key,value,json_path,keys=[]):
 
     # get value if needed
     okey = key
     ovalue = value
 
-    setting = SETTINGS_DEPTH[-1]
+    with open(os.path.join(PATH,json_path),'r') as f:
+        data = json.load(f)
+
+    setting = keys[-1]
 
     # eval value if needed
     if callable(value):
         value = value()
 
-
     # find root of current part of dict
-    if len(SETTINGS_DEPTH) == 1:
-        one = SETTINGS_DEPTH[0]
-        root = SETTINGS
+    if len(keys) == 1:
+        one = keys[0]
+        root = data
 
-    elif len(SETTINGS_DEPTH) == 2:
-        one,two = SETTINGS_DEPTH
-        root = SETTINGS[one]
+    elif len(keys) == 2:
+        one,two = keys
+        root = data[one]
 
-    elif len(SETTINGS_DEPTH) == 3:
-        one,two,three = SETTINGS_DEPTH
-        root = SETTINGS[one][two]
+    elif len(keys) == 3:
+        one,two,three = keys
+        root = data[one][two]
+
+    elif len(keys) == 4:
+        one,two,three,four = keys
+        root = data[one][two][three]
     
     # this shouldnt happen lol
     else:
-        dbg(SETTINGS_DEPTH)
+        dbg(keys)
 
 
     # apply change
     root[setting] = value
 
     # write to file
-    with open(os.path.join(PATH,'settings.json'),'w') as f:
-        f.write(json.dumps(SETTINGS,indent=4))
+    with open(os.path.join(PATH,json_path),'w') as f:
+        f.write(json.dumps(data,indent=4))
 
 
     # reimport settings
     import_settings()
     infield.pos = get_infield_pos()
+
+def load_path(path,key=None):
+    with open(path,'r') as f:
+        out = json.load(f)
+        if key:
+            out = out[key]
+    return out
 
 
 ## miscellaneous
@@ -407,7 +418,7 @@ def handle_menu(key,obj,page=0):
         if key == "ENTER":
             # edit setting
             new = obj.submit()
-            edit_setting(obj.setting,new)
+            edit_json(json_path=obj.file,keys=obj.__ui_keys,key=obj.setting,value=new)
 
             # edit previous ui to show changes
             fun,kwargs,newobj = UI_TRACE[-2]
@@ -447,7 +458,7 @@ def handle_menu(key,obj,page=0):
         UI_TRACE[-1][1]['index'] = index
 
         # add to depth
-        SETTINGS_DEPTH.append(selected.real_label)
+        obj.__ui_keys.append(selected.real_label)
 
         # create menu
         d = create_submenu(selected)
@@ -456,6 +467,9 @@ def handle_menu(key,obj,page=0):
         if hasattr(d,'options') and d.options:
             d.selected_index = [o for o in d.options].index(selected.real_value)
             d.select()
+
+        d.__ui_keys = obj.__ui_keys
+        d.file = obj.file
 
         # print
         d.select()
@@ -515,14 +529,26 @@ def return_to_infield(*args,**kwargs):
     PIPE_OUTPUT = None
     KEEP_PIPE = False
     
-## settings menu caller
-def menu_settings(index=0,dict_index=0):
-    with open(os.path.join(PATH,'settings.json'),'r') as f:
-        SETTINGS = json.load(f)
-        objects = container_from_dict(SETTINGS)
+## menu caller
+def create_menu(source,corners,index=None,dict_index=0):
+    source_arg = source
+
+    if isinstance(source,list):
+        fun,kwargs = source
+        source = fun(**kwargs)
+    else:
+        source = source_arg
+
+    objects = container_from_dict(source)
         
     for o in objects:
-        o.set_corner(1,'SETTINGS')
+        if not source_arg == source:
+            o.dict_path = kwargs['path']
+
+        for i,c in enumerate(corners):
+            if not c == None:
+                o.set_corner(i,c)
+
         o.width = min(WIDTH-5,o.width)
         o.center()
 
@@ -533,7 +559,15 @@ def menu_settings(index=0,dict_index=0):
     
     # set pipes
     set_pipe(handle_menu,{"obj": objects, 'page': dict_index},keep=True)
-    add_to_trace([menu_settings,{'index': lambda obj: obj.selected_index, 'dict_index': dict_index}, c])
+    if index == None:
+        add_to_trace([
+            create_menu,{
+                'source': source_arg,
+                'index': lambda obj: obj.selected_index,
+                'dict_index': dict_index,
+                'corners': corners
+            },c
+        ])
 
     # print
     c.selected_index = (0 if index==None else index) 
@@ -543,36 +577,38 @@ def menu_settings(index=0,dict_index=0):
     return objects
 
 ## submenu caller
-def create_submenu(selected,index=None,dict_index=0):
-    if isinstance(selected.real_value,dict):
-        dicts = container_from_dict(selected.real_value)
+def create_submenu(source,index=None,dict_index=0):
+    if isinstance(source.real_value,dict):
+        dicts = container_from_dict(source.real_value)
         d = dicts[dict_index]
-        d.selected_index = (0 if index==None else index) 
+        d.source_index = (0 if index==None else index) 
         if len(d.selectables):
             d.select()
 
     else:
-        if isinstance(selected.__ui_options,list):
-            options = selected.__ui_options
+        if isinstance(source.__ui_options,list):
+            options = source.__ui_options
         else:
             options = None
 
         d = InputDialog(
-                    label_value=selected.real_label,
+                    label_value=source.real_label,
                     label_underpad=1,
                     options=options,
-                    field_value=str(selected.real_value),
-                    width=45
+                    field_value=str(source.real_value),
+                    width=min(40,int(WIDTH*(2/3)))
         )
 
-        d.setting = selected.real_label
-        d.real_value = selected.real_value
+        d.setting = source.real_label
+        d.real_value = source.real_value
         dicts = [d]
 
     for dic in dicts:
-        dic.setting = selected.real_label
-        dic.real_value = selected.real_value
+        dic.setting = source.real_label
+        dic.real_value = source.real_value
         dic.center()
+        for i in range(4):
+            dic.set_corner(i,"X")
 
     d = dicts[dict_index]
     d.select()
@@ -580,30 +616,9 @@ def create_submenu(selected,index=None,dict_index=0):
 
     set_pipe(handle_menu,{'obj': dicts, 'page': dict_index})
     if index == None:
-        add_to_trace([create_submenu,{'selected': selected, 'index': 0, 'dict_index': dict_index}, d])
+        add_to_trace([create_submenu,{'source': source, 'index': 0, 'dict_index': dict_index}, d])
 
     return d
-
-def test_ui(index=0,dict_index=0):
-    LOGIN_SCREEN = {
-            "ui__title1": "login to teahaz",
-            "ui__prompt_options_serverlist": [],
-            "server": "gyulaiak",
-            "username": "",
-            "password": ""
-            }
-
-    
-    servers = ["server1","the gang","gyulaiak"]
-
-    dicts = container_from_dict(LOGIN_SCREEN)
-    d = dicts[dict_index]
-    d.select(index)
-    d.center()
-    print(d)
-    
-    set_pipe(handle_menu,{'obj': dicts, 'page': dict_index},keep=True)
-    add_to_trace([test_ui,{'dict_index': dict_index, 'index': index}, d])
 
 
 
@@ -1105,8 +1120,19 @@ def handle_action(action):
 
     # menu actions
     elif action.startswith('menu_'):
+        menu = action.replace('menu_','')
+        corners = ["X","X","X","X"]
+
+        if menu == "settings":
+            corners[1] = "settings"
+            path = os.path.join(PATH,'settings.json')
+
+        elif menu == "login":
+            corners[1] = "login"
+            path = os.path.join(PATH,'usercfg.json')
+
         # call menu handler
-        globals()[action]()
+        dicts = create_menu(source=[load_path,{'path': path}],corners=corners)
 
 
     

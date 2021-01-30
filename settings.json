@@ -1,14 +1,11 @@
 {
+    "ui__file": "settings.json",
     "ui__title1": "global",
     "ui__prompt_options__debug": [
         true,
         false
     ],
     "DO_DEBUG": true,
-    "ui__prompt_options__seamless": [
-        true,
-        false
-    ],
     "ui__title2": "colors",
     "ui__prompt_options__colorscheme": [
         "normal"
@@ -34,7 +31,7 @@
     },
     "ui__title3": "messaging",
     "URL": "https://github.com/bczsalba/asztal",
-    "ROOMID": "conversations",
+    "ROOMID": "conversationsa",
     "USERNAME": "lilac",
     "ui__title4": "bindings",
     "ESCAPE_KEY": "ESC",
@@ -70,7 +67,7 @@
     "VIMBINDS": {
         "ESCAPE": {
             "ui__title1": "modes & misc",
-            "test_ui": "CTRL_T",
+            "menu_login": "CTRL_T",
             "menu_settings": "CTRL_/",
             "mode_visual": "v",
             "mode_insert": "i",
@@ -145,5 +142,7 @@
             "selection_change": "c",
             "selection_copy": "y"
         }
-    }
+    },
+    "server": ":rocket:",
+    "username": ""
 }
