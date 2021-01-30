@@ -1,11 +1,16 @@
 # BUGS
+## urgent
 - usercfg.json not in git
+
+## can wait
 - insert label should only show outside of menu
 - only the first element in multipage containers resizes
 - exit doesnt reenable cursor
 
+
+
 # FEATURES 
-## UPCOMING CHECKLIST
+## upcoming checklist
 - profiles menu
     * [ ] generate prompts for options
     * [ ] add settings/saving handler (maybe using edit_setting)
@@ -26,5 +31,5 @@
 - FUTURE: settings should be auto generated from a dict on first launch, not included in git as it blocks pulls
 
 
-## FINISHED
+## finished
 
