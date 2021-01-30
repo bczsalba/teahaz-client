@@ -1,4 +1,5 @@
 # BUGS
+- usercfg.json not in git
 - insert label should only show outside of menu
 - only the first element in multipage containers resizes
 - exit doesnt reenable cursor
@@ -22,6 +23,8 @@
     * [ ] CTRL_L or something to reprint current ui
 
 - FUTURE: gtk plugin
+- FUTURE: settings should be auto generated from a dict on first launch, not included in git as it blocks pulls
+
 
 ## FINISHED
 
