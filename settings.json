@@ -18,7 +18,8 @@
             "label": "38;5;249",
             "value": "38;5;72",
             "border": "38;5;60",
-            "mode_indicator": "38;5;225",
+            "field_highlight": "38;5;210",
+            "mode_indicator": "38;5;72",
             "ui__title2": "characters",
             "corners": {
                 "top_left": "X",

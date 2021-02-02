@@ -117,7 +117,7 @@ def container_from_dict(dic,padding=4,**kwargs):
                 height_with_segment = dicts[-1].real_height + next_title*(1+dicts[-1].padding)+5
                 
                 if height_with_segment > HEIGHT-5:
-                    dicts.append(Container(**kwargs,width=width))
+                    dicts.append(Container(**kwargs))
                     dicts[-1].add_elements(l)
                     continue
 
@@ -197,7 +197,11 @@ def container_from_dict(dic,padding=4,**kwargs):
                 if length == 0:
                     continue
                 else:
-                    item = "bl!"
+                    #item = "bl!"
+                    item = "->"
+                    delim = ''
+            else:
+                delim = None
             
 
             # create, add prompt
@@ -207,6 +211,11 @@ def container_from_dict(dic,padding=4,**kwargs):
             p.set_style('label',CONTAINER_LABEL_STYLE)
             p.set_style('value',CONTAINER_VALUE_STYLE)
             p.real_value = real_value
+
+            if not delim == None:
+                p.delimiter_style = lambda: ['   ','{}']
+                p.set_style('value',CONTAINER_LABEL_STYLE)
+
 
             # this array keeps track of path within a dictionary
             p.__ui_keys = []
@@ -738,13 +747,18 @@ class Prompt:
     # return string representation of self
     def __repr__(self):
         delimiters = []
-        for i,v in enumerate(self.delimiter_style()):
-            if i % 2 == 0:
-                delimiters.append(v+' ')
-            else:
-                delimiters.append(' '+v)
+        style = self.delimiter_style()
 
-        start,end = delimiters[:2]
+        if not style == None:
+            for i,v in enumerate(self.delimiter_style()):
+                if i % 2 == 0:
+                    delimiters.append(v+' ')
+                else:
+                    delimiters.append(' '+v)
+
+            start,end = delimiters[:2]
+        else:
+            start,end = '   ','   '
 
         
         # if there is a label do <label> [ ]

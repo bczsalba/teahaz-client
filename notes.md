@@ -2,7 +2,6 @@
 ## in progress
 
 ## urgent
-- `D` doesn't work
 
 ## can wait
 - insert label should only show outside of menu
@@ -32,8 +31,8 @@
         + [ ] make InputDialog only clear Infield (maybe even just the changes made to it)
  
 - multiline:
+    * [ ] strip `\n` from paste
     * [ ] fix endless insert tags after `dd` and `ESC` `i`
-    * [ ] fix visual_goto_up/down not working
 
 
 - add to escape
@@ -73,3 +72,5 @@
 
 - multiline:
     * [x] implement `\033[7m` highlighting for infield
+    * [x] fix visual_goto_up/down not working
+    * [x] implement custom cursor & highlight colors

@@ -52,6 +52,7 @@ class InputField:
         self.selected_start = 0
         self.selected_end = 0
         self.field_color = '\033[0m'
+        self.visual_color = ''
 
         # TODO
         self.linecap = linecap
@@ -170,9 +171,14 @@ class InputField:
 
         # set highlighter according to highlight param
         highlighter = ('\033[7m' if highlight else '')
+        if callable(self.visual_color):
+            visual_color = self.visual_color()
+        else:
+            visual_color = self.visual_color
+
 
         # construct line
-        line = left + highlighter + charUnderCursor + '\033[0m' + self.field_color + right + '\033[0m'
+        line = left + highlighter + visual_color + charUnderCursor + '\033[0m' + self.field_color + right + '\033[0m'
 
         if return_line:
             return line
@@ -207,6 +213,10 @@ class InputField:
         right = self.value[end:]
 
         highlight = '\033[7m'
+        if callable(self.visual_color):
+            visual_color = self.visual_color()
+        else:
+            visual_color = self.visual_color
 
         self.selected = selected
         self.selected_start = start
@@ -214,7 +224,7 @@ class InputField:
         
         self.wipe()
 
-        line = left+highlight+selected+self.field_color+right
+        line = left+highlight+visual_color+selected+self.field_color+right
         from client import dbg
         dbg('col',self.field_color)
 

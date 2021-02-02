@@ -1475,6 +1475,7 @@ if __name__ == "__main__":
     # set default mode
     infield = getch.InputField(pos=get_infield_pos())
     infield.line_offset = None
+    infield.visual_color = lambda: '\033['+THEME['field_highlight']+'m'
     
     MODE_LABEL = Label('-- ESCAPE --',justify='left')
     MODE_LABEL.set_style('value',lambda item: color(item,THEME['mode_indicator']))
