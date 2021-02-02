@@ -222,7 +222,7 @@ def container_from_dict(dic,padding=4,**kwargs):
 
             # add prompt to dict
             if dicts[-1].height + p.height > HEIGHT-5:
-                dicts.append(Container(**kwargs,width=width))
+                dicts.append(Container(**kwargs))
 
             dicts[-1].add_elements(p)
 
