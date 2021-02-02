@@ -8,20 +8,20 @@
 - only the first element in multipage containers resizes
 
 ## fixed
-- [x] exit doesnt reenable cursor
-- [x] login menu is narrow as shit
-- [x] holding j on long buttons causes weird expansion
-- [x] there is an extra padding when ui__file is set
-
 
 
 # FEATURES 
 ## upcoming checklist
+- general ui
+    * [ ] add pathbar to bottom in settings (maybe other menus too)
+    * [ ] make colorguide nicer
+
 - login menu
     * [ ] generate prompts for server options
+        + basically, the idea is for the choice to be registered after an enter press, and for it to look like timetable.
         + [ ] create dict to store data like address,nick,users?
-        + [ ] overwrite handler for all prompts in serverlist with the id system
         + [ ] overwrite select to be like asztal's timetable
+        + [ ] overwrite handler for all prompts in serverlist with the id system
 
 - fixes for printing
     * currently, every print() call wipes the container

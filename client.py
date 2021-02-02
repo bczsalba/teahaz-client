@@ -411,12 +411,10 @@ def handle_menu(key,obj,attributes={},page=0):
         if hasattr(old,'__ui_keys') and not d == None:
             setattr(d,'__ui_keys',old.__ui_keys)
 
-        if len(obj.__ui_keys):
-            obj.__ui_keys.pop(-1)
+        if hasattr(obj,'__ui_keys'):
+            if len(obj.__ui_keys):
+                obj.__ui_keys.pop(-1)
 
-        #if not c == None:
-        #    for key,value in attributes.items():
-        #        setattr(c,key,value)
         return
 
     # do actions specific to input dialog
@@ -460,6 +458,8 @@ def handle_menu(key,obj,attributes={},page=0):
         return
 
     elif key == "ENTER":
+        if obj.selected == None:
+            return
 
         # get obj and index
         selected,_,index = obj.selected
@@ -634,16 +634,58 @@ def create_submenu(source,index=None,dict_index=0):
             dic.set_corner(i,c)
 
     d = dicts[dict_index]
+    d.selected_index = (0 if index==None else index) 
     d.select()
     print(d)
 
     set_pipe(handle_menu,{'obj': dicts, 'page': dict_index})
     if index == None:
-        add_to_trace([create_submenu,{'source': source, 'index': 0, 'dict_index': dict_index}, d])
+        add_to_trace([create_submenu,{'source': source, 'index': index, 'dict_index': dict_index}, d])
 
     return d
 
+def test_ui(dict_index=0):
+    width = max(40,int(WIDTH*(2/3)))
+    dicts = []
+    line_length = min(width//5,14)
 
+    for index,ground in enumerate(['fg','bg']):
+        count = 0
+        c = Container(width=width,border=lambda: ['','','',''])
+
+        # create color line
+        for i in range(256//line_length):
+            line = []
+            for j in range(line_length):
+                count += 1
+                num = str(count)
+                pad = 4-len(num)
+                line.append('\033[38;5;'+num+'m' + pad*' ' + num)
+            bg = ('\033[7m' if ground == 'bg' else '')
+            c.add_elements(Label(value=bg+'\033[1m'+' '.join(line)+'\033[0m'))
+
+
+        #set up tabbar
+        tabbar = Prompt(options=['foreground','background'])
+        tabbar._is_selectable = False
+        tabbar.set_style('highlight',pytermgui.TABBAR_HIGHLIGHT_STYLE)
+        tabbar.select(index)
+
+
+        # finalize dict
+        c.center()
+        c.add_elements([Label(),tabbar])
+        dicts.append(c)
+
+        
+
+    c = dicts[dict_index]
+    set_pipe(handle_menu,{'obj': dicts, 'page': dict_index},keep=True)
+    add_to_trace([test_ui,{'dict_index': dict_index},c])
+
+    print(c)
+    return c
+        
 
 
 # NETWORK FUNCTIONS #
@@ -1156,6 +1198,10 @@ def handle_action(action):
             pytermgui.set_attribute_for_id('usercfg-button_connect','handler',lambda: dbg('connect button pressed'))
             pytermgui.set_attribute_for_id('usercfg-button_add','handler',lambda: dbg('add button pressed'))
 
+        elif menu == "test":
+            test_ui()
+            return
+
         CURRENT_FILE = path
 
         # call menu handler
@@ -1470,6 +1516,8 @@ if __name__ == "__main__":
             'prompt_delimiter_style',
             lambda: THEME['prompt_delimiters']
     )
+
+    pytermgui.set_attribute_for_id('settings-themes_showcolors','handler',lambda: (UI_TRACE[-1][2].wipe(),test_ui()))
     
 
     # set default mode
