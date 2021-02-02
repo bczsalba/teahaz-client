@@ -1,0 +1,26 @@
+{
+    "ui__file": "usercfg.json",
+    "ui__title1": "sign in",
+    "ui__prompt_options_serverlist": [
+        "doge",
+        "buy doge",
+        ":rocket:"
+    ],
+    "server": "doge",
+    "add new server": {
+        "ui__title1": "add new server",
+        "address": "",
+        "name": "",
+        "secret": "",
+        "ui__button": {
+            "id": "usercfg-button_add",
+            "value": "add"
+        }
+    },
+    "username": "",
+    "password": "",
+    "ui__button": {
+        "id": "usercfg-button_connect",
+        "value": "connect!"
+    }
+}

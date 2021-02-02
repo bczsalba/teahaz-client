@@ -43,7 +43,7 @@ def decode(a):
 ## settings
 ### import settings from json
 def import_settings():
-    global SETTINGS,COLORS
+    global SETTINGS,THEME
 
     with open(os.path.join(PATH,'settings.json'),'r') as f:
         SETTINGS = json.load(f)
@@ -53,12 +53,11 @@ def import_settings():
     if is_set('MODE'):
         switch_mode(MODE)
 
-    current_colorscheme = SETTINGS['COLORSCHEME']
-    COLORS = SETTINGS['COLORSCHEMES'][current_colorscheme]
+    current_colorscheme = SETTINGS['SELECTED_THEME']
+    THEME = SETTINGS['THEMES'][current_colorscheme]
 
 ## edit setting in json (needed because lambda cannot do assignments)
 def edit_json(key,value,json_path,keys=[]):
-
     # get value if needed
     okey = key
     ovalue = value
@@ -93,14 +92,12 @@ def edit_json(key,value,json_path,keys=[]):
     else:
         dbg(keys)
 
-
     # apply change
     root[setting] = value
 
     # write to file
     with open(os.path.join(PATH,json_path),'w') as f:
         f.write(json.dumps(data,indent=4))
-
 
     # reimport settings
     import_settings()
@@ -286,6 +283,7 @@ class InputDialog(Container):
         elif self.dialog_type in ["field","binding"]:
             self.field = InputDialogField(default=field_value,print_at_start=False)
             self.field.set_style('value',gui['CONTAINER_VALUE_STYLE'])
+            self.field.field_color = '\033['+THEME['value']+'m'
 
         # add label
         self.add_elements([self.label])
@@ -387,7 +385,7 @@ def get_infield_pos(return_offset=False):
     return [3,HEIGHT-2-offset]
 
 ## handle action but for menus
-def handle_menu(key,obj,page=0):
+def handle_menu(key,obj,attributes={},page=0):
     global PIPE_OUTPUT,UI_TRACE
 
     if isinstance(obj,list):
@@ -399,9 +397,9 @@ def handle_menu(key,obj,page=0):
         obj.wipe()
 
         # go up the trace
+        old = UI_TRACE[-1][2]
         UI_TRACE.pop(-1)
-        if len(SETTINGS_DEPTH):
-            SETTINGS_DEPTH.pop(-1)
+
         fun,args,new = UI_TRACE[-1]
         dbg(fun,args)
 
@@ -409,7 +407,16 @@ def handle_menu(key,obj,page=0):
         kwargs = args.copy()
 
         # execute trace
-        fun(**kwargs) 
+        d = fun(**kwargs) 
+        if hasattr(old,'__ui_keys') and not d == None:
+            setattr(d,'__ui_keys',old.__ui_keys)
+
+        if len(obj.__ui_keys):
+            obj.__ui_keys.pop(-1)
+
+        #if not c == None:
+        #    for key,value in attributes.items():
+        #        setattr(c,key,value)
         return
 
     # do actions specific to input dialog
@@ -418,19 +425,23 @@ def handle_menu(key,obj,page=0):
         if key == "ENTER":
             # edit setting
             new = obj.submit()
-            edit_json(json_path=obj.file,keys=obj.__ui_keys,key=obj.setting,value=new)
+            dbg('new:',new)
+            dbg('keys:',obj.__ui_keys)
+            dbg('key:',obj.setting)
+            dbg('new:',new)
+            edit_json(json_path=CURRENT_FILE,keys=obj.__ui_keys,key=obj.setting,value=new)
 
             # edit previous ui to show changes
             fun,kwargs,newobj = UI_TRACE[-2]
-            if not kwargs.get('selected') == None:
+            if not type(kwargs.get('source')) in [None,list]:
                 # set new value
-                kwargs['selected'].value = new
+                kwargs['source'].value = new
 
                 # set new real_value
-                kwargs['selected'].real_value[obj.setting] = new
+                kwargs['source'].real_value[obj.setting] = new
 
             # go back
-            handle_menu("ESC",obj)
+            handle_menu("ESC",obj,attributes={'__ui_keys': obj.__ui_keys})
             return
 
         # send key to field
@@ -449,10 +460,15 @@ def handle_menu(key,obj,page=0):
         return
 
     elif key == "ENTER":
-        obj.wipe()
 
         # get obj and index
         selected,_,index = obj.selected
+        
+        if hasattr(selected,'handler'):
+            selected.handler()
+            return
+        
+        obj.wipe()
 
         # set previous trace element index
         UI_TRACE[-1][1]['index'] = index
@@ -469,7 +485,6 @@ def handle_menu(key,obj,page=0):
             d.select()
 
         d.__ui_keys = obj.__ui_keys
-        d.file = obj.file
 
         # print
         d.select()
@@ -478,23 +493,30 @@ def handle_menu(key,obj,page=0):
       
     elif key == " ":
         selected,_,index = obj.selected
+        dbg(selected.__ui_options)
         if selected.__ui_options and len(selected.__ui_options) == 2:
             if not globals().get(selected.real_label) == None:
                 # add to depth
-                SETTINGS_DEPTH.append(selected.real_label)
+                selected.__ui_keys.append(selected.real_label)
                 old_index = selected.__ui_options.index(globals()[selected.real_label])
                 if old_index == 0:
                     new_index = 1
                 else:
                     new_index = 0
 
-                edit_setting(selected.real_label,selected.__ui_options[new_index])
+                edit_json(
+                        json_path=CURRENT_FILE,
+                        keys=[selected.real_label],
+                        key=selected.real_label,
+                        value=selected.__ui_options[new_index]
+                )
+
                 fun,args,obj = UI_TRACE[-1]
                 args['index'] = index
 
                 kwargs = args.copy()
                 fun(**kwargs)
-                SETTINGS_DEPTH.pop(-1)
+                selected.__ui_keys.pop(-1)
             return
 
     elif key in "hjkl" or key.startswith("ARROW"):
@@ -529,8 +551,8 @@ def return_to_infield(*args,**kwargs):
     PIPE_OUTPUT = None
     KEEP_PIPE = False
     
-## menu caller
-def create_menu(source,corners,index=None,dict_index=0):
+## create menu from `source` dict
+def create_menu(source,corners,index=None,dict_index=0,**container_args):
     source_arg = source
 
     if isinstance(source,list):
@@ -539,17 +561,17 @@ def create_menu(source,corners,index=None,dict_index=0):
     else:
         source = source_arg
 
-    objects = container_from_dict(source)
+    objects = container_from_dict(source,**container_args,width=max(40,int(WIDTH*(1/2))))
         
     for o in objects:
         if not source_arg == source:
             o.dict_path = kwargs['path']
 
-        for i,c in enumerate(corners):
+        for i,c in enumerate([v for k,v in THEME['corners'].items()]):
             if not c == None:
                 o.set_corner(i,c)
 
-        o.width = min(WIDTH-5,o.width)
+        #o.width = min(WIDTH-5,o.width)
         o.center()
 
     c = objects[dict_index]
@@ -574,12 +596,13 @@ def create_menu(source,corners,index=None,dict_index=0):
     c.select()
     print(c)
     
-    return objects
+    return c
 
-## submenu caller
+## create submenu from `source` object
 def create_submenu(source,index=None,dict_index=0):
     if isinstance(source.real_value,dict):
-        dicts = container_from_dict(source.real_value)
+        dicts = container_from_dict(source.real_value,width=max(40,int(WIDTH*(1/2))))
+
         d = dicts[dict_index]
         d.source_index = (0 if index==None else index) 
         if len(d.selectables):
@@ -596,7 +619,7 @@ def create_submenu(source,index=None,dict_index=0):
                     label_underpad=1,
                     options=options,
                     field_value=str(source.real_value),
-                    width=min(40,int(WIDTH*(2/3)))
+                    width=max(40,int(WIDTH*(1/2)))
         )
 
         d.setting = source.real_label
@@ -607,8 +630,8 @@ def create_submenu(source,index=None,dict_index=0):
         dic.setting = source.real_label
         dic.real_value = source.real_value
         dic.center()
-        for i in range(4):
-            dic.set_corner(i,"X")
+        for i,c in enumerate([v for k,v in THEME['corners'].items()]):
+            dic.set_corner(i,c)
 
     d = dicts[dict_index]
     d.select()
@@ -757,7 +780,7 @@ def getch_loop():
 
 ## act on action
 def handle_action(action):
-    global KEEP_GOING,PIPE_OUTPUT,PIPE_ARGS,VISUAL_START,VISUAL_END,infield
+    global KEEP_GOING,PIPE_OUTPUT,PIPE_ARGS,VISUAL_START,VISUAL_END,infield,CURRENT_FILE
 
 
 
@@ -1130,9 +1153,14 @@ def handle_action(action):
         elif menu == "login":
             corners[1] = "login"
             path = os.path.join(PATH,'usercfg.json')
+            pytermgui.set_attribute_for_id('usercfg-button_connect','handler',lambda: dbg('connect button pressed'))
+            pytermgui.set_attribute_for_id('usercfg-button_add','handler',lambda: dbg('add button pressed'))
+
+        CURRENT_FILE = path
 
         # call menu handler
-        dicts = create_menu(source=[load_path,{'path': path}],corners=corners)
+        d = create_menu(source=[load_path,{'path': path}],corners=corners)
+        dbg(d.width)
 
 
     
@@ -1374,7 +1402,7 @@ PIPE_ARGS = {}
 KEEP_PIPE = False
 
 UI_TRACE = []
-SETTINGS_DEPTH = []
+CURRENT_FILE = None
 
 # given by server
 COOKIE = "flamingoestothestore"
@@ -1409,14 +1437,39 @@ if __name__ == "__main__":
 
 
     # set pytermgui styles
-    pytermgui.set_style('container_title',lambda item: bold(color(item.upper(),COLORS['title'])+':'))
-    pytermgui.set_style('container_label',lambda item: (color(item.lower(),COLORS['label'])))
-    pytermgui.set_style('container_value',lambda item: (color(item,COLORS['value'])))
-    pytermgui.set_style('container_border',lambda item: (color(item,COLORS['border'])))
-    pytermgui.set_style('prompt_highlight',lambda item: highlight(item,'38;5;57'))
-    pytermgui.set_style('tabbar_highlight',lambda item: highlight(item,'38;5;69'))
-    pytermgui.set_style('container_border_chars',[bold(v) for v in COLORS['border_chars']])
-    pytermgui.set_style('prompt_delimiter_style',COLORS['prompt_delimiters'])
+    pytermgui.set_style(
+            'container_title',
+            lambda item: bold(color(item.upper(),THEME['title'])+':')
+    )
+    pytermgui.set_style(
+            'container_label',
+            lambda item: (color(item.lower(),THEME['label']))
+    )
+    pytermgui.set_style(
+            'container_value',
+            lambda item: (color(item,THEME['value']))
+    )
+    pytermgui.set_style(
+            'container_border',
+            lambda item: (color(item,THEME['border']))
+    )
+    pytermgui.set_style(
+            'prompt_highlight',
+            lambda item: highlight(item,THEME['value'])
+    )
+    pytermgui.set_style(
+            'tabbar_highlight',
+            #lambda item: highlight(item,THEME['title'])
+            lambda item: color(item,THEME['title'])
+    )
+    pytermgui.set_style(
+            'container_border_chars',
+            lambda: [bold(v) for v in THEME['border_chars']]
+    )
+    pytermgui.set_style(
+            'prompt_delimiter_style',
+            lambda: THEME['prompt_delimiters']
+    )
     
 
     # set default mode
@@ -1424,7 +1477,7 @@ if __name__ == "__main__":
     infield.line_offset = None
     
     MODE_LABEL = Label('-- ESCAPE --',justify='left')
-    MODE_LABEL.set_style('value',lambda item: color(item,COLORS['mode_indicator']))
+    MODE_LABEL.set_style('value',lambda item: color(item,THEME['mode_indicator']))
     x,y = get_infield_pos()
     MODE_LABEL.pos = [x,y+5]
     

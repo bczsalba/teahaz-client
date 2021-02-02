@@ -51,6 +51,7 @@ class InputField:
         self.selected = ''
         self.selected_start = 0
         self.selected_end = 0
+        self.field_color = '\033[0m'
 
         # TODO
         self.linecap = linecap
@@ -168,10 +169,10 @@ class InputField:
             charUnderCursor = self.value[self.cursor]
 
         # set highlighter according to highlight param
-        highlighter = ('\033[47m\033[30m' if highlight else '')
+        highlighter = ('\033[7m' if highlight else '')
 
         # construct line
-        line = left + highlighter + charUnderCursor + '\033[0m' + right
+        line = left + highlighter + charUnderCursor + '\033[0m' + self.field_color + right + '\033[0m'
 
         if return_line:
             return line
@@ -205,7 +206,7 @@ class InputField:
         selected = self.value[start:end]
         right = self.value[end:]
 
-        highlight = '\033[47m\033[30m'
+        highlight = '\033[7m'
 
         self.selected = selected
         self.selected_start = start
@@ -213,7 +214,9 @@ class InputField:
         
         self.wipe()
 
-        line = left+highlight+selected+'\033[0m'+right
+        line = left+highlight+selected+self.field_color+right
+        from client import dbg
+        dbg('col',self.field_color)
 
         # write to stdout
         x,y = self.pos
@@ -307,8 +310,11 @@ class _GetchUnix:
 
     def __call__(self):
         buff = ''
-        for c in self.get_chars():
-            buff += c
+        try:
+            for c in self.get_chars():
+                buff += c
+        except KeyboardInterrupt:
+            return '\x03'
 
         return buff
 

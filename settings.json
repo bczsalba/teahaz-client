@@ -8,30 +8,39 @@
     "DO_DEBUG": true,
     "ui__title2": "colors",
     "ui__prompt_options__colorscheme": [
-        "normal"
+        "draculite"
     ],
-    "COLORSCHEME": "normal",
-    "COLORSCHEMES": {
-        "normal": {
+    "SELECTED_THEME": "draculite",
+    "THEMES": {
+        "draculite": {
             "ui__title1": "colors",
             "title": "38;5;210",
-            "label": "38;5;250",
+            "label": "38;5;249",
             "value": "38;5;72",
             "border": "38;5;60",
             "mode_indicator": "38;5;225",
-            "ui__title2": "highlights",
-            "ui__title3": "characters",
+            "ui__title2": "characters",
+            "corners": {
+                "top_left": "X",
+                "top_right": "x",
+                "bottom_left": "x",
+                "bottom_right": "X"
+            },
             "border_chars": "|-",
-            "ui__prompt_options": [
+            "ui__prompt_options__delimiters": [
                 "<>",
                 "[]"
             ],
-            "prompt_delimiters": "<>"
+            "prompt_delimiters": "<>",
+            "ui__button": {
+                "id": "settings-themes_showcolors",
+                "value": "show color guide"
+            }
         }
     },
     "ui__title3": "messaging",
     "URL": "https://github.com/bczsalba/asztal",
-    "ROOMID": "conversationsa",
+    "ROOMID": "nothing",
     "USERNAME": "lilac",
     "ui__title4": "bindings",
     "ESCAPE_KEY": "ESC",
@@ -142,7 +151,5 @@
             "selection_change": "c",
             "selection_copy": "y"
         }
-    },
-    "server": ":rocket:",
-    "username": ""
+    }
 }

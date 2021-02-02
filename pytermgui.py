@@ -58,6 +58,21 @@ def break_line(_inline,_len,_pad=0,_separator=' '):
     else:
         return _inline.split('\n')
 
+def set_element_id(element,element_id):
+    element.id = element_id
+    ELEMENT_IDS[element_id] = element
+
+    # set given attributes 
+    if not ELEMENT_ATTRIBUTES.get(element_id) == None:
+        attribute,value = ELEMENT_ATTRIBUTES[element_id]
+        setattr(element,attribute,value)
+
+# set attributes to be applied to all elements matching id
+def set_attribute_for_id(element_id,key,value):
+    ELEMENT_ATTRIBUTES[element_id] = [key,value]
+    
+def get_object_by_id(key):
+    return ELEMENT_IDS.get(key)
 
 
 # EXAMPLES #
@@ -68,106 +83,139 @@ def break_line(_inline,_len,_pad=0,_separator=' '):
 # returns a list of Container objects, len() > 1 if the 
 # container height wouldn't fit the screen
 def container_from_dict(dic,padding=4,**kwargs):
-    width = min(40,int(WIDTH*(2/3)))
-
-    dic_c = Container(**kwargs,width=width)
+    dic_c = Container(**kwargs)
     dicts = [dic_c]
     reverse_items = False
     handler = None
     current_padding = 1
     prompt_options = None
     datafile = None
+    element_id = None
 
     for i,(key,item) in enumerate(dic.items()):
-        # read titles into labels
-        if key.startswith("ui__title"):
-            # get next title element
-            for next_title,k in enumerate(list(dic.keys())[i+1:]):
-                if k.startswith('ui__title') and k[-1].isdigit():
-                    break
+        if key.startswith('ui__'):        
+            # GENERATOR OPTIONS
+            ## set datafile for all objects
+            if key == "ui__file":
+                datafile = item
 
-            l = Label(value=item,justify="left")
-            l.set_style('value',CONTAINER_TITLE_STYLE)
+            ## read titles into labels
+            elif key.startswith("ui__title"):
+                # get next title element
+                for next_title,k in enumerate(list(dic.keys())[i+1:]):
+                    if k.startswith('ui__title') and k[-1].isdigit():
+                        break
 
-            height_with_segment = dicts[-1].real_height + next_title*(1+dicts[-1].padding)+5
-            
-            if height_with_segment > HEIGHT-5:
-                dicts.append(Container(**kwargs,width=width))
+                l = Label(value=item,justify="left")
+                l.set_style('value',CONTAINER_TITLE_STYLE)
+
+                # set id
+                if not element_id == None:
+                    set_element_id(l,element_id)
+                    element_id = None
+
+                height_with_segment = dicts[-1].real_height + next_title*(1+dicts[-1].padding)+5
+                
+                if height_with_segment > HEIGHT-5:
+                    dicts.append(Container(**kwargs,width=width))
+                    dicts[-1].add_elements(l)
+                    continue
+
+                
+                # only pad if not the first element
+                if not i == 0 and not list(dic.keys())[i-1] == "ui__file":
+                    pad = Label()
+                    dicts[-1].add_elements(pad)
+
+                # add label to container
                 dicts[-1].add_elements(l)
-                continue
 
+                # set new padding value
+                current_padding = padding
+
+            ## set options for next prompt
+            elif key.startswith("ui__prompt_options"):
+                prompt_options = item
+
+            ## reverse keys and values
+            elif key == "ui__reverse_items":
+                reverse_items = True
+
+            ## set next element id
+            elif key.startswith("ui__id"):
+                element_id = item
+
+
+            # ELEMENT SHORTHANDS
+            ## create prompt with options `item`
+            elif key.startswith("ui__prompt"):
+                options = item
+                p = Prompt(options=options)
+                p.set_style('value',CONTAINER_VALUE_STYLE)
+                
+                if element_id:
+                    set_element_id(p,element_id)
+                    element_id = None
+
+                dicts[-1].add_elements(p)
+ 
+            ## create padder
+            elif key.startswith("ui__padding"):
+                p = Label()
+
+                if element_id:
+                    set_element_id(p,element_id)
+                    element_id = None
+
+                dicts[-1].add_elements(p)
+
+            elif key.startswith("ui__button"):
+                button = Prompt(options=[item.get('value')])
+                button.set_style('value',CONTAINER_VALUE_STYLE)
+
+                set_element_id(button,item.get('id'))
+
+                if not hasattr(button,'handler'):
+                    button.handler = lambda: None
+
+                dicts[-1].add_elements(button)
             
-            # only pad if not the first element
-            if not i == 0:
-                pad = Label()
-                dicts[-1].add_elements(pad)
 
-            # add label to container
-            dicts[-1].add_elements(l)
+        else:
+            # reverse meanings of key & item
+            if reverse_items:
+                temp = key
+                key = item
+                item = temp
 
-            # set new padding value
-            current_padding = padding
-            continue
+            # set real value (not str())
+            real_value = item
 
-        elif key.startswith("ui__prompt_options"):
-            prompt_options = item
-            continue
+            # ignore empty dicts
+            if isinstance(item,dict):
+                length = len(item.keys())
+                if length == 0:
+                    continue
+                else:
+                    item = "bl!"
+            
 
-        elif key == "ui__reverse_items":
-            reverse_items = True
-            continue
-
-        elif key.startswith("ui__prompt"):
-            options = item
-            p = Prompt(options=options)
+            # create, add prompt
+            p = Prompt(real_label=str(key),label=str(key),value=str(item),padding=current_padding)
+            p.__ui_options = prompt_options
+            prompt_options = None
+            p.set_style('label',CONTAINER_LABEL_STYLE)
             p.set_style('value',CONTAINER_VALUE_STYLE)
+            p.real_value = real_value
+
+            # this array keeps track of path within a dictionary
+            p.__ui_keys = []
+
+            # add prompt to dict
+            if dicts[-1].height + p.height > HEIGHT-5:
+                dicts.append(Container(**kwargs,width=width))
+
             dicts[-1].add_elements(p)
-            continue
-
-        elif key == "ui__file":
-            datafile = item
-            continue
-            
-        
-        elif key.startswith("ui__padding"):
-            dicts[-1].add_elements(Label())
-            continue
-
-        # reverse meanings of key & item
-        if reverse_items:
-            temp = key
-            key = item
-            item = temp
-
-        # set real value (not str())
-        real_value = item
-
-        # ignore empty dicts
-        if isinstance(item,dict):
-            length = len(item.keys())
-            if length == 0:
-                continue
-            else:
-                item = "->"
-        
-
-        # create, add prompt
-        p = Prompt(real_label=str(key),label=str(key),value=str(item),padding=current_padding)
-        p.__ui_options = prompt_options
-        prompt_options = None
-        p.set_style('label',CONTAINER_LABEL_STYLE)
-        p.set_style('value',CONTAINER_VALUE_STYLE)
-        p.real_value = real_value
-        p.__ui_keys = []
-        
-        # this is used to keep track of path taken for writing changes to a file
-
-
-        # add prompt to dict
-        if dicts[-1].height + p.height > HEIGHT-5:
-            dicts.append(Container(**kwargs,width=width))
-
-        dicts[-1].add_elements(p)
 
 
     do_tabline = len(dicts) > 1
@@ -201,7 +249,7 @@ def underline(s):
     return '\033[4m'+str(s)+'\033[0m'
 
 def highlight(s,fg='30'):
-    return color(clean_ansi(s),['47',fg])
+    return color(clean_ansi(s),['7',fg])
 
 def color(s,col):
     if isinstance(col,list):
@@ -268,7 +316,7 @@ class Container:
         if border == None:
             border = CONTAINER_BORDER_CHARS
         self.border_style = CONTAINER_BORDER_STYLE
-        self.set_borders(border)
+        self.set_borders(border())
 
         # set up flags
         self._do_dynamic_size = dynamic_size
@@ -419,7 +467,10 @@ class Container:
 
     # set border values
     def set_borders(self,border):
+        from client import dbg
+        dbg(border)
         if len(border) == 1:
+            border = border[0]
             self.borders = [border,border,border,border]
         elif len(border) == 2:
             sides,topbottom = border
@@ -618,14 +669,17 @@ class Container:
     # EVENT: check for long elements, handle them
     # - called during __repr__ element loop
     def _handle_long_element(self,e):
-        if hasattr(e,'label') and hasattr(e,'value'):
+        if hasattr(e,'label') and hasattr(e,'value') and not isinstance(e.value,dict):
             # check value length
             if real_length(str(e.value))+4 > self.width*(1/3):
                 # check if self can be extended
                 if e.width+10 < WIDTH*(1/2) and e.width < self.width:
                     self.width = e.width+10
                 else:
+                    e.real_value = e.value
                     e.value = '...'
+                    from client import dbg
+                    dbg(e.value,e.real_value)
                 
             if real_length(str(e.label))+4 > self.width*(1/2):
                 e.label = str(e.label)[:int(self.width*(1/3))-3]+'...'
@@ -684,7 +738,7 @@ class Prompt:
     # return string representation of self
     def __repr__(self):
         delimiters = []
-        for i,v in enumerate(self.delimiter_style):
+        for i,v in enumerate(self.delimiter_style()):
             if i % 2 == 0:
                 delimiters.append(v+' ')
             else:
@@ -767,7 +821,10 @@ class Prompt:
 
     # method to overwrite
     def submit(self):
-        return self.value
+        if hasattr(self,'real_value'):
+            return self.real_value
+        else:
+            return self.value
 
 class Label:
     """ 
@@ -827,6 +884,14 @@ class Label:
 # global width & height -- refreshed at every new object creation
 WIDTH,HEIGHT = os.get_terminal_size()
 
+# element_id - object
+ELEMENT_IDS = {}
+
+# element_id - [attribute,value]
+## this is applied in set_element_id, to every element
+## matching the given element_id
+ELEMENT_ATTRIBUTES = {}
+
 # styles
 ## other
 GLOBAL_HIGHLIGHT_STYLE = highlight
@@ -834,7 +899,7 @@ CURSOR_HIGHLIGHT_STYLE = GLOBAL_HIGHLIGHT_STYLE
 TABBAR_HIGHLIGHT_STYLE = GLOBAL_HIGHLIGHT_STYLE
 
 # container
-CONTAINER_BORDER_CHARS = "|-"
+CONTAINER_BORDER_CHARS = lambda: "|-"
 CONTAINER_BORDER_STYLE = lambda item: item
 CONTAINER_LABEL_STYLE = lambda item: item
 CONTAINER_VALUE_STYLE = lambda item: item
@@ -844,7 +909,7 @@ CONTAINER_TITLE_STYLE = lambda item: italic(bold(item))
 ## prompt
 PROMPT_LABEL_STYLE = lambda item: item
 PROMPT_VALUE_STYLE = lambda item: item
-PROMPT_DELIMITER_STYLE = '[]'
+PROMPT_DELIMITER_STYLE = lambda: '[]'
 PROMPT_HIGHLIGHT_STYLE = GLOBAL_HIGHLIGHT_STYLE
 
 ## label
