@@ -11,6 +11,7 @@ import requests
 import pytermgui
 import threading
 import pyperclip as clip
+from urllib.parse import urlparse
 from pytermgui import WIDTH,HEIGHT
 from pytermgui import clean_ansi,real_length,break_line
 from pytermgui import italic,bold,underline,color,highlight
@@ -306,7 +307,7 @@ class InputDialog(Container):
         self.width = max(self.width,self.field.width)
         self.get_border()
         self.center()
-        self.wipe()
+        #self.wipe()
 
         return super().__repr__()
 
@@ -401,7 +402,9 @@ def handle_menu(key,obj,attributes={},page=0):
         UI_TRACE.pop(-1)
 
         fun,args,new = UI_TRACE[-1]
-        dbg(fun,args)
+        for e in UI_TRACE:
+            dbg(e[0])
+        dbg()
 
         # create copy so the original dict isnt overwritten
         kwargs = args.copy()
@@ -423,10 +426,6 @@ def handle_menu(key,obj,attributes={},page=0):
         if key == "ENTER":
             # edit setting
             new = obj.submit()
-            dbg('new:',new)
-            dbg('keys:',obj.__ui_keys)
-            dbg('key:',obj.setting)
-            dbg('new:',new)
             edit_json(json_path=CURRENT_FILE,keys=obj.__ui_keys,key=obj.setting,value=new)
 
             # edit previous ui to show changes
@@ -465,7 +464,7 @@ def handle_menu(key,obj,attributes={},page=0):
         selected,_,index = obj.selected
         
         if hasattr(selected,'handler'):
-            selected.handler()
+            selected.handler(obj,selected)
             return
         
         obj.wipe()
@@ -493,7 +492,6 @@ def handle_menu(key,obj,attributes={},page=0):
       
     elif key == " ":
         selected,_,index = obj.selected
-        dbg(selected.__ui_options)
         if selected.__ui_options and len(selected.__ui_options) == 2:
             if not globals().get(selected.real_label) == None:
                 # add to depth
@@ -526,7 +524,7 @@ def handle_menu(key,obj,attributes={},page=0):
         elif key in ["k","ARROW_UP"]:
             obj.selected_index -= 1
 
-        elif is_set('objects',locals()):
+        elif len(objects) > 1:
             obj.wipe()
             if key in ["h","ARROW_LEFT"]:
                 new = max(0,page-1)
@@ -594,6 +592,7 @@ def create_menu(source,corners,index=None,dict_index=0,**container_args):
     # print
     c.selected_index = (0 if index==None else index) 
     c.select()
+    dbg('returning')
     print(c)
     
     return c
@@ -678,13 +677,108 @@ def test_ui(dict_index=0):
         dicts.append(c)
 
         
-
     c = dicts[dict_index]
-    set_pipe(handle_menu,{'obj': dicts, 'page': dict_index},keep=True)
-    add_to_trace([test_ui,{'dict_index': dict_index},c])
-
+    set_pipe(handle_menu,{'obj': dicts, 'page': dict_index})
+    #if dict_index == 0:
+    #    add_to_trace([test_ui,{'dict_index':dict_index},c])
     print(c)
     return c
+
+# create menu with revealing elements (like asztal/timetable)
+def create_reveal_menu(source):
+    this works but it shouldnt alma
+    def reveal_select(container,index):
+        container.wipe()
+    #    elements = container.elements.copy()
+    #    container.elements = []
+    #    for e in elements:
+    #        container.add_elements(e)
+    #        if e._is_selected:
+    #            e.revealed = []
+    #            for key,item in p.real_value.items():
+    #                l = Label(value=color('- ',THEME['title'])+color(item,'38;5;240'),padding=6,justify='left')
+    #                #l._is_reveal_item = True
+    #                #d.add_elements(l)
+    #                container.add_elements(l)
+    #                e.revealed.append(l)
+    #                dbg(l in container.elements)
+    #        #else:
+    #        #    if hasattr(e,'revealed'):
+    #        #        for other in e.revealed:
+    #        #            #dbg(container.elements,other)
+    #        #            container.elements.remove(other)
+    #        #            repr(container)
+
+
+    def pad(s,times):
+        return "  "*times+s
+
+    def reveal_repr(element):
+        lines = ''
+        element.height = 1
+
+        chatroom = element.real_value['chatroom']
+        address = urlparse(element.real_value['address']).netloc
+        if address == '':
+            address = 'localhost'
+
+        if element._is_selected:
+            pass
+            
+            #chatroom = (chatroom)
+            #address = bold(color(address,THEME['value']))
+            #lines += pytermgui.PROMPT_HIGHLIGHT_STYLE(pad(chatroom+bold(color(' @ ',THEME['value']))+address,1))
+
+
+            #lines += pad(color('* ',THEME['value'])+bold(element.label.strip()),1)
+            #lines += italic(element.label)
+            #for key,item in element.real_value.items():
+            #    lines += '\n'+pad(color('- ',THEME['title'])+color(item,'38;5;240'),2)
+            #    element.height += 1
+        else:
+            #lines += pad(chatroom+bold(' @ ')+address,2)
+
+            return lines
+
+
+    d = Container(width=max(30,int((1/2)*WIDTH)),center_elements=0)
+    title = Label(value=pytermgui.CONTAINER_TITLE_STYLE('Server selection'),justify='left')
+    d.add_elements(title)
+
+    #for key,value in source.items():
+    #    p = Prompt(label=pad(str(key),times=1),value='')
+    #    p.real_value = value
+    #    p.custom_repr = reveal_repr
+    #    d.add_elements(p)
+    #    d._selection_changed = reveal_select
+    options = []
+    for key,content in source.items():
+        chatroom = content['chatroom']
+        address = urlparse(content['address']).netloc
+        if address == '':
+            address = 'localhost'
+
+        options.append(chatroom+' @ '+address)
+        continue
+    
+    #d.add_elements(Prompt(options=[chatroom+' @ '+address],justify_options='center',padding=0))
+    d.add_elements(Prompt(options=options,justify_options='center',padding=0))
+    
+
+
+
+    set_pipe(handle_menu,{'obj': d})
+    for i,c in enumerate([v for k,v in THEME['corners'].items()]):
+        d.set_corner(i,c)
+    add_to_trace(
+
+    d.select()
+
+
+    #d.select(0)
+    d.center()
+    print(d)
+
         
 
 
@@ -1195,18 +1289,20 @@ def handle_action(action):
         elif menu == "login":
             corners[1] = "login"
             path = os.path.join(PATH,'usercfg.json')
-            pytermgui.set_attribute_for_id('usercfg-button_connect','handler',lambda: dbg('connect button pressed'))
-            pytermgui.set_attribute_for_id('usercfg-button_add','handler',lambda: dbg('add button pressed'))
+            pytermgui.set_attribute_for_id('usercfg-button_connect','handler', lambda *args: dbg('connect button pressed'))
+            pytermgui.set_attribute_for_id('usercfg-button_add','handler', lambda *args: dbg('add button pressed'))
+            pytermgui.set_attribute_for_id('usercfg_serverlist','handler', lambda old,new: (old.wipe(),create_reveal_menu(new.real_value)))
+
 
         elif menu == "test":
             test_ui()
+            dbg('hey')
             return
 
         CURRENT_FILE = path
 
         # call menu handler
         d = create_menu(source=[load_path,{'path': path}],corners=corners)
-        dbg(d.width)
 
 
     

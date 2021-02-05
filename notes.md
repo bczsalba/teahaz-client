@@ -1,7 +1,10 @@
 # BUGS
 ## in progress
+[ ] Container-s don't update size properly when new elements are added
+    -- this may not need to be fixed (lol), the reveal menu should be using labels for every level, not one long string.
 
 ## urgent
+- `ESC` doesn't work after color menu
 
 ## can wait
 - insert label should only show outside of menu
@@ -12,23 +15,19 @@
 
 # FEATURES 
 ## upcoming checklist
-- general ui
-    * [ ] add pathbar to bottom in settings (maybe other menus too)
-    * [ ] make colorguide nicer
+- minor additions
+    * [ ] `add_to_trace` can get the caller function dynamically, so it really should
 
 - login menu
     * [ ] generate prompts for server options
         + basically, the idea is for the choice to be registered after an enter press, and for it to look like timetable.
-        + [ ] create dict to store data like address,nick,users?
+        + [x] create dict to store data like address,nick,users?
         + [ ] overwrite select to be like asztal's timetable
         + [ ] overwrite handler for all prompts in serverlist with the id system
 
-- fixes for printing
-    * currently, every print() call wipes the container
-    * this causes flashing in lower performance terminals like vim's
-    * to fix:
-        + [ ] make `container.select` clear the previously selected prompt
-        + [ ] make InputDialog only clear Infield (maybe even just the changes made to it)
+- general ui
+    * [ ] add pathbar to bottom in settings (maybe other menus too)
+    * [ ] make colorguide nicer
  
 - multiline:
     * [ ] strip `\n` from paste
@@ -74,3 +73,7 @@
     * [x] implement `\033[7m` highlighting for infield
     * [x] fix visual_goto_up/down not working
     * [x] implement custom cursor & highlight colors
+
+- fixes for printing
+    * [x] figure out what wipes the screen
+    * [x] make it, like, not do that

@@ -5,7 +5,7 @@
         true,
         false
     ],
-    "DO_DEBUG": true,
+    "DO_DEBUG": false,
     "ui__title2": "colors",
     "ui__prompt_options__colorscheme": [
         "draculite"

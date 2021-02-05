@@ -212,6 +212,10 @@ def container_from_dict(dic,padding=4,**kwargs):
             p.set_style('value',CONTAINER_VALUE_STYLE)
             p.real_value = real_value
 
+            if element_id:
+                set_element_id(p,element_id)
+                element_id = None
+
             if not delim == None:
                 p.delimiter_style = lambda: ['   ','{}']
                 p.set_style('value',CONTAINER_LABEL_STYLE)
@@ -310,6 +314,7 @@ class Container:
 
         # set up values
         self.previous_pos = None
+        self.previous_repr = None
         self.padding = padding
 
         self.elements = []
@@ -362,7 +367,7 @@ class Container:
 
 
         line = ''
-        new_real_height = self.height
+        new_real_height = 0
 
         # print elements
         x,starty = self.pos
@@ -396,24 +401,24 @@ class Container:
                         self.selectables.remove(o)
                 continue
 
-            diff = len(lines) - 1
+            diff = len(lines)
             new_real_height += diff
+
 
             for li,l in enumerate(lines):
                 line += f"\033[{starty+i+li};{x}H"+(real_length(l)+2)*' '
                 line += f"\033[{starty+i+li};{x}H "+l
 
-            starty += diff
+            starty += diff-1
 
         
-        if not self.real_height <= new_real_height:
+        if not self.real_height == new_real_height:
             self.real_height = new_real_height
             self.height = new_real_height
         self.get_border()
 
         # print border
         py = None
-        from client import dbg
         for x,y,char in self.border[:]:
             # set previous y
             py = y
@@ -421,7 +426,7 @@ class Container:
             # write to stdout
             line += f'\033[{y};{x}H'+char
 
-        # update previous pos
+        self.previous_repr = line
         return line
 
 
@@ -476,8 +481,6 @@ class Container:
 
     # set border values
     def set_borders(self,border):
-        from client import dbg
-        dbg(border)
         if len(border) == 1:
             border = border[0]
             self.borders = [border,border,border,border]
@@ -544,7 +547,6 @@ class Container:
         for i,c in enumerate(self.border):
             x,y,_ = c
 
-            from client import dbg
             if [x,y] in newcoords:
                 newindex = newcoords.index([x,y])
                 self.border.pop(i)
@@ -623,10 +625,15 @@ class Container:
             # unselect element if 
             elif not target_element == self.selectables[i][0]:
                 e._is_selected = False
+
+        self._selection_changed(self,sub_i)
   
     
     # go through object, wipe ever character contained
     def wipe(self,pos=None):
+        #from client import dbg
+        #dbg('wiped by: ',sys._getframe().f_back.f_code.co_name)
+
         if pos == None:
             pos = self.pos
 
@@ -642,9 +649,10 @@ class Container:
 
     
     # transform self to new position
-    def move(self,pos):
+    def move(self,pos,wipe=False):
         self.pos = pos
-        self.wipe()
+        if wipe:
+            self.wipe()
         self.get_border()
 
 
@@ -687,11 +695,17 @@ class Container:
                 else:
                     e.real_value = e.value
                     e.value = '...'
-                    from client import dbg
-                    dbg(e.value,e.real_value)
                 
             if real_length(str(e.label))+4 > self.width*(1/2):
                 e.label = str(e.label)[:int(self.width*(1/3))-3]+'...'
+
+    
+    # EVENT: selection changed
+    # - called during select() method, useful in extending select behaviour
+    @staticmethod
+    def _selection_changed(self,index):
+        return
+
 
 class Prompt:
     """ 
@@ -709,7 +723,7 @@ class Prompt:
                             non-inclusive.)
     """
     
-    def __init__(self,width=None,options=None,label=None,real_label=None,value="",padding=0): 
+    def __init__(self,width=None,options=None,label=None,real_label=None,justify_options='center',value="",padding=0): 
         # the existence of label decides the layout (<> []/[] [] [])
         if label:
             self.label = str(label)
@@ -738,6 +752,7 @@ class Prompt:
         self.label_style = PROMPT_LABEL_STYLE
         self.value_style = PROMPT_VALUE_STYLE
         self.delimiter_style = PROMPT_DELIMITER_STYLE
+        self.justify = justify_options
         
         # flags
         self._is_selectable = True
@@ -746,6 +761,9 @@ class Prompt:
 
     # return string representation of self
     def __repr__(self):
+        if hasattr(self,'custom_repr'):
+            return self.custom_repr(self)
+
         delimiters = []
         style = self.delimiter_style()
 
@@ -797,10 +815,20 @@ class Prompt:
                 else:
                     return ""
             
-            for i,l in enumerate(lines):
-                l_len = real_length(l)
-                pad = ( (self.width-l_len)//2 + self.padding + 2) * " "
-                lines[i] = pad + l + pad
+            if self.justify == 'center':
+                for i,l in enumerate(lines):
+                    l_len = real_length(l)
+                    pad = ( (self.width-l_len)//2 + self.padding + 2) * " "
+                    lines[i] = pad + l + pad
+
+            elif self.justify == "left":
+                for i,l in enumerate(lines):
+                    lines[i] = self.padding*' '+l
+
+            elif self.justify == "right":
+                for i,l in enumerate(lines):
+                    pad = self.width-real_length(lines[i])-self.padding+2
+                    lines[i] = pad*' '+l
                 
             # set new hight, return line
             self.height = len(lines)

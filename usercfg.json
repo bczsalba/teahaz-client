@@ -1,12 +1,22 @@
 {
     "ui__file": "usercfg.json",
     "ui__title1": "sign in",
-    "ui__prompt_options_serverlist": [
-        "doge",
-        "buy doge",
-        ":rocket:"
-    ],
-    "server": "doge",
+    "ui__id": "usercfg_serverlist",
+    "serverlist": {
+        "doge": {
+            "address": "https://github.com/bczsalba/asztal",
+            "chatroom": "asztal.py"
+        },
+        "test": {
+            "address": "localhost:8080",
+            "chatroom": "locals"
+        },
+        "another test": {
+            "address": "localhost:8080",
+            "chatroom": "globals"
+        }
+    },
+    "server_name": "doge",
     "add new server": {
         "ui__title1": "add new server",
         "address": "",
