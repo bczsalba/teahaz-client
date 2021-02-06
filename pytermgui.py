@@ -440,6 +440,7 @@ class Container:
 
     # internal function to add elements
     def _add_element(self,element):
+
         # set width for element if none is available
         if element.width == None:
             element.width = self.width
@@ -457,11 +458,6 @@ class Container:
         # run element to update its values
         repr(element)
 
-        # add to elements
-        # update real_height
-        self.real_height += element.height
-        self.height += element.height
-
         # add padding
         for _ in range(self.padding):
             e = Label("")
@@ -470,6 +466,10 @@ class Container:
             self.height += e.height
 
         self.elements.append(element)
+
+        # update real_height
+        self.real_height += element.height
+        self.height += element.height
 
         # add selectables
         if element._is_selectable:
@@ -610,6 +610,7 @@ class Container:
         if len(self.selectables) == 0:
             return
 
+        from client import dbg; dbg(index)
         if index > len(self.selectables)-1:
             if VERBOSE:
                 raise Exception("Index is not in elements.")
@@ -713,7 +714,6 @@ class Container:
     @staticmethod
     def _selection_changed(self,index):
         return
-
 
 class Prompt:
     """ 

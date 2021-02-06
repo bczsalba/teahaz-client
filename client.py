@@ -119,8 +119,13 @@ def dbg(*args):
         return
 
     s = ' '.join([str(a) for a in args])
+
+    caller = sys._getframe().f_back.f_code.co_name
+    filename = sys._getframe().f_back.f_code.co_filename.split('/')[-1]
+    lineno = sys._getframe().f_back.f_lineno
+
     with open(LOGFILE,'a') as f:
-        f.write(s+'\n')
+        f.write(f"{bold(color(filename,THEME.get('title')))}/{caller}:{bold(color(lineno,THEME.get('value')))} : "+s+'\n')
 
 ### do `fun` after `ms` passes, nonblocking
 def do_after(ms,fun,control='true',args={}):
@@ -273,28 +278,26 @@ class InputDialog(Container):
                 self.dialog_type = "prompt"
             else:
                 self.dialog_type = "field"
-            #self.dialog_type = "field"
-
 
         if self.dialog_type == "prompt":
-            self.field = Prompt(options=options,width=20)
+            self.field = Prompt(options=options,width=self.width)
             self.field.set_style('value',gui['CONTAINER_VALUE_STYLE'])
             self.field.set_style('label',gui['CONTAINER_LABEL_STYLE'])
         
-        elif self.dialog_type in ["field","binding"]:
+        elif self.dialog_type == "field":
             self.field = InputDialogField(default=field_value,print_at_start=False)
             self.field.set_style('value',gui['CONTAINER_VALUE_STYLE'])
             self.field.field_color = '\033['+THEME['value']+'m'
 
         # add label
-        self.add_elements([self.label])
+        self.add_elements(self.label)
 
         # add paddings under label
         for _ in range(label_underpad):
             self.add_elements(Label())
 
         # add field
-        self.add_elements([self.field])
+        self.add_elements(self.field)
         
         # set xlimit of field
         self.field.xlimit = self.width-3
@@ -305,11 +308,12 @@ class InputDialog(Container):
 
     def __repr__(self):
         self.width = max(self.width,self.field.width)
-        self.get_border()
-        self.center()
+        #self.get_border()
+        #self.center()
         #self.wipe()
 
         return super().__repr__()
+
 
 ## field class for input dialog
 class InputDialogField(getch.InputField):
@@ -538,6 +542,9 @@ def handle_menu(key,obj,attributes={},page=0):
             set_pipe(handle_menu,{"obj": objects, "page": new})
             UI_TRACE[-1][1]['dict_index'] = new
 
+    elif key == "SIGTERM":
+        handle_action("quit")
+
 
     obj.select()
     print(obj)
@@ -605,7 +612,8 @@ def create_submenu(source,index=None,dict_index=0):
         dicts = container_from_dict(source.real_value,width=max(40,int(WIDTH*(1/2))))
 
         for d in dicts:
-            title = Label(value=pytermgui.CONTAINER_TITLE_STYLE(source.real_label,justify='center'))
+            # add title object to 0 index
+            title = Label(value=pytermgui.CONTAINER_TITLE_STYLE(source.real_label),justify='center')
             d.add_elements(title)
             l = d.elements.pop(-1)
             d.elements.insert(0,l)
@@ -628,6 +636,8 @@ def create_submenu(source,index=None,dict_index=0):
                     field_value=str(source.real_value),
                     width=max(40,int(WIDTH*(1/2)))
         )
+        #d.height += 1
+        dbg(d.height)
 
         d.setting = source.real_label
         d.real_value = source.real_value
@@ -696,7 +706,33 @@ def test_ui(dict_index=0):
     print(c)
     return c
 
-def create_reveal_menu(source):
+def create_server_picker(source):
+    d = Container(width=max(30,int((1/2)*WIDTH)),center_elements=0)
+    title = Label(value='Choose server',justify='center')
+    title.set_style('value',pytermgui.CONTAINER_TITLE_STYLE)
+
+    d.add_elements([title,Label()])
+
+    for key,value in source.items():
+        chatr = value.get('chatroom')
+        addr = urlparse(value.get('address')).netloc
+        if addr == '':
+            addr = 'localhost'
+
+        p = Prompt(options=[chatr+color(' @ ',THEME['title'])+addr],justify_options="center")
+        p.handler = lambda _,self: dbg(self.submit())
+        d.add_elements(p)
+
+    add_to_trace([{'source': source},d])
+    set_pipe(handle_menu,{'obj': [d]})
+
+    d.select()
+    d.center()
+    print(d)
+        
+
+
+def __creatrejlkdfa(source):
     def pad(s,times):
         return "  "*times+s
 
@@ -1259,7 +1295,7 @@ def handle_action(action):
             path = os.path.join(PATH,'usercfg.json')
             pytermgui.set_attribute_for_id('usercfg-button_connect','handler', lambda *args: dbg('connect button pressed'))
             pytermgui.set_attribute_for_id('usercfg-button_add','handler', lambda *args: dbg('add button pressed'))
-            pytermgui.set_attribute_for_id('usercfg_serverlist','handler', lambda old,new: (old.wipe(),create_reveal_menu(new.real_value)))
+            pytermgui.set_attribute_for_id('usercfg_serverlist','handler', lambda old,new: (old.wipe(),create_server_picker(new.real_value)))
 
 
         elif menu == "test":
@@ -1549,7 +1585,7 @@ if __name__ == "__main__":
     # set pytermgui styles
     pytermgui.set_style(
             'container_title',
-            lambda item: bold(color(item.upper(),THEME['title'])+':')
+            lambda item: bold(color(item.upper(),THEME['title'])+':').replace('_',' ')
     )
     pytermgui.set_style(
             'container_label',

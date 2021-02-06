@@ -18,7 +18,6 @@
     },
     "server_name": "doge",
     "add new server": {
-        "ui__title1": "add new server",
         "address": "",
         "name": "",
         "secret": "",
