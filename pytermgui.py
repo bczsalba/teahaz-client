@@ -74,6 +74,9 @@ def set_attribute_for_id(element_id,key,value):
 def get_object_by_id(key):
     return ELEMENT_IDS.get(key)
 
+def set_listener(event,func):
+    globals()['event__'+event] = func
+
 
 # EXAMPLES #
 
@@ -271,6 +274,9 @@ def color(s,col):
     return f'\033[{col}m'+str(s)+'\033[0m'
 
 
+# EVENTS #
+def event__window_size_changed(caller,new,old):
+    pass
 
 
 # CLASSES #
@@ -359,9 +365,11 @@ class Container:
     def __repr__(self):
         global WIDTH,HEIGHT
 
-        # TODO: detect need for centering (maybe?)
         nWIDTH,nHEIGHT = os.get_terminal_size()
         if not [WIDTH,HEIGHT] == [nWIDTH,nHEIGHT]:
+            # call event
+            event__window_size_changed(self,[WIDTH,HEIGHT],[nWIDTH,nHEIGHT])
+
             WIDTH,HEIGHT = nWIDTH,nHEIGHT
             self._window_size_changed()
 

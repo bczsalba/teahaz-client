@@ -178,7 +178,7 @@ def switch_mode(target):
             sys.stdout.write(f'\033[{y};{x}H ')
         sys.stdout.flush()
 
-    else:
+    elif not PIPE_OUTPUT:
         MODE_LABEL.value = bold('-- '+target.upper()+' --')
         print(f'\033[{y};{x}H'+repr(MODE_LABEL))
 
@@ -187,16 +187,16 @@ def switch_mode(target):
 ### add caller of ui element to ui trace
 def add_to_trace(arr):
     global UI_TRACE
+    func = globals()[sys._getframe().f_back.f_code.co_name]
 
     for o in UI_TRACE:
-        name = o[0].__name__
-        if name.startswith('menu') and name == arr[0].__name__:
+        if func == o[0]:
             found = True
-            break
     else:
         found = False
 
     if not found:
+        arr.insert(0,func)
         UI_TRACE.append(arr)
 
 ### redirect getch_loop to `fun` with `args`
@@ -392,6 +392,8 @@ def handle_menu(key,obj,attributes={},page=0):
     if isinstance(obj,list):
         objects = obj
         obj = obj[page]
+        # this isnt working yet, TODO
+        pytermgui.set_listener('window_size_changed', lambda *args: (d.center() for d in objects))
 
     # go up one menu using trace 
     if key == "ESC":
@@ -581,7 +583,7 @@ def create_menu(source,corners,index=None,dict_index=0,**container_args):
     set_pipe(handle_menu,{"obj": objects, 'page': dict_index},keep=True)
     if index == None:
         add_to_trace([
-            create_menu,{
+            {
                 'source': source_arg,
                 'index': lambda obj: obj.selected_index,
                 'dict_index': dict_index,
@@ -601,6 +603,12 @@ def create_menu(source,corners,index=None,dict_index=0,**container_args):
 def create_submenu(source,index=None,dict_index=0):
     if isinstance(source.real_value,dict):
         dicts = container_from_dict(source.real_value,width=max(40,int(WIDTH*(1/2))))
+
+        for d in dicts:
+            title = Label(value=pytermgui.CONTAINER_TITLE_STYLE(source.real_label,justify='center'))
+            d.add_elements(title)
+            l = d.elements.pop(-1)
+            d.elements.insert(0,l)
 
         d = dicts[dict_index]
         d.source_index = (0 if index==None else index) 
@@ -639,10 +647,12 @@ def create_submenu(source,index=None,dict_index=0):
 
     set_pipe(handle_menu,{'obj': dicts, 'page': dict_index})
     if index == None:
-        add_to_trace([create_submenu,{'source': source, 'index': index, 'dict_index': dict_index}, d])
+        add_to_trace([{'source': source, 'index': index, 'dict_index': dict_index}, d])
 
     return d
 
+
+# these two are dumb, redo needed.
 def test_ui(dict_index=0):
     width = max(40,int(WIDTH*(2/3)))
     dicts = []
@@ -660,8 +670,10 @@ def test_ui(dict_index=0):
                 num = str(count)
                 pad = 4-len(num)
                 line.append('\033[38;5;'+num+'m' + pad*' ' + num)
-            bg = ('\033[7m' if ground == 'bg' else '')
-            c.add_elements(Label(value=bg+'\033[1m'+' '.join(line)+'\033[0m'))
+
+            bg = ('\033[7m' if ground == 'bg' else '\033[1m')
+
+            c.add_elements(Label(value=bg+' '.join(line)+'\033[0m'))
 
 
         #set up tabbar
@@ -679,67 +691,14 @@ def test_ui(dict_index=0):
         
     c = dicts[dict_index]
     set_pipe(handle_menu,{'obj': dicts, 'page': dict_index})
-    #if dict_index == 0:
-    #    add_to_trace([test_ui,{'dict_index':dict_index},c])
+    if dict_index == 0:
+        add_to_trace([{'dict_index':dict_index},c])
     print(c)
     return c
 
-# create menu with revealing elements (like asztal/timetable)
 def create_reveal_menu(source):
-    this works but it shouldnt alma
-    def reveal_select(container,index):
-        container.wipe()
-    #    elements = container.elements.copy()
-    #    container.elements = []
-    #    for e in elements:
-    #        container.add_elements(e)
-    #        if e._is_selected:
-    #            e.revealed = []
-    #            for key,item in p.real_value.items():
-    #                l = Label(value=color('- ',THEME['title'])+color(item,'38;5;240'),padding=6,justify='left')
-    #                #l._is_reveal_item = True
-    #                #d.add_elements(l)
-    #                container.add_elements(l)
-    #                e.revealed.append(l)
-    #                dbg(l in container.elements)
-    #        #else:
-    #        #    if hasattr(e,'revealed'):
-    #        #        for other in e.revealed:
-    #        #            #dbg(container.elements,other)
-    #        #            container.elements.remove(other)
-    #        #            repr(container)
-
-
     def pad(s,times):
         return "  "*times+s
-
-    def reveal_repr(element):
-        lines = ''
-        element.height = 1
-
-        chatroom = element.real_value['chatroom']
-        address = urlparse(element.real_value['address']).netloc
-        if address == '':
-            address = 'localhost'
-
-        if element._is_selected:
-            pass
-            
-            #chatroom = (chatroom)
-            #address = bold(color(address,THEME['value']))
-            #lines += pytermgui.PROMPT_HIGHLIGHT_STYLE(pad(chatroom+bold(color(' @ ',THEME['value']))+address,1))
-
-
-            #lines += pad(color('* ',THEME['value'])+bold(element.label.strip()),1)
-            #lines += italic(element.label)
-            #for key,item in element.real_value.items():
-            #    lines += '\n'+pad(color('- ',THEME['title'])+color(item,'38;5;240'),2)
-            #    element.height += 1
-        else:
-            #lines += pad(chatroom+bold(' @ ')+address,2)
-
-            return lines
-
 
     d = Container(width=max(30,int((1/2)*WIDTH)),center_elements=0)
     title = Label(value=pytermgui.CONTAINER_TITLE_STYLE('Server selection'),justify='left')
@@ -761,7 +720,6 @@ def create_reveal_menu(source):
         options.append(chatroom+' @ '+address)
         continue
     
-    #d.add_elements(Prompt(options=[chatroom+' @ '+address],justify_options='center',padding=0))
     d.add_elements(Prompt(options=options,justify_options='center',padding=0))
     
 
@@ -770,7 +728,7 @@ def create_reveal_menu(source):
     set_pipe(handle_menu,{'obj': d})
     for i,c in enumerate([v for k,v in THEME['corners'].items()]):
         d.set_corner(i,c)
-    add_to_trace(
+    add_to_trace([{'source': source},d])
 
     d.select()
 
@@ -930,6 +888,12 @@ def handle_action(action):
     elif action == "test_ui":
         test_ui()
 
+    elif action == "reprint":
+        fun,args,obj = UI_TRACE[-1]
+        pytermgui.clr()
+        fun(**args)
+        return
+
     # message binds
     elif action == "message_send":
         msg = infield.value
@@ -971,6 +935,8 @@ def handle_action(action):
         right = infield.value[cursor+offset:]
       
         infield.set_value(left+paste+right,infield.cursor+len(paste))
+        infield.pos = get_infield_pos()
+        infield.print()
 
 
 
@@ -989,7 +955,7 @@ def handle_action(action):
             action = action[:-2]
 
         # if going into escape mode move cursor 
-        if action == "escape" and len(infield.value) and MODE != "VISUAL" and infield.cursor > 0:
+        if action == "escape" and len(infield.value) > 0 and MODE != "VISUAL" and infield.cursor > 0:
             infield.cursor -= 1
 
         elif action == "visual":
@@ -1268,6 +1234,8 @@ def handle_action(action):
     elif action.endswith('_line'):
         if action == "delete_line":
             clip.copy(infield.value)
+            infield.line_offset = 0 
+            infield.wipe()
             infield.set_value('')
 
         elif action == "select_line":
@@ -1543,18 +1511,18 @@ PIPE_OUTPUT = None
 PIPE_ARGS = {}
 KEEP_PIPE = False
 
-UI_TRACE = []
+UI_TRACE = [[return_to_infield,{},'']]
 CURRENT_FILE = None
 
 # given by server
 COOKIE = "flamingoestothestore"
 
 # base data array to append to
-BASE_DATA = {
-    "username": USERNAME,
-    "cookie": COOKIE,
-    "chatroom": ROOMID,
-}
+#BASE_DATA = {
+#    "username": USERNAME,
+#    "cookie": COOKIE,
+#    "chatroom": ROOMID,
+#}
 
 
 
@@ -1613,7 +1581,7 @@ if __name__ == "__main__":
             lambda: THEME['prompt_delimiters']
     )
 
-    pytermgui.set_attribute_for_id('settings-themes_showcolors','handler',lambda: (UI_TRACE[-1][2].wipe(),test_ui()))
+    pytermgui.set_attribute_for_id('settings-themes_showcolors','handler',lambda *args: (UI_TRACE[-1][2].wipe(),test_ui()))
     
 
     # set default mode
@@ -1627,8 +1595,6 @@ if __name__ == "__main__":
     MODE_LABEL.pos = [x,y+5]
     
     switch_mode("ESCAPE")
-
-    add_to_trace([return_to_infield,{'_': '"'},''])
 
     # main input loop
     getch_loop()

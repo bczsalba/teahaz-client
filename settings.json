@@ -5,7 +5,7 @@
         true,
         false
     ],
-    "DO_DEBUG": false,
+    "DO_DEBUG": true,
     "ui__title2": "colors",
     "ui__prompt_options__colorscheme": [
         "draculite"
@@ -40,9 +40,11 @@
         }
     },
     "ui__title3": "messaging",
-    "URL": "https://github.com/bczsalba/asztal",
-    "ROOMID": "nothing",
-    "USERNAME": "lilac",
+    "FILETYPE_DEFAULTS": {
+        "image": "kitty +kitten icat {path} --scale_up",
+        "video": "mpv {path}",
+        "text": "kitty -e sh vim {path}"
+    },
     "ui__title4": "bindings",
     "ESCAPE_KEY": "ESC",
     "ui__prompt_options__vimmode": [
@@ -85,6 +87,7 @@
             "mode_insert+1": "a",
             "select_line": "V",
             "quit": "q",
+            "reprint": "CTRL_L",
             "message_send": "ENTER",
             "ui__title2": "navigation",
             "goto_line_0th": "0",
@@ -124,12 +127,14 @@
         "INSERT": {
             "mode_escape": "ESC",
             "insert_newlines": "ENTER",
-            "menu_settings": "CTRL_/"
+            "menu_settings": "CTRL_/",
+            "reprint": "CTRL_L"
         },
         "VISUAL": {
             "ui__title1": "modes & misc",
             "mode_escape": "ESC",
             "menu_settings": "CTRL_/",
+            "reprint": "CTRL_L",
             "ui__title2": "movement",
             "goto_cursor_left": "h",
             "goto_cursor_right": "l",

@@ -1,22 +1,20 @@
 # BUGS
 ## in progress
-[ ] Container-s don't update size properly when new elements are added
-    -- this may not need to be fixed (lol), the reveal menu should be using labels for every level, not one long string.
 
 ## urgent
 - `ESC` doesn't work after color menu
 
 ## can wait
-- insert label should only show outside of menu
 - only the first element in multipage containers resizes
 
 ## fixed
+[x] insert label should only show outside of menu
 
 
 # FEATURES 
 ## upcoming checklist
-- minor additions
-    * [ ] `add_to_trace` can get the caller function dynamically, so it really should
+- new binds
+    * [ ] `s` 
 
 - login menu
     * [ ] generate prompts for server options
@@ -27,18 +25,12 @@
 
 - general ui
     * [ ] add pathbar to bottom in settings (maybe other menus too)
-    * [ ] make colorguide nicer
+    * [x] make colorguide nicer
  
 - multiline:
+    * [x] fix paste not adjusting height
     * [ ] strip `\n` from paste
     * [ ] fix endless insert tags after `dd` and `ESC` `i`
-
-
-- add to escape
-    * [ ] `s` 
-
-- new binds
-    * [ ] CTRL_L or something to reprint current ui
 
 - FUTURE: gtk plugin
 
@@ -77,3 +69,9 @@
 - fixes for printing
     * [x] figure out what wipes the screen
     * [x] make it, like, not do that
+
+- minor additions
+    * [x] `add_to_trace` can get the caller function dynamically, so it really should
+
+- new binds
+    * [x] CTRL_L or something to reprint current ui
