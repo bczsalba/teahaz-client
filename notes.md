@@ -1,37 +1,18 @@
 # BUGS
-## in progress
-
-## urgent
-- `ESC` doesn't work after color menu
-
-## can wait
-- only the first element in multipage containers resizes
-
-## fixed
-[x] insert label should only show outside of menu
+- [ ] colorguide menu doesnt add to trace
+- [ ] only the first element in multipage containers resizes
 
 
 # FEATURES 
 ## upcoming checklist
+- messaging lol
+
 - new binds
     * [ ] `s` 
 
-- login menu
-    * [ ] generate prompts for server options
-        + basically, the idea is for the choice to be registered after an enter press, and for it to look like timetable.
-        + [x] create dict to store data like address,nick,users?
-        + [ ] overwrite select to be like asztal's timetable
-        + [ ] overwrite handler for all prompts in serverlist with the id system
-
 - general ui
     * [ ] add pathbar to bottom in settings (maybe other menus too)
-    * [x] make colorguide nicer
  
-- multiline:
-    * [x] fix paste not adjusting height
-    * [ ] strip `\n` from paste
-    * [ ] fix endless insert tags after `dd` and `ESC` `i`
-
 - FUTURE: gtk plugin
 
 ## finished
@@ -61,10 +42,20 @@
             - [x] obj.file not set sometimes
             - [x] deeper objects dont refresh their values
 
+- login menu
+    * [x] generate prompts for server options
+        + basically, the idea is for the choice to be registered after an enter press, and for it to look like timetable.
+        + [x] create dict to store data like address,nick,users?
+        + [x] overwrite select to be like asztal's timetable
+        + [x] overwrite handler for all prompts in serverlist with the id system
+
 - multiline:
     * [x] implement `\033[7m` highlighting for infield
-    * [x] fix visual_goto_up/down not working
     * [x] implement custom cursor & highlight colors
+    * [x] fix visual_goto_up/down not working
+    * [x] fix paste not adjusting height
+    * [x] strip `\n` from paste
+    * [x] fix endless insert tags after `dd` and `ESC` `i`
 
 - fixes for printing
     * [x] figure out what wipes the screen
@@ -75,3 +66,6 @@
 
 - new binds
     * [x] CTRL_L or something to reprint current ui
+
+- general ui
+    * [x] make colorguide nicer

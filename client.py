@@ -194,18 +194,14 @@ def add_to_trace(arr):
     global UI_TRACE
     func = globals()[sys._getframe().f_back.f_code.co_name]
 
-    for o in UI_TRACE:
-        if func == o[0]:
-            found = True
-    else:
-        found = False
+    old = UI_TRACE[-1]
 
-    if not found:
-        arr.insert(0,func)
+    arr.insert(0,func)
+    if old[:1] != arr[:1]:
         UI_TRACE.append(arr)
 
 ### redirect getch_loop to `fun` with `args`
-def set_pipe(fun,arg,keep=None):
+def set_pipe(fun,arg,keep=1):
     global PIPE_OUTPUT, KEEP_PIPE
 
     PIPE_OUTPUT = fun,arg
@@ -215,6 +211,10 @@ def set_pipe(fun,arg,keep=None):
 ### return current index of object
 def get_index(obj):
     return obj.selected_index
+
+### set new chatroom, make transition to it
+def set_chatroom(s):
+    dbg('switched server to ',s)
 
 
 ## editing
@@ -405,7 +405,8 @@ def handle_menu(key,obj,attributes={},page=0):
 
         # go up the trace
         old = UI_TRACE[-1][2]
-        UI_TRACE.pop(-1)
+        removed = UI_TRACE.pop(-1)
+        dbg(removed[0])
 
         fun,args,new = UI_TRACE[-1]
         for e in UI_TRACE:
@@ -480,6 +481,7 @@ def handle_menu(key,obj,attributes={},page=0):
 
         # add to depth
         obj.__ui_keys.append(selected.real_label)
+        dbg(obj.__ui_keys)
 
         # create menu
         d = create_submenu(selected)
@@ -545,6 +547,19 @@ def handle_menu(key,obj,attributes={},page=0):
     elif key == "SIGTERM":
         handle_action("quit")
 
+    #if hasattr(obj,'__ui_keys'):
+    #    value = ''
+    #    dbg(obj.__ui_keys)
+    #    for o in obj.__ui_keys:
+    #        value += '/'+o
+    #    dbg(value)
+
+    #    pathbar = Label(value=value,justify="center",width=obj.width)
+    #    x,y = obj.pos
+    #    pathbar.pos = [0,y+obj.real_height+2]
+    #    print(pathbar)
+
+
 
     obj.select()
     print(obj)
@@ -587,7 +602,7 @@ def create_menu(source,corners,index=None,dict_index=0,**container_args):
     infield.wipe()
     
     # set pipes
-    set_pipe(handle_menu,{"obj": objects, 'page': dict_index},keep=True)
+    set_pipe(handle_menu,{"obj": objects, 'page': dict_index})
     if index == None:
         add_to_trace([
             {
@@ -663,6 +678,7 @@ def create_submenu(source,index=None,dict_index=0):
 
 
 # these two are dumb, redo needed.
+# rename this
 def test_ui(dict_index=0):
     width = max(40,int(WIDTH*(2/3)))
     dicts = []
@@ -702,13 +718,13 @@ def test_ui(dict_index=0):
     c = dicts[dict_index]
     set_pipe(handle_menu,{'obj': dicts, 'page': dict_index})
     if dict_index == 0:
-        add_to_trace([{'dict_index':dict_index},c])
+        add_to_trace([{'dict_index': dict_index},c])
     print(c)
     return c
 
 def create_server_picker(source):
     d = Container(width=max(30,int((1/2)*WIDTH)),center_elements=0)
-    title = Label(value='Choose server',justify='center')
+    title = Label(value='choose chatroom',justify='center')
     title.set_style('value',pytermgui.CONTAINER_TITLE_STYLE)
 
     d.add_elements([title,Label()])
@@ -720,60 +736,49 @@ def create_server_picker(source):
             addr = 'localhost'
 
         p = Prompt(options=[chatr+color(' @ ',THEME['title'])+addr],justify_options="center")
-        p.handler = lambda _,self: dbg(self.submit())
+        p.real_value = value
+        p.parent = d
+        p.handler = lambda _,self: {set_chatroom(self.real_value),handle_menu("ESC",obj=self.parent)}
         d.add_elements(p)
 
+    infield.wipe()
     add_to_trace([{'source': source},d])
+    set_pipe(handle_menu,{'obj': [d]},keep=True)
+
+    d.select()
+    d.center()
+    print(d)
+        
+def create_menu_picker():
+    # get all menus from binds
+    menus = []
+    for b in BINDS[MODE].keys():
+        if b.startswith('menu_') and not b == "menu_picker":
+            menus.append(b)
+
+    d = Container(width=40)
+    title = Label(value="pick your menu")
+    title.set_style("value",pytermgui.CONTAINER_TITLE_STYLE)
+    d.add_elements([title,Label()])
+
+    for m in menus:
+        name = m[5:]
+        p = Prompt(options=[name],justify_options="center")
+        p.action = m
+        p.set_style('value',pytermgui.CONTAINER_VALUE_STYLE)
+        p.handler = lambda picker,self: {picker.wipe(),handle_action(self.action)}
+        d.add_elements(p)
+
     set_pipe(handle_menu,{'obj': [d]})
+    add_to_trace([{},d])
 
-    d.select()
     d.center()
-    print(d)
-        
-
-
-def __creatrejlkdfa(source):
-    def pad(s,times):
-        return "  "*times+s
-
-    d = Container(width=max(30,int((1/2)*WIDTH)),center_elements=0)
-    title = Label(value=pytermgui.CONTAINER_TITLE_STYLE('Server selection'),justify='left')
-    d.add_elements(title)
-
-    #for key,value in source.items():
-    #    p = Prompt(label=pad(str(key),times=1),value='')
-    #    p.real_value = value
-    #    p.custom_repr = reveal_repr
-    #    d.add_elements(p)
-    #    d._selection_changed = reveal_select
-    options = []
-    for key,content in source.items():
-        chatroom = content['chatroom']
-        address = urlparse(content['address']).netloc
-        if address == '':
-            address = 'localhost'
-
-        options.append(chatroom+' @ '+address)
-        continue
-    
-    d.add_elements(Prompt(options=options,justify_options='center',padding=0))
-    
-
-
-
-    set_pipe(handle_menu,{'obj': d})
-    for i,c in enumerate([v for k,v in THEME['corners'].items()]):
-        d.set_corner(i,c)
-    add_to_trace([{'source': source},d])
-
     d.select()
-
-
-    #d.select(0)
-    d.center()
     print(d)
 
-        
+    return d
+
+
 
 
 # NETWORK FUNCTIONS #
@@ -963,7 +968,7 @@ def handle_action(action):
 
     elif action == "paste":
         cursor = infield.cursor
-        paste = clip.paste()
+        paste = clip.paste().replace('\n','') #TODO: this is temp
 
         offset = (1 if VIMMODE else 0)
 
@@ -1297,10 +1302,17 @@ def handle_action(action):
             pytermgui.set_attribute_for_id('usercfg-button_add','handler', lambda *args: dbg('add button pressed'))
             pytermgui.set_attribute_for_id('usercfg_serverlist','handler', lambda old,new: (old.wipe(),create_server_picker(new.real_value)))
 
+        elif menu == "serverpicker":
+            source = json.load(open(os.path.join(PATH,'usercfg.json'),'r')).get('serverlist')
+            create_server_picker(source)
+            return
 
         elif menu == "test":
             test_ui()
-            dbg('hey')
+            return
+
+        elif menu == "picker":
+            create_menu_picker()
             return
 
         CURRENT_FILE = path
@@ -1313,24 +1325,24 @@ def handle_action(action):
     ## PIPES
     ### action_in actions
     elif action.endswith("_in"):
-        set_pipe(do_in,{'action': action})
+        set_pipe(do_in,{'action': action},keep=1)
     
     ### find & till
     elif action == "find":
-        set_pipe(find,{})
+        set_pipe(find,{},keep=1)
 
     elif action == "find_reverse":
-        set_pipe(find,{'reverse': True})
+        set_pipe(find,{'reverse': True},keep=1)
     
     elif action == "till":
-        set_pipe(find,{'offset': -1})
+        set_pipe(find,{'offset': -1},keep=1)
 
     elif action == "till_reverse":
-        set_pipe(find,{'offset': -1, 'reverse': True})
+        set_pipe(find,{'offset': -1, 'reverse': True},keep=1)
 
     elif "replace" in action:
         if len(infield.value):
-            set_pipe(replace,{'action': action})
+            set_pipe(replace,{'action': action},keep=1)
 
 
 

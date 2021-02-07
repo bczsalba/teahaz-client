@@ -79,9 +79,9 @@
     "VIMBINDS": {
         "ESCAPE": {
             "ui__title1": "modes & misc",
-            "menu_login": "CTRL_T",
+            "menu_serverpicker": "CTRL_T",
             "menu_settings": "CTRL_/",
-            "menu_test": "TABt",
+            "menu_picker": "TAB",
             "mode_visual": "v",
             "mode_insert": "i",
             "mode_insert+1": "a",
