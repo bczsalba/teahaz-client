@@ -82,6 +82,7 @@
             "menu_serverpicker": "CTRL_T",
             "menu_settings": "CTRL_/",
             "menu_picker": "TAB",
+            "menu_login": "SIGTERM",
             "mode_visual": "v",
             "mode_insert": "i",
             "mode_insert+1": "a",

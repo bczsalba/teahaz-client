@@ -6,6 +6,13 @@
 # FEATURES 
 ## upcoming checklist
 - messaging lol
+    * rn: started work on login menu, need to add functionality to add button, fix bug with writing stuff
+    * [ ] profiles menu
+        + [ ] add new server functionality
+    * [ ] change_chatroom
+        + [ ] set up CONNECTIONS dict, containing session objects assigned to some key
+        + [ ] let change_chatroom switch active connection to them, or create new connection if one isn't in dict
+    * [ ] top headerbar
 
 - new binds
     * [ ] `s` 

@@ -1,8 +1,5 @@
 {
-    "ui__file": "usercfg.json",
-    "ui__title1": "sign in",
-    "ui__id": "usercfg_serverlist",
-    "serverlist": {
+    "SERVERLIST": {
         "doge": {
             "address": "https://github.com/bczsalba/asztal",
             "chatroom": "asztal.py"
@@ -15,20 +12,5 @@
             "address": "localhost:8080",
             "chatroom": "globals"
         }
-    },
-    "server_name": "doge",
-    "add new server": {
-        "address": "",
-        "name": "",
-        "ui__button": {
-            "id": "usercfg-button_add",
-            "value": "add"
-        }
-    },
-    "username": "",
-    "password": "",
-    "ui__button": {
-        "id": "usercfg-button_connect",
-        "value": "connect!"
     }
 }

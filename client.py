@@ -43,19 +43,21 @@ def decode(a):
 
 ## settings
 ### import settings from json
-def import_settings():
-    global SETTINGS,THEME
+def import_json(name):
+    #global SETTINGS,THEME
 
-    with open(os.path.join(PATH,'settings.json'),'r') as f:
-        SETTINGS = json.load(f)
-        for key,item in SETTINGS.items():
+    with open(os.path.join(PATH,name+'.json'),'r') as f:
+        globals()[name.upper()] = json.load(f)
+        d = globals()[name.upper()]
+        for key,item in d.items():
             globals()[key] = item
 
     if is_set('MODE'):
         switch_mode(MODE)
 
-    current_colorscheme = SETTINGS['SELECTED_THEME']
-    THEME = SETTINGS['THEMES'][current_colorscheme]
+    if name == "settings":
+        current_colorscheme = d['SELECTED_THEME']
+        globals()['THEME'] = d['THEMES'][current_colorscheme]
 
 ## edit setting in json (needed because lambda cannot do assignments)
 def edit_json(key,value,json_path,keys=[]):
@@ -216,6 +218,8 @@ def get_index(obj):
 def set_chatroom(s):
     dbg('switched server to ',s)
 
+def add_new_server(values):
+    pass
 
 ## editing
 ### split `s` by delimiters defined in `DELIMITERS`, return array of words
@@ -1297,14 +1301,23 @@ def handle_action(action):
 
         elif menu == "login":
             corners[1] = "login"
-            path = os.path.join(PATH,'usercfg.json')
-            pytermgui.set_attribute_for_id('usercfg-button_connect','handler', lambda *args: dbg('connect button pressed'))
-            pytermgui.set_attribute_for_id('usercfg-button_add','handler', lambda *args: dbg('add button pressed'))
-            pytermgui.set_attribute_for_id('usercfg_serverlist','handler', lambda old,new: (old.wipe(),create_server_picker(new.real_value)))
+            source = {
+                    "ui__title": "new connection",
+                    "server_name": "",
+                    "address": "",
+                    "username": "",
+                    "password": "",
+                    "ui__button": {
+                        "id": "login-button_add",
+                        "value": "add"
+                        }
+                    }
+            pytermgui.set_attribute_for_id('login-button_add','handler',lambda *args: dbg('add pressed lol'))
+            d = create_menu(source=source,corners=corners)
+            return
 
         elif menu == "serverpicker":
-            source = json.load(open(os.path.join(PATH,'usercfg.json'),'r')).get('serverlist')
-            create_server_picker(source)
+            create_server_picker(SERVERLIST)
             return
 
         elif menu == "test":
@@ -1540,7 +1553,8 @@ def replace(key,action):
 
 # GLOBALS #
 PATH = os.path.abspath(os.path.dirname(__file__))
-import_settings()
+import_json("settings")
+import_json("usercfg")
 
 LOGFILE = os.path.join(PATH,'log')
 DELIMITERS = "!@#$%^&*()[]{}|\\;':\",.<>/? \t"
