@@ -20,7 +20,6 @@ from pytermgui import Container,Prompt,Label,container_from_dict
 
 
 # HELPERS #
-
 ### b64 encode
 def encode(a):
     return base64.b64encode(a.encode('utf-8')).decode('utf-8')
@@ -44,8 +43,6 @@ def decode(a):
 ## settings
 ### import settings from json
 def import_json(name):
-    #global SETTINGS,THEME
-
     with open(os.path.join(PATH,name+'.json'),'r') as f:
         globals()[name.upper()] = json.load(f)
         d = globals()[name.upper()]
@@ -65,8 +62,11 @@ def edit_json(key,value,json_path,keys=[]):
     okey = key
     ovalue = value
 
-    with open(os.path.join(PATH,json_path),'r') as f:
-        data = json.load(f)
+    if isinstance(json_path,dict):
+        data = json_path
+    else:
+        with open(os.path.join(PATH,json_path),'r') as f:
+            data = json.load(f)
 
     setting = keys[-1]
 
@@ -93,20 +93,25 @@ def edit_json(key,value,json_path,keys=[]):
     
     # this shouldnt happen lol
     else:
-        dbg(keys)
+        dbg('ERROR: invalid len(keys)',keys)
+        return
 
     # apply change
     root[setting] = value
 
     # write to file
-    with open(os.path.join(PATH,json_path),'w') as f:
-        f.write(json.dumps(data,indent=4))
+    if isinstance(json_path,str):
+        with open(os.path.join(PATH,json_path),'w') as f:
+            f.write(json.dumps(data,indent=4))
 
     # reimport settings
-    import_settings()
+    import_json('settings')
     infield.pos = get_infield_pos()
 
 def load_path(path,key=None):
+    if isinstance(path,dict):
+        return path
+
     with open(path,'r') as f:
         out = json.load(f)
         if key:
@@ -122,12 +127,15 @@ def dbg(*args):
 
     s = ' '.join([str(a) for a in args])
 
-    caller = sys._getframe().f_back.f_code.co_name
+    method = sys._getframe().f_back.f_code.co_name
+    obj = sys._getframe().f_back.f_locals.get('self')
     filename = sys._getframe().f_back.f_code.co_filename.split('/')[-1]
     lineno = sys._getframe().f_back.f_lineno
 
+    get_caller = lambda: type(obj).__name__+'.'+method if obj else method
+
     with open(LOGFILE,'a') as f:
-        f.write(f"{bold(color(filename,THEME.get('title')))}/{caller}:{bold(color(lineno,THEME.get('value')))} : "+s+'\n')
+        f.write(f"{bold(color(filename,THEME.get('title')))}/{get_caller()}:{bold(color(lineno,THEME.get('value')))} : "+s+'\n')
 
 ### do `fun` after `ms` passes, nonblocking
 def do_after(ms,fun,control='true',args={}):
@@ -149,8 +157,14 @@ def reverse_dict_lookup(d,value):
     keys = list(d.keys())
     values = list(d.values())
 
-    index = values.index(value)
-    return keys[index]
+    if value in values:
+        index = values.index(value)
+        return keys[index]
+    else:
+        return None
+
+def ignore_input(*args):
+    dbg('ignoring',args[0])
 
 
 ## variables
@@ -159,6 +173,10 @@ def is_set(var,scope=None):
     if scope == None:
         scope = globals()
     return (var in scope and scope[var])
+
+def toggle_option(options,current):
+    current_index = options.index(current)
+    return options[len(options)-1-current_index]
 
 ## switch to input mode, set globals
 def switch_mode(target):
@@ -173,7 +191,7 @@ def switch_mode(target):
         BINDS  = BASEBINDS
 
     MODE = target
-    x,y = get_infield_pos(return_offset=1)
+    x,y = get_infield_pos()
     x -= 1
     y += 1
     if infield.line_offset:
@@ -194,12 +212,24 @@ def switch_mode(target):
 ### add caller of ui element to ui trace
 def add_to_trace(arr):
     global UI_TRACE
-    func = globals()[sys._getframe().f_back.f_code.co_name]
+
+    frame = sys._getframe().f_back
+    lineno = frame.f_lineno
+    _class = type(frame.f_locals['self']).__name__
+
+    if not frame == None:
+        _method = frame.f_code.co_name
+        func = getattr(globals()[_class],_method)
+        arr[0]['self'] = frame.f_locals['self']
+    else:
+        func = _method
 
     old = UI_TRACE[-1]
+    oldfun,oldargs,_ = old
+    newfun,newargs = func,arr[1]
 
     arr.insert(0,func)
-    if old[:1] != arr[:1]:
+    if not (oldfun == newfun and oldargs == newargs):
         UI_TRACE.append(arr)
 
 ### redirect getch_loop to `fun` with `args`
@@ -210,16 +240,57 @@ def set_pipe(fun,arg,keep=1):
     if not keep == None:
         KEEP_PIPE = keep
 
+### set current ui file, accepts file paths and dicts
+def set_current_file(value):
+    globals()['CURRENT_FILE'] = value
+
 ### return current index of object
 def get_index(obj):
     return obj.selected_index
 
-### set new chatroom, make transition to it
-def set_chatroom(s):
-    dbg('switched server to ',s)
 
-def add_new_server(values):
-    pass
+## server
+### set new chatroom, make transition to it
+def set_chatroom(index):
+    if index == 'invalid' or index == 'register':
+        return
+
+    globals()['CURRENT_CHATROOM'] = index
+    address = CHATLIST[index].get('address')
+    chatroom = CHATLIST[index].get('chatroom')
+    globals()['URL'] = address
+
+    urls = [connection.get('url') for connection in SESSION.cookies]
+    if not address in urls:
+        handle_action('menu_login')
+
+def add_new_server(values,register=False):
+    d = {}
+    for key,value in values.items():
+        if not key.startswith('ui__'):
+            d[key] = value
+
+    name = d.get('server_name')
+    del d['server_name']
+
+
+    CHATLIST.append(d)
+    with open(os.path.join(PATH,'usercfg.json'),'w') as f:
+        f.write(json.dumps({"CURRENT_CHATROOM": CURRENT_CHATROOM, "CHATLIST": CHATLIST},indent=4))
+    import_json('usercfg')
+
+    dbg('set new server',name,'to',d)
+    if register:
+        url = d.get('address') 
+        chatroom = d.get('chatroom')
+
+        d = ui.create_menu(source=[load_path,{'path': d}],corners=[[],[],[],'register'])
+        print(d)
+        return 'register'
+
+
+    return len(CHATLIST)-1
+
 
 ## editing
 ### split `s` by delimiters defined in `DELIMITERS`, return array of words
@@ -257,131 +328,12 @@ def is_in_last_word(index,string):
 
 
 
+# UI FUNCTIONS #
 
-
-
-
-# UI #
-
-## input dialog class
-class InputDialog(Container):
-    def __init__(self,options=None,label_value='',label_justify="center",label_underpad=0,field_value='',dialog_type=None,**kwargs):
-        super().__init__(**kwargs)
-        gui = pytermgui.__dict__
-        
-        # set up label class
-        self.label = Label(value=label_value,justify=label_justify)
-        self.label.set_style('value',gui['CONTAINER_TITLE_STYLE'])
-
-        # set up field depending on options given
-        self.options = options
-        self.dialog_type = dialog_type
-
-        if self.dialog_type == None:
-            if isinstance(options,list):
-                self.dialog_type = "prompt"
-            else:
-                self.dialog_type = "field"
-
-        if self.dialog_type == "prompt":
-            self.field = Prompt(options=options,width=self.width)
-            self.field.set_style('value',gui['CONTAINER_VALUE_STYLE'])
-            self.field.set_style('label',gui['CONTAINER_LABEL_STYLE'])
-        
-        elif self.dialog_type == "field":
-            self.field = InputDialogField(default=field_value,print_at_start=False)
-            self.field.set_style('value',gui['CONTAINER_VALUE_STYLE'])
-            self.field.field_color = '\033['+THEME['value']+'m'
-
-        # add label
-        self.add_elements(self.label)
-
-        # add paddings under label
-        for _ in range(label_underpad):
-            self.add_elements(Label())
-
-        # add field
-        self.add_elements(self.field)
-        
-        # set xlimit of field
-        self.field.xlimit = self.width-3
-
-    def submit(self):
-        self.value = self.field.submit()
-        return self.value
-
-    def __repr__(self):
-        self.width = max(self.width,self.field.width)
-        #self.get_border()
-        #self.center()
-        #self.wipe()
-
-        return super().__repr__()
-
-
-## field class for input dialog
-class InputDialogField(getch.InputField):
-    def __init__(self,**kwargs):
-        super().__init__(**kwargs)
-
-        self.width = len(self.value)
-        self.height = 1
-        self._is_selectable = False
-        self.options = None
-
-        self.value_style = lambda item: item
-
-    # return text of self
-    def __repr__(self):
-        line = self.value_style(self.print(return_line=True))
-        return line
-    
-    def set_style(self,key,value):
-        setattr(self,key+'_style',value)
-
-    # return value
-    def submit(self):
-        return self.value
-
-
-
-## print s to coordinates, clear space for it if needed
-def printTo(x=0,y=0,s='',clear=False):
-    # clear the len of string with 1 margin on both sides
-    print(f'\033[{y};{x-1}H'+(len(s)+2)*' ')
-
-    # print
-    print(f'\033[{y};{x}H'+s)
-
-## get and sort messages, add lines attribute
-def get_lines():
-    # TODO: this 0 might be too much in the future
-    messages_raw = get(0)
-    messages = []
-
-    # sort messages
-    for m in sorted(messages_raw,key=lambda x: x['time']):
-        # add representation of file 
-        if m['type'] == 'file':
-            m['message'] = f"`.{m['extension']}` file."
-
-        # decode message
-        elif m['type'] == 'text':
-            m['message'] = decode(m['message'])
-
-        # break message into lines
-        m['lines'] = []
-        #m['lines'].append(m['username'])
-        m['lines'] += break_line(m['message'],MESSAGE_BREAKLEN)
-
-        # add message to list
-        messages.append(m)
-
-    return messages
-
-def get_infield_pos(return_offset=False):
+## get what position infield should be at
+def get_infield_pos():
     if 'infield' in globals().keys() and len(infield.value):
-        offset = (len(infield.value)+2)//WIDTH
+        offset = (len(infield.value)+1)//WIDTH
 
         if not infield.line_offset == offset:
             infield.wipe()
@@ -393,181 +345,6 @@ def get_infield_pos(return_offset=False):
 
     return [3,HEIGHT-2-offset]
 
-## handle action but for menus
-def handle_menu(key,obj,attributes={},page=0):
-    global PIPE_OUTPUT,UI_TRACE
-
-    if isinstance(obj,list):
-        objects = obj
-        obj = obj[page]
-        # this isnt working yet, TODO
-        pytermgui.set_listener('window_size_changed', lambda *args: (d.center() for d in objects))
-
-    # go up one menu using trace 
-    if key == "ESC":
-        obj.wipe()
-
-        # go up the trace
-        old = UI_TRACE[-1][2]
-        removed = UI_TRACE.pop(-1)
-        dbg(removed[0])
-
-        fun,args,new = UI_TRACE[-1]
-        for e in UI_TRACE:
-            dbg(e[0])
-        dbg()
-
-        # create copy so the original dict isnt overwritten
-        kwargs = args.copy()
-
-        # execute trace
-        d = fun(**kwargs) 
-        if hasattr(old,'__ui_keys') and not d == None:
-            setattr(d,'__ui_keys',old.__ui_keys)
-
-        if hasattr(obj,'__ui_keys'):
-            if len(obj.__ui_keys):
-                obj.__ui_keys.pop(-1)
-
-        return
-
-    # do actions specific to input dialog
-    if isinstance(obj,InputDialog):
-        # submit input
-        if key == "ENTER":
-            # edit setting
-            new = obj.submit()
-            edit_json(json_path=CURRENT_FILE,keys=obj.__ui_keys,key=obj.setting,value=new)
-
-            # edit previous ui to show changes
-            fun,kwargs,newobj = UI_TRACE[-2]
-            if not type(kwargs.get('source')) in [None,list]:
-                # set new value
-                kwargs['source'].value = new
-
-                # set new real_value
-                kwargs['source'].real_value[obj.setting] = new
-
-            # go back
-            handle_menu("ESC",obj,attributes={'__ui_keys': obj.__ui_keys})
-            return
-
-        # send key to field
-        elif isinstance(obj.field,InputDialogField):
-            obj.field.send(key)
-
-        # navigate prompt
-        else:
-            if key in ["h","ARROW_LEFT"]:
-                obj.selected_index -= 1
-            elif key in ["l","ARROW_RIGHT"]:
-                obj.selected_index += 1
-            obj.select()
-
-        print(obj)
-        return
-
-    elif key == "ENTER":
-        if obj.selected == None:
-            return
-
-        # get obj and index
-        selected,_,index = obj.selected
-        
-        if hasattr(selected,'handler'):
-            selected.handler(obj,selected)
-            return
-        
-        obj.wipe()
-
-        # set previous trace element index
-        UI_TRACE[-1][1]['index'] = index
-
-        # add to depth
-        obj.__ui_keys.append(selected.real_label)
-        dbg(obj.__ui_keys)
-
-        # create menu
-        d = create_submenu(selected)
-
-        # select current option if possible
-        if hasattr(d,'options') and d.options:
-            d.selected_index = [o for o in d.options].index(selected.real_value)
-            d.select()
-
-        d.__ui_keys = obj.__ui_keys
-
-        # print
-        d.select()
-        print(d)
-        return
-      
-    elif key == " ":
-        selected,_,index = obj.selected
-        if selected.__ui_options and len(selected.__ui_options) == 2:
-            if not globals().get(selected.real_label) == None:
-                # add to depth
-                selected.__ui_keys.append(selected.real_label)
-                old_index = selected.__ui_options.index(globals()[selected.real_label])
-                if old_index == 0:
-                    new_index = 1
-                else:
-                    new_index = 0
-
-                edit_json(
-                        json_path=CURRENT_FILE,
-                        keys=[selected.real_label],
-                        key=selected.real_label,
-                        value=selected.__ui_options[new_index]
-                )
-
-                fun,args,obj = UI_TRACE[-1]
-                args['index'] = index
-
-                kwargs = args.copy()
-                fun(**kwargs)
-                selected.__ui_keys.pop(-1)
-            return
-
-    elif key in "hjkl" or key.startswith("ARROW"):
-        if key in ["j","ARROW_DOWN"]:
-            obj.selected_index += 1
-
-        elif key in ["k","ARROW_UP"]:
-            obj.selected_index -= 1
-
-        elif len(objects) > 1:
-            obj.wipe()
-            if key in ["h","ARROW_LEFT"]:
-                new = max(0,page-1)
-
-            elif key in ["l","ARROW_RIGHT"]:
-                new = min(len(objects)-1,page+1)
-
-            obj = objects[new]
-            set_pipe(handle_menu,{"obj": objects, "page": new})
-            UI_TRACE[-1][1]['dict_index'] = new
-
-    elif key == "SIGTERM":
-        handle_action("quit")
-
-    #if hasattr(obj,'__ui_keys'):
-    #    value = ''
-    #    dbg(obj.__ui_keys)
-    #    for o in obj.__ui_keys:
-    #        value += '/'+o
-    #    dbg(value)
-
-    #    pathbar = Label(value=value,justify="center",width=obj.width)
-    #    x,y = obj.pos
-    #    pathbar.pos = [0,y+obj.real_height+2]
-    #    print(pathbar)
-
-
-
-    obj.select()
-    print(obj)
-
 ## return to normal input
 def return_to_infield(*args,**kwargs):
     global PIPE_OUTPUT,KEEP_PIPE
@@ -576,216 +353,109 @@ def return_to_infield(*args,**kwargs):
     infield.print()
     PIPE_OUTPUT = None
     KEEP_PIPE = False
-    
-## create menu from `source` dict
-def create_menu(source,corners,index=None,dict_index=0,**container_args):
-    source_arg = source
 
-    if isinstance(source,list):
-        fun,kwargs = source
-        source = fun(**kwargs)
-    else:
-        source = source_arg
-
-    objects = container_from_dict(source,**container_args,width=max(40,int(WIDTH*(1/2))))
-        
-    for o in objects:
-        if not source_arg == source:
-            o.dict_path = kwargs['path']
-
-        for i,c in enumerate([v for k,v in THEME['corners'].items()]):
-            if not c == None:
-                o.set_corner(i,c)
-
-        #o.width = min(WIDTH-5,o.width)
-        o.center()
-
-    c = objects[dict_index]
-
-    # clear infield from screen
-    infield.wipe()
-    
-    # set pipes
-    set_pipe(handle_menu,{"obj": objects, 'page': dict_index})
-    if index == None:
-        add_to_trace([
-            {
-                'source': source_arg,
-                'index': lambda obj: obj.selected_index,
-                'dict_index': dict_index,
-                'corners': corners
-            },c
-        ])
-
-    # print
-    c.selected_index = (0 if index==None else index) 
-    c.select()
-    dbg('returning')
-    print(c)
-    
-    return c
-
-## create submenu from `source` object
-def create_submenu(source,index=None,dict_index=0):
-    if isinstance(source.real_value,dict):
-        dicts = container_from_dict(source.real_value,width=max(40,int(WIDTH*(1/2))))
-
-        for d in dicts:
-            # add title object to 0 index
-            title = Label(value=pytermgui.CONTAINER_TITLE_STYLE(source.real_label),justify='center')
-            d.add_elements(title)
-            l = d.elements.pop(-1)
-            d.elements.insert(0,l)
-
-        d = dicts[dict_index]
-        d.source_index = (0 if index==None else index) 
-        if len(d.selectables):
-            d.select()
-
-    else:
-        if isinstance(source.__ui_options,list):
-            options = source.__ui_options
-        else:
-            options = None
-
-        d = InputDialog(
-                    label_value=source.real_label,
-                    label_underpad=1,
-                    options=options,
-                    field_value=str(source.real_value),
-                    width=max(40,int(WIDTH*(1/2)))
-        )
-        #d.height += 1
-        dbg(d.height)
-
-        d.setting = source.real_label
-        d.real_value = source.real_value
-        dicts = [d]
-
-    for dic in dicts:
-        dic.setting = source.real_label
-        dic.real_value = source.real_value
-        dic.center()
-        for i,c in enumerate([v for k,v in THEME['corners'].items()]):
-            dic.set_corner(i,c)
-
-    d = dicts[dict_index]
-    d.selected_index = (0 if index==None else index) 
-    d.select()
-    print(d)
-
-    set_pipe(handle_menu,{'obj': dicts, 'page': dict_index})
-    if index == None:
-        add_to_trace([{'source': source, 'index': index, 'dict_index': dict_index}, d])
-
-    return d
-
-
-# these two are dumb, redo needed.
-# rename this
-def test_ui(dict_index=0):
-    width = max(40,int(WIDTH*(2/3)))
-    dicts = []
-    line_length = min(width//5,14)
-
-    for index,ground in enumerate(['fg','bg']):
-        count = 0
-        c = Container(width=width,border=lambda: ['','','',''])
-
-        # create color line
-        for i in range(256//line_length):
-            line = []
-            for j in range(line_length):
-                count += 1
-                num = str(count)
-                pad = 4-len(num)
-                line.append('\033[38;5;'+num+'m' + pad*' ' + num)
-
-            bg = ('\033[7m' if ground == 'bg' else '\033[1m')
-
-            c.add_elements(Label(value=bg+' '.join(line)+'\033[0m'))
-
-
-        #set up tabbar
-        tabbar = Prompt(options=['foreground','background'])
-        tabbar._is_selectable = False
-        tabbar.set_style('highlight',pytermgui.TABBAR_HIGHLIGHT_STYLE)
-        tabbar.select(index)
-
-
-        # finalize dict
-        c.center()
-        c.add_elements([Label(),tabbar])
-        dicts.append(c)
-
-        
-    c = dicts[dict_index]
-    set_pipe(handle_menu,{'obj': dicts, 'page': dict_index})
-    if dict_index == 0:
-        add_to_trace([{'dict_index': dict_index},c])
-    print(c)
-    return c
-
-def create_server_picker(source):
-    d = Container(width=max(30,int((1/2)*WIDTH)),center_elements=0)
-    title = Label(value='choose chatroom',justify='center')
-    title.set_style('value',pytermgui.CONTAINER_TITLE_STYLE)
-
-    d.add_elements([title,Label()])
-
-    for key,value in source.items():
-        chatr = value.get('chatroom')
-        addr = urlparse(value.get('address')).netloc
-        if addr == '':
-            addr = 'localhost'
-
-        p = Prompt(options=[chatr+color(' @ ',THEME['title'])+addr],justify_options="center")
-        p.real_value = value
-        p.parent = d
-        p.handler = lambda _,self: {set_chatroom(self.real_value),handle_menu("ESC",obj=self.parent)}
-        d.add_elements(p)
-
-    infield.wipe()
-    add_to_trace([{'source': source},d])
-    set_pipe(handle_menu,{'obj': [d]},keep=True)
-
-    d.select()
-    d.center()
-    print(d)
-        
-def create_menu_picker():
-    # get all menus from binds
-    menus = []
-    for b in BINDS[MODE].keys():
-        if b.startswith('menu_') and not b == "menu_picker":
-            menus.append(b)
-
-    d = Container(width=40)
-    title = Label(value="pick your menu")
-    title.set_style("value",pytermgui.CONTAINER_TITLE_STYLE)
-    d.add_elements([title,Label()])
-
-    for m in menus:
-        name = m[5:]
-        p = Prompt(options=[name],justify_options="center")
-        p.action = m
-        p.set_style('value',pytermgui.CONTAINER_VALUE_STYLE)
-        p.handler = lambda picker,self: {picker.wipe(),handle_action(self.action)}
-        d.add_elements(p)
-
-    set_pipe(handle_menu,{'obj': [d]})
-    add_to_trace([{},d])
-
-    d.center()
-    d.select()
-    print(d)
-
-    return d
 
 
 
 
 # NETWORK FUNCTIONS #
+
+# start threaded connection, TODO: ignore input
+def start_connection(contype,menu=None,**kwargs):
+    def _connect(*args,**kwargs):
+        # decide function to use
+        dbg('started')
+        contype = args[0]
+        if contype  == 'post':
+            fun = SESSION.post
+        elif contype == 'get':
+            fun = SESSION.get
+        else:
+            dbg('implement',contype,'pls')
+            raise NotImplementedError
+        dbg(1)
+
+
+        # try to get return value
+        try:
+            ret = fun(**kwargs)
+
+        # connection timeout message
+        except requests.exceptions.ConnectTimeout:
+            ret = ["Connection timed out.",408]
+
+        # connection error message
+        except requests.exceptions.ConnectionError as e:
+            dbg('Exception during',contype+': ',e)
+            ret = ["Error happened during connection. Check log for more info.",0]
+
+        # unimplemented errors
+        except Exception as e:
+            dbg('implement',type(e).__name__,'pls')
+            raise NotImplementedError
+
+        return ret
+    
+    
+    t = ThreadWithReturnValue(target=_connect,args=(contype,),kwargs=kwargs)
+    t.start()
+    ret_val = t.join()
+
+    if not menu == None:
+        handler = lambda prev,_: {
+            prev.wipe(),
+            handle_menu_actions(
+                'menu_'+str(menu),
+                pytermgui.get_object_by_id(str(menu)+"-button_submit").parent.dict_path)}
+    else:
+        handler = lambda prev,_: {
+            prev.wipe(),
+            handle_menu('ESC',prev)}
+
+    if isinstance(ret_val,list):
+        ui.create_error_dialog(ret_val[0],'try again',handler=handler)
+        return False
+
+    elif not 200 <= ret_val.status_code < 300:
+        ui.create_error_dialog(ret_val.text.strip(),'try again',handler=handler)
+        return False
+
+    else:
+        return ret_val
+        
+def login(url,data):
+    dbg('logging in to',url)
+    d = {
+            'username': data.get('username'),
+            'password': data.get('password')
+            }
+
+    handler = lambda prev,self: {
+            prev.wipe(),
+            handle_menu_actions('menu_login',current_file=data) }
+    
+    if url == "":
+        ui.create_error_dialog('Invalid value "'+url+'" for url.','choose other server',handler=handler)
+        return 0 
+
+    resp = start_connection('post','login',url=url+'/login',json=d,timeout=None)
+    if not resp or not resp.status_code == requests.status_codes.ok:
+        dbg('problem')
+    #handle_menu("ESC",UI_TRACE[-1][2])
+    
+def register(url,data):
+    dbg('registered called to',url)
+
+    handler = lambda prev,self: {
+        prev.wipe(),
+        handle_menu_actions('menu_register',current_file=data) }
+    
+    if url == "":
+        ui.create_error_dialog('Invalid value "'+url+'" for url.','choose other server',handler=handler)
+        return 0 
+
+    start_connection('post','register',url=url+'/register',json=data,timeout=None)
+    #handle_menu("ESC",UI_TRACE[-1][2])
 
 ## receiving method
 def get(parameter,mode="message"):
@@ -844,6 +514,7 @@ def send(message,mType='text'):
 
 
 
+
 # INPUT #
 
 ## key intercepter loop, separate thread
@@ -854,7 +525,6 @@ def getch_loop():
     while KEEP_GOING:
         key = getch.getch()
 
-        # TODO: `dd`+n*(`ESC`+`i`) is buggy as shit
         infield.pos = get_infield_pos()
 
         # this lets other functions hijack the key output as parameters
@@ -920,8 +590,13 @@ def getch_loop():
 ## act on action
 def handle_action(action):
     global KEEP_GOING,PIPE_OUTPUT,PIPE_ARGS,VISUAL_START,VISUAL_END,infield,CURRENT_FILE
-
-
+    
+    #action_not_handled = handle_menu_actions(action)
+    #if not action_not_handled:
+    #    return
+    if action.startswith('menu'):
+        dbg('calling menu',action)
+        handle_menu_actions(action)
 
     ## INLINE ACTIONS
     # quit program in a clean way
@@ -929,9 +604,6 @@ def handle_action(action):
         print('\033[?25h')
         KEEP_GOING = 0
         sys.exit()
-
-    elif action == "test_ui":
-        test_ui()
 
     elif action == "reprint":
         fun,args,obj = UI_TRACE[-1]
@@ -1290,49 +962,6 @@ def handle_action(action):
             infield.visual(VISUAL_START,VISUAL_END)
             switch_mode("VISUAL")
 
-    # menu actions
-    elif action.startswith('menu_'):
-        menu = action.replace('menu_','')
-        corners = ["X","X","X","X"]
-
-        if menu == "settings":
-            corners[1] = "settings"
-            path = os.path.join(PATH,'settings.json')
-
-        elif menu == "login":
-            corners[1] = "login"
-            source = {
-                    "ui__title": "new connection",
-                    "server_name": "",
-                    "address": "",
-                    "username": "",
-                    "password": "",
-                    "ui__button": {
-                        "id": "login-button_add",
-                        "value": "add"
-                        }
-                    }
-            pytermgui.set_attribute_for_id('login-button_add','handler',lambda *args: dbg('add pressed lol'))
-            d = create_menu(source=source,corners=corners)
-            return
-
-        elif menu == "serverpicker":
-            create_server_picker(SERVERLIST)
-            return
-
-        elif menu == "test":
-            test_ui()
-            return
-
-        elif menu == "picker":
-            create_menu_picker()
-            return
-
-        CURRENT_FILE = path
-
-        # call menu handler
-        d = create_menu(source=[load_path,{'path': path}],corners=corners)
-
 
     
     ## PIPES
@@ -1356,6 +985,280 @@ def handle_action(action):
     elif "replace" in action:
         if len(infield.value):
             set_pipe(replace,{'action': action},keep=1)
+
+
+## handle action but for menus
+def handle_menu(key,obj,attributes={},page=0):
+    global PIPE_OUTPUT,UI_TRACE
+
+    if isinstance(obj,list):
+        objects = obj
+        obj = obj[page]
+        # this isnt working yet, TODO
+        pytermgui.set_listener('window_size_changed', lambda *args: (d.center() for d in objects))
+
+    # go up one menu using trace 
+    if key == "ESC":
+        obj.wipe()
+
+        # go up the trace
+        old = UI_TRACE[-1][2]
+        removed = UI_TRACE.pop(-1)
+        #dbg('removed',removed,'from trace.')
+
+        fun,args,new = UI_TRACE[-1]
+        #for e in UI_TRACE:
+        #    dbg(e[0])
+        #dbg()
+
+        # create copy so the original dict isnt overwritten
+        kwargs = args.copy()
+
+        # execute trace
+        d = fun(**kwargs) 
+        if hasattr(old,'__ui_keys') and not d == None:
+            setattr(d,'__ui_keys',old.__ui_keys)
+
+        if hasattr(obj,'__ui_keys'):
+            if len(obj.__ui_keys):
+                obj.__ui_keys.pop(-1)
+
+        return
+
+    # do actions specific to input dialog
+    if isinstance(obj,InputDialog):
+        # submit input
+        if key == "ENTER":
+            # edit setting
+            new = obj.submit()
+            edit_json(json_path=CURRENT_FILE,keys=obj.__ui_keys,key=obj.setting,value=new)
+
+            # edit previous ui to show changes
+            fun,kwargs,newobj = UI_TRACE[-2]
+            if not type(kwargs.get('source')) in [None,list]:
+                # set new value
+                kwargs['source'].value = new
+
+                # set new real_value
+                kwargs['source'].real_value[obj.setting] = new
+
+            # go back
+            handle_menu("ESC",obj,attributes={'__ui_keys': obj.__ui_keys})
+            return
+
+        # send key to field
+        elif isinstance(obj.field,InputDialogField):
+            obj.field.send(key)
+
+        # navigate prompt
+        else:
+            if key in ["h","ARROW_LEFT"]:
+                obj.selected_index -= 1
+            elif key in ["l","ARROW_RIGHT"]:
+                obj.selected_index += 1
+            obj.select()
+
+        print(obj)
+        return
+
+    elif key == "ENTER":
+        if obj.selected == None:
+            return
+
+        # get obj and index
+        selected,_,index = obj.selected
+        
+        if hasattr(selected,'handler'):
+            selected.handler(obj,selected)
+            return
+        
+        obj.wipe()
+
+        # set previous trace element index
+        UI_TRACE[-1][1]['index'] = index
+        dbg(UI_TRACE[-1][:1])
+
+        # add to depth
+        obj.__ui_keys.append(selected.real_label)
+
+        # create menu
+        d = ui.create_submenu(selected)
+
+        # select current option if possible
+        if hasattr(d,'options') and d.options:
+            d.selected_index = [o for o in d.options].index(selected.real_value)
+            d.select()
+
+        d.__ui_keys = obj.__ui_keys
+
+        # print
+        d.select()
+        print(d)
+        return
+      
+    elif key == " ":
+        selected,_,index = obj.selected
+        if selected.__ui_options and len(selected.__ui_options) == 2:
+            if not globals().get(selected.real_label) == None:
+                # add to depth
+                selected.__ui_keys.append(selected.real_label)
+                old_index = selected.__ui_options.index(globals()[selected.real_label])
+                if old_index == 0:
+                    new_index = 1
+                else:
+                    new_index = 0
+
+                edit_json(
+                        json_path=CURRENT_FILE,
+                        keys=[selected.real_label],
+                        key=selected.real_label,
+                        value=selected.__ui_options[new_index]
+                )
+
+                fun,args,obj = UI_TRACE[-1]
+                args['index'] = index
+
+                kwargs = args.copy()
+                fun(**kwargs)
+                selected.__ui_keys.pop(-1)
+            return
+
+    elif key in "hjkl" or key.startswith("ARROW"):
+        if key in ["j","ARROW_DOWN"]:
+            obj.selected_index += 1
+
+        elif key in ["k","ARROW_UP"]:
+            obj.selected_index -= 1
+
+        elif len(objects) > 1:
+            obj.wipe()
+            if key in ["h","ARROW_LEFT"]:
+                new = max(0,page-1)
+
+            elif key in ["l","ARROW_RIGHT"]:
+                new = min(len(objects)-1,page+1)
+
+            obj = objects[new]
+            set_pipe(handle_menu,{"obj": objects, "page": new})
+            UI_TRACE[-1][1]['dict_index'] = new
+
+    elif key == "SIGTERM":
+        handle_action("quit")
+
+    #if hasattr(obj,'__ui_keys'):
+    #    value = ''
+    #    dbg(obj.__ui_keys)
+    #    for o in obj.__ui_keys:
+    #        value += '/'+o
+    #    dbg(value)
+
+    #    pathbar = Label(value=value,justify="center",width=obj.width)
+    #    x,y = obj.pos
+    #    pathbar.pos = [0,y+obj.real_height+2]
+    #    print(pathbar)
+
+
+
+    obj.select()
+    print(obj)
+
+
+def handle_menu_actions(action,current_file=None):#*args,**kwargs):#    
+    menu = action.replace('menu_','')
+    corners = ["X","X","X","X"]
+    attrs = {}
+
+    if menu == "settings":
+        corners[1] = "settings"
+        source = os.path.join(PATH,'settings.json')
+    
+    elif menu == "login_type":
+        pytermgui.set_attribute_for_id('login_type-prompt','handler',lambda prev,self: {
+                prev.wipe(), handle_action("menu_"+self.submit())})
+
+        source = {
+            "ui__title": "choose login type",
+            "ui__padding": 0,
+            "ui__id": "login_type-prompt",
+            "ui__prompt": ["login","register"]
+        }
+
+    elif menu == "login":
+        chatroom = CHATLIST[CURRENT_CHATROOM]
+        chatid = chatroom.get('chatroom')
+        address = chatroom.get('address')
+
+        name = chatid+' @ '+address
+        corners[1] = "login"
+        pytermgui.set_attribute_for_id('login-button_submit','address',address)
+        pytermgui.set_attribute_for_id('login-button_submit','handler',
+                lambda prev,self: login(self.address,self.parent.dict_path))
+
+        if current_file == None:
+            source = {
+                "ui__title": "Log into server",
+                "ui__padding0": 0,
+                "username": "",
+                "password": "",
+                "ui__padding1": 1,
+                "ui__button": {
+                    "id": "login-button_submit",
+                    "value": "submit!"
+                }
+            }
+        else:
+            source = current_file
+        
+        attrs["address"] = address
+
+    elif menu == "register":
+        chatroom = CHATLIST[CURRENT_CHATROOM]
+        chatid = chatroom.get('chatroom')
+        address = chatroom.get('address')
+
+        pytermgui.set_attribute_for_id('register-button_submit','address',address)
+        pytermgui.set_attribute_for_id('register-button_submit','handler',
+                lambda prev,self: register(self.address,self.parent.dict_path))
+
+        if current_file == None:
+            source = {
+                "ui__title": "Register onto server",
+                "ui__padding0": 0,
+                "username": "",
+                "password": "",
+                "email": "",
+                "nickname": "",
+                "ui__padding1": 1,
+                "ui__button": {
+                    "id": "register-button_submit",
+                    "value": "submit!"
+                }
+            }
+
+        else:
+            source = current_file
+
+        attrs["address"] = address
+
+
+    elif menu == "picker":
+        ui.create_menu_picker()
+        return
+    
+    else:
+        return True
+
+    #globals()['CURRENT_FILE'] = path
+    set_current_file(source)
+
+    # call menu handler
+    d = ui.create_menu(source=[load_path,{'path': source}],corners=corners)
+
+    for key,value in attrs.items():
+        if key == "id":
+            pytermgui.set_element_id(d,value)
+        else:
+            setattr(d,key,value)
 
 
 
@@ -1551,6 +1454,368 @@ def replace(key,action):
 
 
 
+
+# CLASSES # 
+class ThreadWithReturnValue(threading.Thread):
+    """
+    Thread object that returns its value in the `join` method.
+    taken from: https://stackoverflow.com/a/40344234
+    """
+
+    def __init__(self,**kwargs):
+        super().__init__(**kwargs)
+        self._return = None
+
+    def run(self):
+        if self._target is not None:
+            self._return = self._target(*self._args, **self._kwargs)
+
+    def join(self,timeout=None):
+        super().join(timeout=timeout)
+        return self._return
+
+class InputDialog(Container):
+    """
+    Class extending pytermgui.Container to add support 
+    for more field types, a submit() method and to act
+    as a prefab to the common dialog type Containers
+    """
+    def __init__(self,options=None,label_value='',label_justify="center",label_underpad=0,field_value='',dialog_type=None,**kwargs):
+        super().__init__(**kwargs)
+        gui = pytermgui.__dict__
+        
+        # set up label class
+        self.label = Label(value=label_value,justify=label_justify)
+        self.label.set_style('value',gui['CONTAINER_TITLE_STYLE'])
+
+        # set up field depending on options given
+        self.options = options
+        self.dialog_type = dialog_type
+
+        if self.dialog_type == None:
+            if isinstance(options,list):
+                self.dialog_type = "prompt"
+            else:
+                self.dialog_type = "field"
+
+        if self.dialog_type == "prompt":
+            self.field = Prompt(options=options,width=self.width)
+            self.field.set_style('value',gui['CONTAINER_VALUE_STYLE'])
+            self.field.set_style('label',gui['CONTAINER_LABEL_STYLE'])
+        
+        elif self.dialog_type == "field":
+            self.field = InputDialogField(default=field_value,print_at_start=False)
+            self.field.set_style('value',gui['CONTAINER_VALUE_STYLE'])
+            self.field.field_color = '\033['+THEME['value']+'m'
+
+        # add label
+        self.add_elements(self.label)
+
+        # add paddings under label
+        for _ in range(label_underpad):
+            self.add_elements(Label())
+
+        # add field
+        self.add_elements(self.field)
+        
+        # set xlimit of field
+        self.field.xlimit = self.width-3
+
+    def submit(self):
+        self.value = self.field.submit()
+        return self.value
+
+    def __repr__(self):
+        self.width = max(self.width,self.field.width)
+        #self.get_border()
+        #self.center()
+        #self.wipe()
+
+        return super().__repr__()
+
+class InputDialogField(getch.InputField):
+    """
+    Class to extend getch's InputField to add compatibility
+    for pytermgui Containers.
+    """
+
+    def __init__(self,**kwargs):
+        super().__init__(**kwargs)
+
+        self.width = len(self.value)
+        self.height = 1
+        self._is_selectable = False
+        self.options = None
+
+        self.value_style = lambda item: item
+
+    # return text of self
+    def __repr__(self):
+        line = self.value_style(self.print(return_line=True))
+        return line
+    
+    def set_style(self,key,value):
+        setattr(self,key+'_style',value)
+
+    # return value
+    def submit(self):
+        return self.value
+
+class UIGenerator:
+    """
+    Object used for organizing UI generator functions
+    into one place. May also have some values stored
+    in the future.
+    """
+
+    # wipe most recent ui element
+    def wipe(self):
+        UI_TRACE[-1][2].wipe()
+
+    # create menu from a dictionary source
+    def create_menu(self,source,corners,index=None,dict_index=0,**container_args):
+        source_arg = source
+
+        if isinstance(source,list):
+            fun,kwargs = source
+            source = fun(**kwargs)
+        else:
+            source = source_arg
+
+        objects = container_from_dict(source,**container_args,width=max(40,int(WIDTH*(1/2))))
+            
+        for o in objects:
+            if not source_arg == source:
+                o.dict_path = kwargs['path']
+
+            for i,c in enumerate([v for k,v in THEME['corners'].items()]):
+                if not c == None:
+                    o.set_corner(i,c)
+
+            #o.width = min(WIDTH-5,o.width)
+            o.center()
+
+        c = objects[dict_index]
+
+        # clear infield from screen
+        infield.wipe()
+        
+        # set pipes
+        if PIPE_OUTPUT:
+            fun,_ = PIPE_OUTPUT
+        else:
+            fun = None
+        if not fun == ignore_input:
+            set_pipe(handle_menu,{"obj": objects, 'page': dict_index})
+
+        if index == None:
+            add_to_trace([
+                {
+                    'source': source_arg,
+                    'index': None,
+                    'dict_index': dict_index,
+                    'corners': corners
+                },c
+            ])
+
+        # print
+        c.selected_index = (0 if index==None else index) 
+        c.select()
+        print(c)
+        
+        return c
+
+    # create menu from object source, used for sub-level objects
+    def create_submenu(self,source,index=None,dict_index=0):
+        if isinstance(source.real_value,dict):
+            dicts = container_from_dict(source.real_value,width=max(40,int(WIDTH*(1/2))))
+
+            for d in dicts:
+                # add title object to 0 index
+                title = Label(value=pytermgui.CONTAINER_TITLE_STYLE(source.real_label),justify='center')
+                d.add_elements(title)
+                l = d.elements.pop(-1)
+                d.elements.insert(0,l)
+
+            d = dicts[dict_index]
+            d.source_index = (0 if index==None else index) 
+            if len(d.selectables):
+                d.select()
+
+        else:
+            if isinstance(getattr(source,'__ui_options'),list):
+                options = getattr(source,'__ui_options')
+            else:
+                options = None
+
+            d = InputDialog(
+                        label_value=source.real_label,
+                        label_underpad=1,
+                        options=options,
+                        field_value=str(source.real_value),
+                        width=max(40,int(WIDTH*(1/2)))
+            )
+
+            d.setting = source.real_label
+            d.real_value = source.real_value
+            dicts = [d]
+
+        for dic in dicts:
+            dic.setting = source.real_label
+            dic.real_value = source.real_value
+            dic.center()
+            for i,c in enumerate([v for k,v in THEME['corners'].items()]):
+                dic.set_corner(i,c)
+
+        d = dicts[dict_index]
+        d.selected_index = (0 if index==None else index) 
+        d.select()
+        print(d)
+
+        fun,args = PIPE_OUTPUT
+        dbg(fun)
+        if not fun == ignore_input:
+            set_pipe(handle_menu,{'obj': dicts, 'page': dict_index})
+        if index == None:
+            add_to_trace([{'source': source, 'index': index, 'dict_index': dict_index}, d])
+
+        return d
+ 
+
+            
+    # create menu picker menu, likely only for dbg
+    def create_menu_picker(self):
+        d = Container(width=40)
+        title = Label(value="pick your menu")
+        title.set_style("value",pytermgui.CONTAINER_TITLE_STYLE)
+        d.add_elements([title,Label()])
+
+        for m in MENUS:
+            name = m[5:]
+            p = Prompt(options=[name],justify_options="center")
+            p.action = m
+            p.set_style('value',pytermgui.CONTAINER_VALUE_STYLE)
+            p.handler = lambda prev,self: {prev.wipe(),handle_action(self.action)}
+            d.add_elements(p)
+
+        set_pipe(handle_menu,{'obj': [d]})
+        add_to_trace([{},d])
+
+        d.center()
+        d.select()
+        print(d)
+
+        return d
+
+    # unified way to create error dialog
+    def create_error_dialog(self,text,button="ignore",handler=None):
+        source = {
+                    "ui__error_title": "Error occured!",
+                    "ui__padding": "",
+                    "ui__label": {
+                        "value": ''.join(text.split('"')),
+                        "justify": "left",
+                        "padding": 4
+                    },
+                    "ui__padding1": "",
+                    "ui__button": {
+                        "id": "error-button_"+button,
+                        "value": button,
+                    }
+                }
+
+        ui.wipe()
+
+        if handler == None:
+            handler = lambda _,self: handle_menu("ESC",self.parent)
+
+        pytermgui.set_attribute_for_id('error-button_'+button,'handler',handler)
+
+        d = self.create_menu(source,corners=[[],[],[],"error"])
+        return d
+
+    # color code menu for settings/themes
+    def create_colormenu(self,dict_index=0):
+        width = max(40,int(WIDTH*(2/3)))
+        dicts = []
+        line_length = min(width//5,14)
+
+        for index,ground in enumerate(['fg','bg']):
+            count = 0
+            c = Container(width=width,border=lambda: ['','','',''])
+
+            # create color line
+            for i in range(256//line_length):
+                line = []
+                for j in range(line_length):
+                    count += 1
+                    num = str(count)
+                    pad = 4-len(num)
+                    line.append('\033[38;5;'+num+'m' + pad*' ' + num)
+
+                bg = ('\033[7m' if ground == 'bg' else '\033[1m')
+
+                c.add_elements(Label(value=bg+' '.join(line)+'\033[0m'))
+
+
+            #set up tabbar
+            tabbar = Prompt(options=['foreground','background'])
+            tabbar._is_selectable = False
+            tabbar.set_style('highlight',pytermgui.TABBAR_HIGHLIGHT_STYLE)
+            tabbar.select(index)
+
+
+            # finalize dict
+            c.center()
+            c.add_elements([Label(),tabbar])
+            dicts.append(c)
+
+            
+        c = dicts[dict_index]
+        set_pipe(handle_menu,{'obj': dicts, 'page': dict_index})
+        if dict_index == 0:
+            add_to_trace([{'dict_index': dict_index},c])
+        print(c)
+        return c
+
+    # def create_server_picker(self,source):
+
+    ## add new server
+    # def create_menu_server_add(self,url='',chatroom=''):
+    #    source = {
+    #            "ui__title": "new connection",
+    #            "server_name": "",
+    #            "address": url,
+    #            "chatroom": chatroom,
+
+    #            "ui__id": "servernew-prompt_register",
+    #            "ui__prompt_options_register": [True,False],
+    #            "register": True,
+
+    #            "ui__button": {
+    #                "id": "servernew-button_add",
+    #                "value": "add"
+    #                }
+    #            }
+
+    #    pytermgui.set_attribute_for_id('servernew-prompt_register','handler',lambda _,self: {
+    #            setattr(self,'value',toggle_option(getattr(self,'__ui_options',self.real_value))),
+    #            setattr(self,'real_value',self.value),
+    #            print(self.parent)})
+
+    #    pytermgui.set_attribute_for_id('servernew-button_add','handler',lambda _,self: { 
+    #                set_chatroom(
+    #                    add_new_server(
+    #                        self.parent.dict_path,
+    #                        register=pytermgui.get_object_by_id('servernew-prompt_register').real_value))})
+
+    #    d = self.create_menu(source=[load_path,{'path': source}],corners=[[],[],[],"add"])
+    #    globals()['CURRENT_FILE'] = source
+    #    return d
+
+
+
+
 # GLOBALS #
 PATH = os.path.abspath(os.path.dirname(__file__))
 import_json("settings")
@@ -1558,10 +1823,19 @@ import_json("usercfg")
 
 LOGFILE = os.path.join(PATH,'log')
 DELIMITERS = "!@#$%^&*()[]{}|\\;':\",.<>/? \t"
+MENUS = [
+    #"menu_serverpicker",
+    #"menu_servernew",
+    #"menu_serverregister",
+    "menu_login_type",
+    "menu_login",
+    "menu_settings",
+    #"menu_picker"
+]
 
 KEEP_GOING = True
 
-SESSION = requests.Session()
+SESSION = requests.session()
 
 INPUT = ""
 INPUT_CURSOR = 0
@@ -1580,11 +1854,12 @@ CURRENT_FILE = None
 COOKIE = "flamingoestothestore"
 
 # base data array to append to
-#BASE_DATA = {
-#    "username": USERNAME,
-#    "cookie": COOKIE,
-#    "chatroom": ROOMID,
-#}
+URL = None
+BASE_DATA = {
+    "username": None,
+    "cookie": None,
+    "chatroom": None,
+}
 
 
 
@@ -1596,6 +1871,7 @@ if __name__ == "__main__":
     if DO_DEBUG:
         open(LOGFILE,'w').close()
     dbg('starting teahaz at size',str(WIDTH),str(HEIGHT))
+    pytermgui.set_debugger(dbg)
 
     if WIDTH < 37:
         w = Container(height=3)
@@ -1607,11 +1883,17 @@ if __name__ == "__main__":
         sys.exit(1)
 
 
+    ui = UIGenerator()
+
 
     # set pytermgui styles
     pytermgui.set_style(
             'container_title',
             lambda item: bold(color(item.upper(),THEME['title'])+':').replace('_',' ')
+    )
+    pytermgui.set_style(
+            'container_error',
+            lambda item: bold(color(item.upper(),THEME['error']))
     )
     pytermgui.set_style(
             'container_label',
@@ -1643,7 +1925,7 @@ if __name__ == "__main__":
             lambda: THEME['prompt_delimiters']
     )
 
-    pytermgui.set_attribute_for_id('settings-themes_showcolors','handler',lambda *args: (UI_TRACE[-1][2].wipe(),test_ui()))
+    pytermgui.set_attribute_for_id('settings-themes_showcolors','handler',lambda prev,self: (prev.wipe(),ui.create_colormenu()))
     
 
     # set default mode
@@ -1657,6 +1939,11 @@ if __name__ == "__main__":
     MODE_LABEL.pos = [x,y+5]
     
     switch_mode("ESCAPE")
+
+    if not 'CHATLIST' in globals():
+        CHATLIST = []
+        CURRENT_CHATROOM = None
+        handle_action('menu_login')
 
     # main input loop
     getch_loop()

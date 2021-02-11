@@ -1,16 +1,9 @@
 {
-    "SERVERLIST": {
-        "doge": {
-            "address": "https://github.com/bczsalba/asztal",
-            "chatroom": "asztal.py"
-        },
-        "test": {
-            "address": "localhost:8080",
-            "chatroom": "locals"
-        },
-        "another test": {
-            "address": "localhost:8080",
-            "chatroom": "globals"
+    "CURRENT_CHATROOM": 0,
+    "CHATLIST": [
+        {
+            "address": "http://butorhaz.hopto.org:13337",
+            "chatroom": "gyulaiak"
         }
-    }
+    ]
 }

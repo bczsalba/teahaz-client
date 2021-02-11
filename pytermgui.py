@@ -6,6 +6,12 @@ import sys,os,time
 def clr():
     os.system('cls' if os.name == 'nt' else 'clear')
 
+def dbg(*args,**kwargs):
+    pass
+
+def set_debugger(fun):
+    globals()['dbg'] = fun
+
 def set_style(key,value):
     key = key.upper()
 
@@ -64,12 +70,19 @@ def set_element_id(element,element_id):
 
     # set given attributes 
     if not ELEMENT_ATTRIBUTES.get(element_id) == None:
-        attribute,value = ELEMENT_ATTRIBUTES[element_id]
-        setattr(element,attribute,value)
+        for attribute,value in ELEMENT_ATTRIBUTES[element_id].items():
+            setattr(element,attribute,value)
 
 # set attributes to be applied to all elements matching id
 def set_attribute_for_id(element_id,key,value):
-    ELEMENT_ATTRIBUTES[element_id] = [key,value]
+    if element_id in ELEMENT_ATTRIBUTES.keys():
+        ELEMENT_ATTRIBUTES[element_id][key] = value
+    else:
+        ELEMENT_ATTRIBUTES[element_id] = { key: value } 
+
+    obj = get_object_by_id(element_id)
+    if obj:
+        setattr(obj,key,value)
     
 def get_object_by_id(key):
     return ELEMENT_IDS.get(key)
@@ -95,6 +108,7 @@ def container_from_dict(dic,padding=4,**kwargs):
     datafile = None
     element_id = None
 
+
     for i,(key,item) in enumerate(dic.items()):
         if key.startswith('ui__'):        
             # GENERATOR OPTIONS
@@ -103,19 +117,24 @@ def container_from_dict(dic,padding=4,**kwargs):
                 datafile = item
 
             ## read titles into labels
-            elif key.startswith("ui__title"):
+            elif key.startswith("ui__title") or key.startswith('ui__error_title'):
                 # get next title element
                 for next_title,k in enumerate(list(dic.keys())[i+1:]):
                     if k.startswith('ui__title') and k[-1].isdigit():
                         break
 
                 l = Label(value=item,justify="left")
-                l.set_style('value',CONTAINER_TITLE_STYLE)
+
+                if key.startswith('ui__title'):
+                    l.set_style('value',CONTAINER_TITLE_STYLE)
+                else:
+                    l.set_style('value',CONTAINER_ERROR_STYLE)
 
                 # set id
                 if not element_id == None:
                     set_element_id(l,element_id)
                     element_id = None
+                l.parent = dicts[-1]
 
                 height_with_segment = dicts[-1].real_height + next_title*(1+dicts[-1].padding)+5
                 
@@ -159,6 +178,7 @@ def container_from_dict(dic,padding=4,**kwargs):
                 if element_id:
                     set_element_id(p,element_id)
                     element_id = None
+                p.parent = dicts[-1]
 
                 dicts[-1].add_elements(p)
  
@@ -169,6 +189,7 @@ def container_from_dict(dic,padding=4,**kwargs):
                 if element_id:
                     set_element_id(p,element_id)
                     element_id = None
+                p.parent = dicts[-1]
 
                 dicts[-1].add_elements(p)
 
@@ -179,10 +200,23 @@ def container_from_dict(dic,padding=4,**kwargs):
                 set_element_id(button,item.get('id'))
 
                 if not hasattr(button,'handler'):
-                    button.handler = lambda: None
+                    button.handler = lambda *args: None
 
                 dicts[-1].add_elements(button)
+                button.parent = dicts[-1]
             
+            elif key.startswith('ui__label'):
+                justify = item.get('justify')
+                value = item.get('value')
+                padding = item.get('padding')
+
+                if element_id:
+                    set_element_id(p,element_id)
+                    element_id = None
+                p.parent = dicts[-1]
+
+                label = Label(value=value,justify=justify,padding=padding)
+                dicts[-1].add_elements(label)
 
         else:
             # reverse meanings of key & item
@@ -218,6 +252,7 @@ def container_from_dict(dic,padding=4,**kwargs):
             if element_id:
                 set_element_id(p,element_id)
                 element_id = None
+            p.parent = dicts[-1]
 
             if not delim == None:
                 p.delimiter_style = lambda: ['   ','{}']
@@ -264,7 +299,7 @@ def italic(s):
 def underline(s):
     return '\033[4m'+str(s)+'\033[0m'
 
-def highlight(s,fg='30'):
+def highlight(s,fg='0'):
     return color(clean_ansi(s),['7',fg])
 
 def color(s,col):
@@ -610,7 +645,6 @@ class Container:
         if len(self.selectables) == 0:
             return
 
-        from client import dbg; dbg(index)
         if index > len(self.selectables)-1:
             if VERBOSE:
                 raise Exception("Index is not in elements.")
@@ -640,8 +674,6 @@ class Container:
     
     # go through object, wipe ever character contained
     def wipe(self,pos=None):
-        #from client import dbg
-        #dbg('wiped by: ',sys._getframe().f_back.f_code.co_name)
 
         if pos == None:
             pos = self.pos
@@ -904,11 +936,12 @@ class Label:
         self._is_selected = False
 
     def __repr__(self):
-        lines = break_line(self.value_style(self.value),_len=self.width)
+        lines = break_line(self.value_style(self.value),_len=self.width-self.padding)
 
         if self.justify == "left":
             # nothing needs to be done
-            lines[0] = self.padding*' '+lines[0]
+            for i,l in enumerate(lines):
+                lines[i] = self.padding*' '+l
 
         elif self.justify == "center":
             for i,l in enumerate(lines):
@@ -955,6 +988,7 @@ CONTAINER_LABEL_STYLE = lambda item: item
 CONTAINER_VALUE_STYLE = lambda item: item
 CONTAINER_CORNER_STYLE = lambda char: char
 CONTAINER_TITLE_STYLE = lambda item: italic(bold(item))
+CONTAINER_ERROR_STYLE = lambda item: color(bold(item),'196')
 
 ## prompt
 PROMPT_LABEL_STYLE = lambda item: item
@@ -982,13 +1016,16 @@ if __name__ == "__main__":
     c = container_from_dict(d)[0]
     c.set_corner(0,'example using sprinter json')
     c.set_corner(3,'pytermgui')
+    c.set_style(Prompt,'highlight',lambda a: highlight(a,'38;5;74'))
     c.set_style(Container,'corner',lambda a: color(a,'38;5;141'))
     c.set_style(Container,'border',lambda a: color(a,'38;5;220'))
     c.set_style(Prompt,'label',lambda a: color(a,'38;5;103'))
     c.set_style(Prompt,'value',lambda a: color(a,'38;5;61'))
-    c.set_style(Prompt,'delimiter',['< ',' >'])
+    c.set_style(Prompt,'delimiter',lambda: ['< ',' >'])
     c.set_borders('|_|-')
     c.select(3)
     c.center()
+    #print(c)
+    with open('sprinter.ptg','w') as f:
+        f.write(repr(c))
     print(c)
-    input()

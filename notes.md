@@ -1,18 +1,30 @@
 # BUGS
-- [ ] colorguide menu doesnt add to trace
+- [ ] add to trace returns early in some menus
 - [ ] only the first element in multipage containers resizes
+
 
 
 # FEATURES 
 ## upcoming checklist
+- minor fixes
+    * [ ] inputdialog field should be infinite length
+    * [ ] url address should be pulled from a global
+
 - messaging lol
-    * rn: started work on login menu, need to add functionality to add button, fix bug with writing stuff
-    * [ ] profiles menu
-        + [ ] add new server functionality
+    * [ ] basic functions first
+        + [ ] add server
+        + [x] login/register
+            - [x] basic menu
+            - [x] login function
+            - [x] register function
+
+    * [x] profiles menu
+        + [x] add new server functionality
     * [ ] change_chatroom
-        + [ ] set up CONNECTIONS dict, containing session objects assigned to some key
-        + [ ] let change_chatroom switch active connection to them, or create new connection if one isn't in dict
-    * [ ] top headerbar
+        + [x] let set_chatroom switch active connection to them, or create new connection if one isn't in dict
+
+    * [ ] top headerbar indicating current chatroom info
+
 
 - new binds
     * [ ] `s` 
