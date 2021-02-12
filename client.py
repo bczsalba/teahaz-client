@@ -277,9 +277,7 @@ def add_new_server(values):
     else:
         SERVERS[address] = [chatroom]
 
-    
-    with open(os.path.join(PATH,'usercfg.json'),'w') as f:
-        f.write(json.dumps(SERVERS,indent=4))
+    edit_json('SERVERS',SERVERS,'usercfg.json')
     import_json('usercfg')
 
     return address,SERVERS[address].index(chatroom)
