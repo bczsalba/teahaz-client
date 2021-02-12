@@ -224,12 +224,12 @@ def add_to_trace(arr):
     else:
         func = _method
 
+    arr.insert(0,func)
     old = UI_TRACE[-1]
     oldfun,oldargs,_ = old
     newfun,newargs = func,arr[1]
 
-    arr.insert(0,func)
-    if not (oldfun == newfun and oldargs == newargs):
+    if not (oldfun == newfun and oldargs == newargs):# and oldargs == newargs):
         UI_TRACE.append(arr)
 
 ### redirect getch_loop to `fun` with `args`
@@ -423,7 +423,7 @@ def start_connection(contype,menu=None,**kwargs):
     else:
         return ret_val
         
-def login(url,data):
+def login_or_register(contype,url,data):
     dbg('logging in to',url)
     d = {
             'username': data.get('username'),
@@ -432,30 +432,16 @@ def login(url,data):
 
     handler = lambda prev,self: {
             prev.wipe(),
-            handle_menu_actions('menu_login',current_file=data) }
+            handle_menu_actions('menu_'+contype,current_file=data) }
     
     if url == "":
         ui.create_error_dialog('Invalid value "'+url+'" for url.','choose other server',handler=handler)
         return 0 
 
-    resp = start_connection('post','login',url=url+'/login',json=d,timeout=None)
-    if not resp or not resp.status_code == requests.status_codes.ok:
-        dbg('problem')
-    #handle_menu("ESC",UI_TRACE[-1][2])
+    resp = start_connection('post',contype,url=url+'/'+contype,json=d,timeout=None)
+    if not resp or not resp.status_code in range(200,299):
+        dbg('bad response:',resp)
     
-def register(url,data):
-    dbg('registered called to',url)
-
-    handler = lambda prev,self: {
-        prev.wipe(),
-        handle_menu_actions('menu_register',current_file=data) }
-    
-    if url == "":
-        ui.create_error_dialog('Invalid value "'+url+'" for url.','choose other server',handler=handler)
-        return 0 
-
-    start_connection('post','register',url=url+'/register',json=data,timeout=None)
-    #handle_menu("ESC",UI_TRACE[-1][2])
 
 ## receiving method
 def get(parameter,mode="message"):
@@ -1098,29 +1084,25 @@ def handle_menu(key,obj,attributes={},page=0):
       
     elif key == " ":
         selected,_,index = obj.selected
+        dbg(selected.__ui_options)
         if selected.__ui_options and len(selected.__ui_options) == 2:
-            if not globals().get(selected.real_label) == None:
-                # add to depth
-                selected.__ui_keys.append(selected.real_label)
-                old_index = selected.__ui_options.index(globals()[selected.real_label])
-                if old_index == 0:
-                    new_index = 1
-                else:
-                    new_index = 0
+            #if not globals().get(selected.real_label) == None:
+            # add to depth
+            selected.__ui_keys.append(selected.real_label)
 
-                edit_json(
-                        json_path=CURRENT_FILE,
-                        keys=[selected.real_label],
-                        key=selected.real_label,
-                        value=selected.__ui_options[new_index]
-                )
+            edit_json(
+                    json_path=CURRENT_FILE,
+                    keys=[selected.real_label],
+                    key=selected.real_label,
+                    value=toggle_option(selected.__ui_options, selected.real_value)
+            )
 
-                fun,args,obj = UI_TRACE[-1]
-                args['index'] = index
+            fun,args,obj = UI_TRACE[-1]
+            args['index'] = index
 
-                kwargs = args.copy()
-                fun(**kwargs)
-                selected.__ui_keys.pop(-1)
+            kwargs = args.copy()
+            fun(**kwargs)
+            selected.__ui_keys.pop(-1)
             return
 
     elif key in "hjkl" or key.startswith("ARROW"):
@@ -1192,7 +1174,7 @@ def handle_menu_actions(action,current_file=None):#*args,**kwargs):#
         corners[1] = "login"
         pytermgui.set_attribute_for_id('login-button_submit','address',address)
         pytermgui.set_attribute_for_id('login-button_submit','handler',
-                lambda prev,self: login(self.address,self.parent.dict_path))
+                lambda prev,self: login_or_register('login',self.address,self.parent.dict_path))
 
         if current_file == None:
             source = {
@@ -1218,7 +1200,7 @@ def handle_menu_actions(action,current_file=None):#*args,**kwargs):#
 
         pytermgui.set_attribute_for_id('register-button_submit','address',address)
         pytermgui.set_attribute_for_id('register-button_submit','handler',
-                lambda prev,self: register(self.address,self.parent.dict_path))
+                lambda prev,self: login_or_register('register',self.address,self.parent.dict_path))
 
         if current_file == None:
             source = {
@@ -1239,7 +1221,6 @@ def handle_menu_actions(action,current_file=None):#*args,**kwargs):#
             source = current_file
 
         attrs["address"] = address
-
 
     elif menu == "picker":
         ui.create_menu_picker()
@@ -1507,6 +1488,10 @@ class InputDialog(Container):
             self.field = InputDialogField(default=field_value,print_at_start=False)
             self.field.set_style('value',gui['CONTAINER_VALUE_STYLE'])
             self.field.field_color = '\033['+THEME['value']+'m'
+            self.width = WIDTH
+            borders = self.borders
+            label_underpad += 2
+            self.set_borders(['',borders[1],'',borders[3]])
 
         # add label
         self.add_elements(self.label)
@@ -1516,6 +1501,7 @@ class InputDialog(Container):
             self.add_elements(Label())
 
         # add field
+        self.field.parent = self
         self.add_elements(self.field)
         
         # set xlimit of field
@@ -1551,7 +1537,8 @@ class InputDialogField(getch.InputField):
 
     # return text of self
     def __repr__(self):
-        line = self.value_style(self.print(return_line=True))
+        value = self.print(return_line=True)
+        line = self.value_style(value)
         return line
     
     def set_style(self,key,value):
@@ -1824,7 +1811,7 @@ import_json("usercfg")
 LOGFILE = os.path.join(PATH,'log')
 DELIMITERS = "!@#$%^&*()[]{}|\\;':\",.<>/? \t"
 MENUS = [
-    #"menu_serverpicker",
+    "menu_serverpicker",
     #"menu_servernew",
     #"menu_serverregister",
     "menu_login_type",

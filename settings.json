@@ -33,7 +33,7 @@
                 "<>",
                 "[]"
             ],
-            "prompt_delimiters": "<>",
+            "prompt_delimiters": "[]",
             "ui__button": {
                 "id": "settings-themes_showcolors",
                 "value": "show color guide"
@@ -162,5 +162,6 @@
             "selection_change": "c",
             "selection_copy": "y"
         }
-    }
+    },
+    "prompt_delimiters": "<>"
 }
