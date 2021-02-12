@@ -1,9 +1,15 @@
 {
-    "CURRENT_CHATROOM": 0,
-    "CHATLIST": [
-        {
-            "address": "http://butorhaz.hopto.org:13337",
-            "chatroom": "gyulaiak"
-        }
-    ]
+    "CURRENT_CHATROOM": [
+        "http://butorhaz.hopto.org:13337",
+        0
+    ],
+    "SERVERS": {
+        "http://butorhaz.hopto.org:13337": [
+            "gyulaiak",
+            "zalaiak"
+        ],
+        "http://cserjeskopandi.dyndns.org:13337": [
+            "amalia"
+        ]
+    }
 }

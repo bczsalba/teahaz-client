@@ -1,3 +1,4 @@
+* rn : integrating add_server, global URL & chatroom things
 
 # BUGS
 - [ ] only the first element in multipage containers resizes
@@ -7,7 +8,6 @@
 # FEATURES 
 ## upcoming checklist
 - minor fixes
-    * [ ] inputdialog field should be infinite length
     * [ ] url address should be pulled from a global
 
 - messaging lol

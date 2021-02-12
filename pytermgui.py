@@ -117,7 +117,7 @@ def container_from_dict(dic,padding=4,**kwargs):
                 datafile = item
 
             ## read titles into labels
-            elif key.startswith("ui__title") or key.startswith('ui__error_title'):
+            elif "_title" in key:
                 # get next title element
                 for next_title,k in enumerate(list(dic.keys())[i+1:]):
                     if k.startswith('ui__title') and k[-1].isdigit():
@@ -127,7 +127,11 @@ def container_from_dict(dic,padding=4,**kwargs):
 
                 if key.startswith('ui__title'):
                     l.set_style('value',CONTAINER_TITLE_STYLE)
-                else:
+
+                elif key.startswith('ui__success_title'):
+                    l.set_style('value',CONTAINER_SUCCESS_STYLE)
+
+                elif key.startswith('ui__error_title'):
                     l.set_style('value',CONTAINER_ERROR_STYLE)
 
                 # set id
@@ -563,6 +567,9 @@ class Container:
             side = "right"
             index = 3
 
+        else:
+            raise Exception('Corner position '+str(corner)+' could not be handled.')
+
         # get & replace indexes
         px,py = self.pos
 
@@ -988,7 +995,8 @@ CONTAINER_LABEL_STYLE = lambda item: item
 CONTAINER_VALUE_STYLE = lambda item: item
 CONTAINER_CORNER_STYLE = lambda char: char
 CONTAINER_TITLE_STYLE = lambda item: italic(bold(item))
-CONTAINER_ERROR_STYLE = lambda item: color(bold(item),'196')
+CONTAINER_ERROR_STYLE = lambda item: color(bold(item),'38;5;196')
+CONTAINER_SUCCESS_STYLE = lambda item: color(bold(item),'2')
 
 ## prompt
 PROMPT_LABEL_STYLE = lambda item: item

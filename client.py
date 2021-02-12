@@ -68,6 +68,9 @@ def edit_json(key,value,json_path,keys=[]):
         with open(os.path.join(PATH,json_path),'r') as f:
             data = json.load(f)
 
+    if len(keys) == 0:
+        keys = [key]
+
     setting = keys[-1]
 
     # eval value if needed
@@ -251,45 +254,35 @@ def get_index(obj):
 
 ## server
 ### set new chatroom, make transition to it
-def set_chatroom(index):
+def set_chatroom(url,index):
     if index == 'invalid' or index == 'register':
         return
 
-    globals()['CURRENT_CHATROOM'] = index
-    address = CHATLIST[index].get('address')
-    chatroom = CHATLIST[index].get('chatroom')
-    globals()['URL'] = address
+    globals()['URL'] = url
+    chatrooms = SERVERS[url]
+    globals()['CURRENT_CHATROOM'] = url,index
 
-    urls = [connection.get('url') for connection in SESSION.cookies]
-    if not address in urls:
-        handle_action('menu_login')
+    edit_json('CURRENT_CHATROOM',[url,index],'usercfg.json')
 
-def add_new_server(values,register=False):
+def add_new_server(values):
     d = {}
     for key,value in values.items():
         if not key.startswith('ui__'):
             d[key] = value
 
-    name = d.get('server_name')
-    del d['server_name']
+    address = values.get('address')
+    chatroom = values.get('chatroom')
+    if SERVERS.get(address):
+        SERVERS[address].append(chatroom)
+    else:
+        SERVERS[address] = [chatroom]
 
-
-    CHATLIST.append(d)
+    
     with open(os.path.join(PATH,'usercfg.json'),'w') as f:
-        f.write(json.dumps({"CURRENT_CHATROOM": CURRENT_CHATROOM, "CHATLIST": CHATLIST},indent=4))
+        f.write(json.dumps(SERVERS,indent=4))
     import_json('usercfg')
 
-    dbg('set new server',name,'to',d)
-    if register:
-        url = d.get('address') 
-        chatroom = d.get('chatroom')
-
-        d = ui.create_menu(source=[load_path,{'path': d}],corners=[[],[],[],'register'])
-        print(d)
-        return 'register'
-
-
-    return len(CHATLIST)-1
+    return address,SERVERS[address].index(chatroom)
 
 
 ## editing
@@ -373,8 +366,6 @@ def start_connection(contype,menu=None,**kwargs):
         else:
             dbg('implement',contype,'pls')
             raise NotImplementedError
-        dbg(1)
-
 
         # try to get return value
         try:
@@ -387,7 +378,7 @@ def start_connection(contype,menu=None,**kwargs):
         # connection error message
         except requests.exceptions.ConnectionError as e:
             dbg('Exception during',contype+': ',e)
-            ret = ["Error happened during connection. Check log for more info.",0]
+            ret = ["Error happened during connection. Check log for more info.",-1]
 
         # unimplemented errors
         except Exception as e:
@@ -401,23 +392,24 @@ def start_connection(contype,menu=None,**kwargs):
     t.start()
     ret_val = t.join()
 
-    if not menu == None:
-        handler = lambda prev,_: {
-            prev.wipe(),
-            handle_menu_actions(
-                'menu_'+str(menu),
-                pytermgui.get_object_by_id(str(menu)+"-button_submit").parent.dict_path)}
-    else:
-        handler = lambda prev,_: {
-            prev.wipe(),
-            handle_menu('ESC',prev)}
+    # NOTE to self: error button handler needs to have a handle_menu("ESC") at the end.
+    #if not menu == None:
+    #    handler = lambda prev,_: {
+    #        prev.wipe(),
+    #        handle_menu_actions(
+    #            'menu_'+str(menu),
+    #            pytermgui.get_object_by_id(str(menu)+"-button_submit").parent.dict_path)}
+    #else:
+    #    handler = lambda prev,_: {
+    #        prev.wipe(),
+    #        handle_menu('ESC',prev)}
 
     if isinstance(ret_val,list):
-        ui.create_error_dialog(ret_val[0],'try again',handler=handler)
+        ui.create_error_dialog(ret_val[0],'try again')
         return False
 
     elif not 200 <= ret_val.status_code < 300:
-        ui.create_error_dialog(ret_val.text.strip(),'try again',handler=handler)
+        ui.create_error_dialog(ret_val.text.strip(),'try again')
         return False
 
     else:
@@ -425,22 +417,33 @@ def start_connection(contype,menu=None,**kwargs):
         
 def login_or_register(contype,url,data):
     dbg('logging in to',url)
-    d = {
-            'username': data.get('username'),
-            'password': data.get('password')
-            }
+    if contype == "login":
+        d = {
+                'username': data.get('username'),
+                'password': data.get('password')
+                }
+    elif contype == "register":
+        d = { 
+                'username': data.get('username'),
+                'password': data.get('password'),
+                'email': data.get('email'),
+                'nickname': data.get('nickname')
+                }
 
-    handler = lambda prev,self: {
-            prev.wipe(),
-            handle_menu_actions('menu_'+contype,current_file=data) }
+    #handler = lambda prev,self: {
+    #        prev.wipe(),
+    #        handle_menu_actions('menu_'+contype,current_file=data) }
     
     if url == "":
-        ui.create_error_dialog('Invalid value "'+url+'" for url.','choose other server',handler=handler)
+        ui.create_error_dialog('Invalid value "'+url+'" for url.','choose other server')
         return 0 
 
     resp = start_connection('post',contype,url=url+'/'+contype,json=d,timeout=None)
     if not resp or not resp.status_code in range(200,299):
         dbg('bad response:',resp)
+    else:
+        text = "Successfully " + ("logged in" if contype == "login" else "registered")
+        ui.create_success_dialog(text)
     
 
 ## receiving method
@@ -496,7 +499,6 @@ def send(message,mType='text'):
     # return response
     response = SESSION.post(url=URL+endpoint, json=data)
     return response.text
-
 
 
 
@@ -577,9 +579,7 @@ def getch_loop():
 def handle_action(action):
     global KEEP_GOING,PIPE_OUTPUT,PIPE_ARGS,VISUAL_START,VISUAL_END,infield,CURRENT_FILE
     
-    #action_not_handled = handle_menu_actions(action)
-    #if not action_not_handled:
-    #    return
+    ## MENU ACTIONS
     if action.startswith('menu'):
         dbg('calling menu',action)
         handle_menu_actions(action)
@@ -1011,10 +1011,25 @@ def handle_menu(key,obj,attributes={},page=0):
 
         return
 
+    # get if horizontal navigation between prompt options should be used
+    if not obj.selected == None:
+        selected = obj.selected[0]
+        options = selected.__dict__.get('options')
+        _do_horizontal_nav = options and len(options) > 1
+    else:
+        _do_horizontal_nav = False
+
+
     # do actions specific to input dialog
     if isinstance(obj,InputDialog):
-        # submit input
-        if key == "ENTER":
+        # send key to field
+        if hasattr(obj,'field') and isinstance(obj.field,InputDialogField) and (len(key) < 2 or key == 'BACKSPACE'):
+            obj.field.send(key)
+            print(obj)
+            return
+
+        # navigate prompt
+        elif key == "ENTER":
             # edit setting
             new = obj.submit()
             edit_json(json_path=CURRENT_FILE,keys=obj.__ui_keys,key=obj.setting,value=new)
@@ -1030,24 +1045,11 @@ def handle_menu(key,obj,attributes={},page=0):
 
             # go back
             handle_menu("ESC",obj,attributes={'__ui_keys': obj.__ui_keys})
+            #print(obj)
             return
 
-        # send key to field
-        elif isinstance(obj.field,InputDialogField):
-            obj.field.send(key)
 
-        # navigate prompt
-        else:
-            if key in ["h","ARROW_LEFT"]:
-                obj.selected_index -= 1
-            elif key in ["l","ARROW_RIGHT"]:
-                obj.selected_index += 1
-            obj.select()
-
-        print(obj)
-        return
-
-    elif key == "ENTER":
+    if key == "ENTER":
         if obj.selected == None:
             return
 
@@ -1105,7 +1107,17 @@ def handle_menu(key,obj,attributes={},page=0):
             selected.__ui_keys.pop(-1)
             return
 
+    elif key == "CTRL_L":
+        handle_action('reprint')
+
     elif key in "hjkl" or key.startswith("ARROW"):
+        if isinstance(obj,InputDialog) or _do_horizontal_nav:
+            if key in ["h","ARROW_LEFT"]:
+                obj.selected_index -= 1
+            elif key in ["l","ARROW_RIGHT"]:
+                obj.selected_index += 1
+            obj.select()
+
         if key in ["j","ARROW_DOWN"]:
             obj.selected_index += 1
 
@@ -1145,9 +1157,11 @@ def handle_menu(key,obj,attributes={},page=0):
     print(obj)
 
 
+## call menu creation
 def handle_menu_actions(action,current_file=None):#*args,**kwargs):#    
     menu = action.replace('menu_','')
-    corners = ["X","X","X","X"]
+    corners = [v for k,v in THEME['corners'].items()]
+    dbg(corners)
     attrs = {}
 
     if menu == "settings":
@@ -1166,9 +1180,8 @@ def handle_menu_actions(action,current_file=None):#*args,**kwargs):#
         }
 
     elif menu == "login":
-        chatroom = CHATLIST[CURRENT_CHATROOM]
-        chatid = chatroom.get('chatroom')
-        address = chatroom.get('address')
+        address,chatindex = CURRENT_CHATROOM
+        chatid = SERVERS[address][chatindex]
 
         name = chatid+' @ '+address
         corners[1] = "login"
@@ -1191,12 +1204,11 @@ def handle_menu_actions(action,current_file=None):#*args,**kwargs):#
         else:
             source = current_file
         
-        attrs["address"] = address
+        attrs["address"] = URL
 
     elif menu == "register":
-        chatroom = CHATLIST[CURRENT_CHATROOM]
-        chatid = chatroom.get('chatroom')
-        address = chatroom.get('address')
+        address,chatindex = CURRENT_CHATROOM
+        chatid = SERVERS[address][chatindex]
 
         pytermgui.set_attribute_for_id('register-button_submit','address',address)
         pytermgui.set_attribute_for_id('register-button_submit','handler',
@@ -1220,7 +1232,24 @@ def handle_menu_actions(action,current_file=None):#*args,**kwargs):#
         else:
             source = current_file
 
-        attrs["address"] = address
+        #attrs["address"] = URL
+
+    elif menu == "server_new":
+        pytermgui.set_attribute_for_id('server_new-button_add','handler',
+                lambda prev,self: add_new_server(prev.dict_path))
+
+        source = {
+                "ui__title": "Add new connection",
+                "ui__padding0": 0,
+                "address": "",
+                "chatroom": "",
+                "ui__padding1": 1,
+                "ui__button": {
+                    "id": "server_new-button_add",
+                    "value": "add!"
+                }
+            }
+
 
     elif menu == "picker":
         ui.create_menu_picker()
@@ -1560,7 +1589,7 @@ class UIGenerator:
         UI_TRACE[-1][2].wipe()
 
     # create menu from a dictionary source
-    def create_menu(self,source,corners,index=None,dict_index=0,**container_args):
+    def create_menu(self,source,corners,width=None,index=None,dict_index=0,**container_args):
         source_arg = source
 
         if isinstance(source,list):
@@ -1569,13 +1598,19 @@ class UIGenerator:
         else:
             source = source_arg
 
-        objects = container_from_dict(source,**container_args,width=max(40,int(WIDTH*(1/2))))
+        if width:
+            width = width
+        else:
+            width = max(40,int(WIDTH*1/2))
+
+        objects = container_from_dict(source,**container_args,width=width)
             
         for o in objects:
             if not source_arg == source:
                 o.dict_path = kwargs['path']
 
             for i,c in enumerate([v for k,v in THEME['corners'].items()]):
+                dbg(i,c)
                 if not c == None:
                     o.set_corner(i,c)
 
@@ -1713,12 +1748,29 @@ class UIGenerator:
 
         ui.wipe()
 
-        if handler == None:
-            handler = lambda _,self: handle_menu("ESC",self.parent)
+        #if True or handler == None:
+        handler = lambda _,self: handle_menu("ESC",self.parent)
 
         pytermgui.set_attribute_for_id('error-button_'+button,'handler',handler)
 
         d = self.create_menu(source,corners=[[],[],[],"error"])
+        return d
+
+    # unified way to create success dialog
+    def create_success_dialog(self,text,button="dismiss"):
+        source = {
+                "ui__success_title": text,
+                "ui__padding": "",
+                "ui__button": {
+                    "id": "success-button_"+button,
+                    "value": button
+                    }
+                }
+
+        ui.wipe()
+
+        pytermgui.set_attribute_for_id('success-button_'+button,'handler',lambda prev,self: { handle_menu('ESC',prev), handle_menu('ESC',UI_TRACE[-1][2])})
+        d = self.create_menu(source,corners=[[],[],[],"success"],width=25)
         return d
 
     # color code menu for settings/themes
@@ -1810,12 +1862,14 @@ import_json("usercfg")
 
 LOGFILE = os.path.join(PATH,'log')
 DELIMITERS = "!@#$%^&*()[]{}|\\;':\",.<>/? \t"
+
+# menus for handle_menu_actions
 MENUS = [
-    "menu_serverpicker",
-    #"menu_servernew",
+    #"menu_serverpicker",
+    "menu_server_new",
     #"menu_serverregister",
     "menu_login_type",
-    "menu_login",
+    #"menu_login",
     "menu_settings",
     #"menu_picker"
 ]
@@ -1881,6 +1935,10 @@ if __name__ == "__main__":
     pytermgui.set_style(
             'container_error',
             lambda item: bold(color(item.upper(),THEME['error']))
+    ),
+    pytermgui.set_style(
+            'container_success',
+            lambda item: bold(color(item.upper(),THEME['success']))
     )
     pytermgui.set_style(
             'container_label',
@@ -1919,6 +1977,9 @@ if __name__ == "__main__":
     infield = getch.InputField(pos=get_infield_pos())
     infield.line_offset = None
     infield.visual_color = lambda: '\033['+THEME['field_highlight']+'m'
+
+    urls = list(SERVERS.keys())
+    set_chatroom(urls[0],0)
     
     MODE_LABEL = Label('-- ESCAPE --',justify='left')
     MODE_LABEL.set_style('value',lambda item: color(item,THEME['mode_indicator']))
@@ -1927,8 +1988,8 @@ if __name__ == "__main__":
     
     switch_mode("ESCAPE")
 
-    if not 'CHATLIST' in globals():
-        CHATLIST = []
+    if not 'SERVERS' in globals():
+        SERVERS = {}
         CURRENT_CHATROOM = None
         handle_action('menu_login')
 

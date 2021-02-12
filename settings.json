@@ -16,6 +16,7 @@
             "ui__title1": "colors",
             "title": "38;5;210",
             "error": "38;5;203",
+            "success": "38;5;76",
             "label": "38;5;249",
             "value": "38;5;72",
             "border": "38;5;60",
@@ -31,9 +32,10 @@
             "border_chars": "|-",
             "ui__prompt_options__delimiters": [
                 "<>",
-                "[]"
+                "[]",
+                "{}"
             ],
-            "prompt_delimiters": "[]",
+            "prompt_delimiters": "<>",
             "ui__button": {
                 "id": "settings-themes_showcolors",
                 "value": "show color guide"
