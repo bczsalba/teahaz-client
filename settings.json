@@ -132,7 +132,7 @@
         },
         "INSERT": {
             "mode_escape": "ESC",
-            "insert_newlines": "ENTER",
+            "message_send": "ENTER",
             "menu_settings": "CTRL_/",
             "reprint": "CTRL_L"
         },

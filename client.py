@@ -7,6 +7,7 @@ import json
 import time
 import getch
 import base64
+import pickle
 import requests
 import pytermgui
 import threading
@@ -206,7 +207,7 @@ def switch_mode(target):
             sys.stdout.write(f'\033[{y};{x}H ')
         sys.stdout.flush()
 
-    elif not PIPE_OUTPUT:
+    elif not KEEP_PIPE:
         MODE_LABEL.value = bold('-- '+target.upper()+' --')
         print(f'\033[{y};{x}H'+repr(MODE_LABEL))
 
@@ -254,33 +255,6 @@ def get_index(obj):
 
 ## server
 ### set new chatroom, make transition to it
-def set_chatroom(url,index):
-    if index == 'invalid' or index == 'register':
-        return
-
-    globals()['URL'] = url
-    chatrooms = SERVERS[url]
-    globals()['CURRENT_CHATROOM'] = url,index
-
-    edit_json('CURRENT_CHATROOM',[url,index],'usercfg.json')
-
-def add_new_server(values):
-    d = {}
-    for key,value in values.items():
-        if not key.startswith('ui__'):
-            d[key] = value
-
-    address = values.get('address')
-    chatroom = values.get('chatroom')
-    if SERVERS.get(address):
-        SERVERS[address].append(chatroom)
-    else:
-        SERVERS[address] = [chatroom]
-
-    edit_json('SERVERS',SERVERS,'usercfg.json')
-    import_json('usercfg')
-
-    return address,SERVERS[address].index(chatroom)
 
 
 ## editing
@@ -351,7 +325,7 @@ def return_to_infield(*args,**kwargs):
 
 # NETWORK FUNCTIONS #
 
-# start threaded connection, TODO: ignore input
+# start threaded connection, TODO: ignore input, add loading screeen
 def start_connection(contype,menu=None,**kwargs):
     def _connect(*args,**kwargs):
         # decide function to use
@@ -428,10 +402,6 @@ def login_or_register(contype,url,data):
                 'nickname': data.get('nickname')
                 }
 
-    #handler = lambda prev,self: {
-    #        prev.wipe(),
-    #        handle_menu_actions('menu_'+contype,current_file=data) }
-    
     if url == "":
         ui.create_error_dialog('Invalid value "'+url+'" for url.','choose other server')
         return 0 
@@ -441,62 +411,9 @@ def login_or_register(contype,url,data):
         dbg('bad response:',resp)
     else:
         text = "Successfully " + ("logged in" if contype == "login" else "registered")
+        BASE_DATA['username'] = d.get('username')
         ui.create_success_dialog(text)
     
-
-## receiving method
-def get(parameter,mode="message"):
-    data = BASE_DATA
-    
-    # set endpoint
-    endpoint = mode+"/"
-
-    # set parameter based on mode
-    if mode == "message":
-        data["time"] = str(parameter)
-    elif mode == "file":
-        data["filename"] = str(parameter)
-    else:
-        return "Client Error: Invalid get mode '"+str(mode)+"'"
-
-    # return response
-    response = SESSION.get(url=URL+endpoint,headers=BASE_DATA)
-    return json.loads(response.text)
-
-## sending method
-def send(message,mType='text'):
-    # base data gets appended to
-    data = BASE_DATA
-    
-    # handle specificities
-    if mType == 'text':
-        # set text-specific fields
-        data["message"] = encode(message)
-        data['type'] = "text"
-
-        endpoint = "message/"
-
-    elif mType == 'file':
-        # get file contents
-        with open(message, 'rb') as infile:
-            contents = encode_binary(infile.read())
-
-        # get file extension bc mimetype sucks sometimes
-        extension = message.split(".")[-1]
-
-        # set file-specific fields
-        data['type'] = "file"
-        data['extension'] = extension
-        data['data'] = contents
-
-        endpoint = "file/"
-
-    else:
-        return "Client Error: Invalid message type '"+str(mType)+"'"
-
-    # return response
-    response = SESSION.post(url=URL+endpoint, json=data)
-    return response.text
 
 
 
@@ -587,6 +504,9 @@ def handle_action(action):
     if action == "quit":
         print('\033[?25h')
         KEEP_GOING = 0
+        with open(SESSIONLOCATION,'wb') as f:
+            pickle.dump(SESSION,f)
+
         sys.exit()
 
     elif action == "reprint":
@@ -598,7 +518,7 @@ def handle_action(action):
     # message binds
     elif action == "message_send":
         msg = infield.value
-        ret = send(msg,'text')
+        ret = th.send(msg,'message')
         dbg(ret)
         if 'OK' in ret:
             infield.clear_value()
@@ -951,24 +871,24 @@ def handle_action(action):
     ## PIPES
     ### action_in actions
     elif action.endswith("_in"):
-        set_pipe(do_in,{'action': action},keep=1)
+        set_pipe(do_in,{'action': action},keep=0)
     
     ### find & till
     elif action == "find":
-        set_pipe(find,{},keep=1)
+        set_pipe(find,{},keep=0)
 
     elif action == "find_reverse":
-        set_pipe(find,{'reverse': True},keep=1)
+        set_pipe(find,{'reverse': True},keep=0)
     
     elif action == "till":
-        set_pipe(find,{'offset': -1},keep=1)
+        set_pipe(find,{'offset': -1},keep=0)
 
     elif action == "till_reverse":
-        set_pipe(find,{'offset': -1, 'reverse': True},keep=1)
+        set_pipe(find,{'offset': -1, 'reverse': True},keep=0)
 
     elif "replace" in action:
         if len(infield.value):
-            set_pipe(replace,{'action': action},keep=1)
+            set_pipe(replace,{'action': action},keep=0)
 
 
 ## handle action but for menus
@@ -1034,7 +954,8 @@ def handle_menu(key,obj,attributes={},page=0):
 
             # edit previous ui to show changes
             fun,kwargs,newobj = UI_TRACE[-2]
-            if not type(kwargs.get('source')) in [None,list]:
+            s = kwargs.get('source')
+            if s and not isinstance(s,list):
                 # set new value
                 kwargs['source'].value = new
 
@@ -1062,7 +983,6 @@ def handle_menu(key,obj,attributes={},page=0):
 
         # set previous trace element index
         UI_TRACE[-1][1]['index'] = index
-        dbg(UI_TRACE[-1][:1])
 
         # add to depth
         obj.__ui_keys.append(selected.real_label)
@@ -1084,7 +1004,6 @@ def handle_menu(key,obj,attributes={},page=0):
       
     elif key == " ":
         selected,_,index = obj.selected
-        dbg(selected.__ui_options)
         if selected.__ui_options and len(selected.__ui_options) == 2:
             #if not globals().get(selected.real_label) == None:
             # add to depth
@@ -1156,10 +1075,10 @@ def handle_menu(key,obj,attributes={},page=0):
 
 
 ## call menu creation
-def handle_menu_actions(action,current_file=None):#*args,**kwargs):#    
+def handle_menu_actions(action,current_file=None): 
+    ui.wipe()
     menu = action.replace('menu_','')
     corners = [v for k,v in THEME['corners'].items()]
-    dbg(corners)
     attrs = {}
 
     if menu == "settings":
@@ -1177,68 +1096,66 @@ def handle_menu_actions(action,current_file=None):#*args,**kwargs):#
             "ui__prompt": ["login","register"]
         }
 
-    elif menu == "login":
+    elif menu in ["login","register"]:
         address,chatindex = CURRENT_CHATROOM
-        chatid = SERVERS[address][chatindex]
+        chatid = SERVERS[address]['chatrooms'][chatindex]
 
         name = chatid+' @ '+address
-        corners[1] = "login"
-        pytermgui.set_attribute_for_id('login-button_submit','address',address)
-        pytermgui.set_attribute_for_id('login-button_submit','handler',
-                lambda prev,self: login_or_register('login',self.address,self.parent.dict_path))
+        corners[1] = menu
+        pytermgui.set_attribute_for_id(menu+'-button_submit','address',address)
+        pytermgui.set_attribute_for_id(menu+'-button_submit','handler',
+                lambda prev,self: login_or_register(menu,self.address,self.parent.dict_path))
 
         if current_file == None:
-            source = {
-                "ui__title": "Log into server",
-                "ui__padding0": 0,
-                "username": "",
-                "password": "",
-                "ui__padding1": 1,
-                "ui__button": {
-                    "id": "login-button_submit",
-                    "value": "submit!"
+            if menu == 'login':
+                source = {
+                    "ui__title": "Log into server",
+                    "ui__padding0": 0,
+                    "username": "",
+                    "password": "",
+                    "ui__padding1": 1,
+                    "ui__button": {
+                        "id": "login-button_submit",
+                        "value": "submit!"
+                    }
                 }
-            }
+            else:
+                source = {
+                    "ui__title": "Register onto server",
+                    "ui__padding0": 0,
+                    "username": "",
+                    "password": "",
+                    "email": "",
+                    "nickname": "",
+                    "ui__padding1": 1,
+                    "ui__button": {
+                        "id": "register-button_submit",
+                        "value": "submit!"
+                    }
+                }
+
         else:
             source = current_file
         
         attrs["address"] = URL
 
-    elif menu == "register":
-        address,chatindex = CURRENT_CHATROOM
-        chatid = SERVERS[address][chatindex]
-
-        pytermgui.set_attribute_for_id('register-button_submit','address',address)
-        pytermgui.set_attribute_for_id('register-button_submit','handler',
-                lambda prev,self: login_or_register('register',self.address,self.parent.dict_path))
-
-        if current_file == None:
-            source = {
-                "ui__title": "Register onto server",
-                "ui__padding0": 0,
-                "username": "",
-                "password": "",
-                "email": "",
-                "nickname": "",
-                "ui__padding1": 1,
-                "ui__button": {
-                    "id": "register-button_submit",
-                    "value": "submit!"
-                }
-            }
-
-        else:
-            source = current_file
-
-        #attrs["address"] = URL
+    elif menu == "server_picker":
+        ui.create_server_picker()
+        return
 
     elif menu == "server_new":
         pytermgui.set_attribute_for_id('server_new-button_add','handler',
-                lambda prev,self: add_new_server(prev.dict_path))
+                lambda prev,self: {
+                    th.add_new_server(prev.dict_path),
+                    handle_menu('ESC',self.parent)})
 
+        #pytermgui.set_attribute_for_id('server_new-prompt_address','handler', lambda _,self: {
+        #            ui.wipe(),
+        #            ui.create_address_picker(self)})
         source = {
                 "ui__title": "Add new connection",
                 "ui__padding0": 0,
+                "ui__id": "server_new-prompt_address",
                 "address": "",
                 "chatroom": "",
                 "ui__padding1": 1,
@@ -1248,6 +1165,9 @@ def handle_menu_actions(action,current_file=None):#*args,**kwargs):#
                 }
             }
 
+    elif menu == "address_picker":
+        ui.create_address_picker()
+        return
 
     elif menu == "picker":
         ui.create_menu_picker()
@@ -1464,6 +1384,162 @@ def replace(key,action):
 
 
 # CLASSES # 
+class TeahazServer:
+    def set_chatroom(self,url,index):
+        global BASE_DATA
+            
+        # return if certain values are passed
+        if index == 'invalid' or index == 'register':
+            return
+
+        
+        # look for url in cookies
+        for cookie in SESSION.cookies:
+            if cookie.domain == urlparse(url).netloc.split(':')[0]:
+                found = True
+                break
+        else:
+            found = False
+
+        globals()['URL'] = url
+        chatrooms = SERVERS[url]['chatrooms']
+        globals()['CURRENT_CHATROOM'] = url,index
+
+        BASE_DATA['username'] = SERVERS[url]['username']
+        BASE_DATA['chatroom'] = chatrooms[index]
+        
+        # get login or register 
+        if not found:
+            handle_action('menu_login_type')
+            return "login"
+
+        # set new globals
+        else:
+            edit_json('CURRENT_CHATROOM',[url,index],'usercfg.json')
+
+        dbg('chatroom set to',url,'/',chatrooms[index])
+
+    def add_new_server(self,values):
+        d = {}
+        for key,value in values.items():
+            if not key.startswith('ui__'):
+                d[key] = value
+
+        address = values.get('address')
+        chatroom = values.get('chatroom')
+        if SERVERS.get(address):
+            SERVERS[address]['chatrooms'].append(chatroom)
+        else:
+            SERVERS[address] = {}
+            SERVERS[address]['username'] = None
+            SERVERS[address]['chatrooms'] = [chatroom]
+
+        edit_json('SERVERS',SERVERS,'usercfg.json')
+        import_json('usercfg')
+
+        return address,SERVERS[address]['chatrooms'].index(chatroom)
+
+    def get(self,parameter,mode="message"):
+        data = BASE_DATA
+        
+        # set endpoint
+        endpoint = "/"+mode+"/"
+
+        # set parameter based on mode
+        if mode == "message":
+            data["time"] = str(parameter)
+        elif mode == "file":
+            data["filename"] = str(parameter)
+        else:
+            return "Client Error: Invalid get mode '"+str(mode)+"'"
+
+        # return response
+        response = SESSION.get(url=URL+'/api/v0'+endpoint,headers=BASE_DATA)
+        return response.text
+
+    ## sending method
+    def send(self,message,endpoint='message'):
+        data = BASE_DATA
+
+        # handle specificities
+        if endpoint == 'message':
+            # set text-specific fields
+            data["message"] = encode(message)
+            data['type'] = "text"
+
+        elif endpoint == 'file':
+            # get file contents
+            with open(message, 'rb') as infile:
+                contents = encode_binary(infile.read())
+
+            # get file extension bc mimetype sucks sometimes
+            extension = message.split(".")[-1]
+
+            # set file-specific fields
+            data['type'] = "file"
+            data['extension'] = extension
+            data['data'] = contents
+
+        else:
+            return "Client Error: Invalid message type '"+str(endpoint)+"'"
+        
+        endpoint = f'/{endpoint}/'
+        dbg(URL+'/api/v0'+endpoint)
+
+        # return response
+        response = SESSION.post(url=URL+'/api/v0'+endpoint, json=data)
+        self.print_messages()
+        return response.text
+
+    def print_messages(self,time=0):
+        get_result = th.get(time,'message')
+        if not PIPE_OUTPUT == None or PREV_GET == get_result:
+            return
+
+
+        globals()['PREV_GET'] = get_result
+        x,y = infield.pos
+        y -= 2
+        for clear_y in range(0,y+1):
+            print(f'\033[{clear_y};0H'+'\033[K')
+
+        try:
+            messages = json.loads(get_result)
+        except ValueError:
+            ui.create_error_dialog(message)
+            return
+
+        for m in reversed(messages):
+            if not isinstance(m,dict):
+                dbg(BASE_DATA)
+                dbg(messages,'isnt right')
+                break
+
+            if m.get('type') == "text":
+                try:
+                    content = decode(m.get('message'))
+                except Exception as e:
+                    dbg(e)
+                    content = "< could not display content >"
+
+                if m.get('username') == BASE_DATA['username']:
+                    x = WIDTH - MAX_MESSAGE_WIDTH() - 5
+                else:
+                    x = infield.pos[0]
+
+                lines = pytermgui.break_line(content,MAX_MESSAGE_WIDTH())
+                lines.insert(0,bold(color(m.get('nickname')+':',THEME['title'])))
+
+                for line in reversed(lines):
+                    dbg(line)
+                    if y > 0:
+                        sys.stdout.write(f'\033[{y};{x}H'+line)
+                        y -= 1
+            y -= 1
+        sys.stdout.flush()
+
+
+
 class ThreadWithReturnValue(threading.Thread):
     """
     Thread object that returns its value in the `join` method.
@@ -1528,7 +1604,6 @@ class InputDialog(Container):
             self.add_elements(Label())
 
         # add field
-        self.field.parent = self
         self.add_elements(self.field)
         
         # set xlimit of field
@@ -1580,11 +1655,16 @@ class UIGenerator:
     Object used for organizing UI generator functions
     into one place. May also have some values stored
     in the future.
+
+    *Almost* all calls to this object are done from
+    handle_menu_actions.
     """
 
     # wipe most recent ui element
     def wipe(self):
-        UI_TRACE[-1][2].wipe()
+        obj = UI_TRACE[-1][2]
+        if hasattr(obj,'wipe'):
+            obj.wipe()
 
     # create menu from a dictionary source
     def create_menu(self,source,corners,width=None,index=None,dict_index=0,**container_args):
@@ -1608,7 +1688,6 @@ class UIGenerator:
                 o.dict_path = kwargs['path']
 
             for i,c in enumerate([v for k,v in THEME['corners'].items()]):
-                dbg(i,c)
                 if not c == None:
                     o.set_corner(i,c)
 
@@ -1663,7 +1742,7 @@ class UIGenerator:
                 d.select()
 
         else:
-            if isinstance(getattr(source,'__ui_options'),list):
+            if isinstance(source.__dict__.get('__ui_options'),list):
                 options = getattr(source,'__ui_options')
             else:
                 options = None
@@ -1693,7 +1772,6 @@ class UIGenerator:
         print(d)
 
         fun,args = PIPE_OUTPUT
-        dbg(fun)
         if not fun == ignore_input:
             set_pipe(handle_menu,{'obj': dicts, 'page': dict_index})
         if index == None:
@@ -1705,8 +1783,8 @@ class UIGenerator:
             
     # create menu picker menu, likely only for dbg
     def create_menu_picker(self):
-        d = Container(width=40)
-        title = Label(value="pick your menu")
+        d = Container(width=50)
+        title = Label(value="pick your menu",justify='center',padding=0)
         title.set_style("value",pytermgui.CONTAINER_TITLE_STYLE)
         d.add_elements([title,Label()])
 
@@ -1727,6 +1805,116 @@ class UIGenerator:
 
         return d
 
+    def create_server_picker(self):
+        # create container
+        d = Container(width=50)
+
+        # set container corners
+        for i,c in enumerate([v for k,v in THEME['corners'].items()]):
+            if not c == None:
+                d.set_corner(i,c)
+
+        # create, add title
+        title = Label('choose chatroom',justify='center')
+        title.set_style('value',pytermgui.CONTAINER_TITLE_STYLE)
+        d.add_elements([title,Label()])
+
+        # go through servers
+        for url_long,data in SERVERS.items():
+            # convert url to a nicer form
+            url = urlparse(url_long).netloc
+            if url == "":
+                url = url_long
+            url_col = color(url,THEME['value'])
+
+            # go through chatrooms
+            for chatroom in data['chatrooms']:
+                chat_col = color(chatroom,THEME['title'])
+
+                # create, add prompt
+                p = Prompt(options=[chat_col+'@'+url_col],justify_options='center')
+                p.url = url_long
+                p.chatroom = chatroom
+
+                p.handler = lambda prev,self: {
+                        handle_menu('ESC',prev)
+                        if not th.set_chatroom(self.url,SERVERS[self.url]['chatrooms'].index(self.chatroom)) else None}
+
+                d.add_elements(p)
+
+        # create, add button
+        button = Prompt(options=['add new'])
+        button.set_style('value',pytermgui.CONTAINER_VALUE_STYLE)
+        pytermgui.set_element_id(button,'server_picker-button_add')
+
+        pytermgui.set_attribute_for_id(button.id,'handler',lambda prev,self: {
+            prev.wipe(),
+            handle_action('menu_server_new')})
+
+        d.add_elements([Label(),button])
+
+
+        set_pipe(handle_menu,{'obj': [d]})
+        add_to_trace([{},d])
+
+        d.center()
+        d.select()
+        print(d)
+
+        return d
+
+    # TODO: make button work here
+    def create_address_picker(self,caller_prompt):
+        f = caller_prompt.parent.dict_path 
+
+        d = Container(width=50)
+
+        # set container corners
+        for i,c in enumerate([v for k,v in THEME['corners'].items()]):
+            if not c == None:
+                d.set_corner(i,c)
+
+        title = Label(value="choose or add address",justify="center")
+        padding = Label()
+        d.add_elements([title,padding])
+
+        for url in SERVERS.keys():
+            p = Prompt(options=[url],justify_options="center")
+            p.file = f
+            p.handler = lambda _,self: {
+                    edit_json('address',self.real_value,self.file),handle_menu('ESC',self.parent)}
+
+            d.add_elements(p)
+
+        #button = Prompt(options=['add new'],justify_options="center")
+        #button.__ui_options = []
+        #button.real_label = 'new address'
+        #dbg(button.__ui_options),
+        #button.__ui_keys = ['address']
+        #button.handler = lambda _,self: {
+        #        ui.wipe(),
+        #        setattr(ui.create_submenu(self),'submit',[])}
+                    
+
+        d.add_elements([padding,button])
+
+        # set styles
+        d.set_style(Prompt,'value',pytermgui.CONTAINER_VALUE_STYLE)
+        d.set_style(Label,'value',pytermgui.CONTAINER_TITLE_STYLE)
+        padding.set_style('value',lambda item: item)
+    
+            
+        set_pipe(handle_menu,{'obj': [d]})
+        add_to_trace([{'caller_prompt': caller_prompt},d])
+
+        d.center()
+        d.select()
+        print(d)
+
+        return d
+
+
+        
     # unified way to create error dialog
     def create_error_dialog(self,text,button="ignore",handler=None):
         source = {
@@ -1756,6 +1944,7 @@ class UIGenerator:
 
     # unified way to create success dialog
     def create_success_dialog(self,text,button="dismiss"):
+        ui.wipe()
         source = {
                 "ui__success_title": text,
                 "ui__padding": "",
@@ -1815,66 +2004,38 @@ class UIGenerator:
         print(c)
         return c
 
-    # def create_server_picker(self,source):
-
-    ## add new server
-    # def create_menu_server_add(self,url='',chatroom=''):
-    #    source = {
-    #            "ui__title": "new connection",
-    #            "server_name": "",
-    #            "address": url,
-    #            "chatroom": chatroom,
-
-    #            "ui__id": "servernew-prompt_register",
-    #            "ui__prompt_options_register": [True,False],
-    #            "register": True,
-
-    #            "ui__button": {
-    #                "id": "servernew-button_add",
-    #                "value": "add"
-    #                }
-    #            }
-
-    #    pytermgui.set_attribute_for_id('servernew-prompt_register','handler',lambda _,self: {
-    #            setattr(self,'value',toggle_option(getattr(self,'__ui_options',self.real_value))),
-    #            setattr(self,'real_value',self.value),
-    #            print(self.parent)})
-
-    #    pytermgui.set_attribute_for_id('servernew-button_add','handler',lambda _,self: { 
-    #                set_chatroom(
-    #                    add_new_server(
-    #                        self.parent.dict_path,
-    #                        register=pytermgui.get_object_by_id('servernew-prompt_register').real_value))})
-
-    #    d = self.create_menu(source=[load_path,{'path': source}],corners=[[],[],[],"add"])
-    #    globals()['CURRENT_FILE'] = source
-    #    return d
-
 
 
 
 # GLOBALS #
 PATH = os.path.abspath(os.path.dirname(__file__))
-import_json("settings")
-import_json("usercfg")
+if os.path.exists(os.path.join(PATH,'settings.json')):
+    import_json("settings")
+
+if os.path.exists(os.path.join(PATH,'usercfg.json')):
+    import_json("usercfg")
+else:
+    with open(os.path.join(PATH,'usercfg.json'),'w') as f:
+        f.write('{}')
+
 
 LOGFILE = os.path.join(PATH,'log')
 DELIMITERS = "!@#$%^&*()[]{}|\\;':\",.<>/? \t"
+MAX_MESSAGE_WIDTH = lambda: int(WIDTH*4/10)
 
 # menus for handle_menu_actions
 MENUS = [
-    #"menu_serverpicker",
+    "menu_server_picker",
+    #"menu_address_picker",
     "menu_server_new",
     #"menu_serverregister",
     "menu_login_type",
     #"menu_login",
-    "menu_settings",
+    #"menu_settings",
     #"menu_picker"
 ]
 
 KEEP_GOING = True
-
-SESSION = requests.session()
 
 INPUT = ""
 INPUT_CURSOR = 0
@@ -1896,7 +2057,6 @@ COOKIE = "flamingoestothestore"
 URL = None
 BASE_DATA = {
     "username": None,
-    "cookie": None,
     "chatroom": None,
 }
 
@@ -1921,8 +2081,16 @@ if __name__ == "__main__":
             print()
         sys.exit(1)
 
+    SESSIONLOCATION = os.path.join(PATH,'session.obj')
+    if os.path.exists(SESSIONLOCATION):
+        with open(SESSIONLOCATION,'rb') as f:
+            SESSION = pickle.load(f)
+    else:
+        SESSION = requests.session()
 
     ui = UIGenerator()
+    th = TeahazServer()
+
 
 
     # set pytermgui styles
@@ -1976,8 +2144,14 @@ if __name__ == "__main__":
     infield.line_offset = None
     infield.visual_color = lambda: '\033['+THEME['field_highlight']+'m'
 
-    urls = list(SERVERS.keys())
-    set_chatroom(urls[0],0)
+    if is_set('SERVERS'):
+        urls = list(SERVERS.keys())
+        th.set_chatroom(urls[0],0)
+        #dbg(th.get(parameter='0'))
+    else:
+        SERVERS = {}
+        CURRENT_CHATROOM = None
+        handle_action('menu_server_new')
     
     MODE_LABEL = Label('-- ESCAPE --',justify='left')
     MODE_LABEL.set_style('value',lambda item: color(item,THEME['mode_indicator']))
@@ -1986,10 +2160,14 @@ if __name__ == "__main__":
     
     switch_mode("ESCAPE")
 
-    if not 'SERVERS' in globals():
-        SERVERS = {}
-        CURRENT_CHATROOM = None
-        handle_action('menu_login')
 
     # main input loop
-    getch_loop()
+    g_loop = threading.Thread(target=getch_loop,name="getch_loop")
+    g_loop.start()
+    PREV_GET = None
+
+    while True:
+        time.sleep(0.5)
+        th.print_messages()
+
+        

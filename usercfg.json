@@ -1,15 +1,15 @@
 {
+    "SERVERS": {
+        "http://butorhaz.hopto.org:13337": {
+            "username": "alma",
+            "chatrooms": [
+                "conv1",
+                "conv2?"
+            ]
+        }
+    },
     "CURRENT_CHATROOM": [
         "http://butorhaz.hopto.org:13337",
         0
-    ],
-    "SERVERS": {
-        "http://butorhaz.hopto.org:13337": [
-            "gyulaiak",
-            "zalaiak"
-        ],
-        "http://cserjeskopandi.dyndns.org:13337": [
-            "amalia"
-        ]
-    }
+    ]
 }

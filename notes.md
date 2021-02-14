@@ -1,30 +1,22 @@
-* rn : integrating add_server, global URL & chatroom things
+* rn: pytermgui/break_line inert errors :(
 
 # BUGS
 - [ ] only the first element in multipage containers resizes
 
 
-
 # FEATURES 
 ## upcoming checklist
-- minor fixes
-    * [ ] url address should be pulled from a global
+- create general picker function that other pickers can call
 
 - messaging lol
-    * [ ] basic functions first
-        + [ ] add server
-        + [x] login/register
-            - [x] basic menu
-            - [x] login function
-            - [x] register function
-
-    * [x] profiles menu
-        + [x] add new server functionality
-    * [ ] change_chatroom
-        + [x] let set_chatroom switch active connection to them, or create new connection if one isn't in dict
-
     * [ ] top headerbar indicating current chatroom info
 
+    * [ ] message
+        + [x] get
+        + [x] send
+        + [ ] display
+            - [ ] invent fancy formula to get pos of messages by index
+        + [ ] select
 
 - new binds
     * [ ] `s` 
@@ -88,3 +80,13 @@
 
 - general ui
     * [x] make colorguide nicer
+
+- messaging lol
+    * [x] basic functions first
+        + [x] add server
+        + [x] login/register
+            - [x] basic menu
+            - [x] login function
+            - [x] register function
+
+

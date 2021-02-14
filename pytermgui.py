@@ -7,7 +7,7 @@ def clr():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 def dbg(*args,**kwargs):
-    pass
+    print(*args,**kwargs)
 
 def set_debugger(fun):
     globals()['dbg'] = fun
@@ -21,6 +21,8 @@ def set_style(key,value):
         globals()[key+'_STYLE'] = value
 
 def clean_ansi(s):
+    if not type(s) in [str,bytes]:
+        raise Exception('Value <'+str(s)+'>\'s type ('+str(type(s))+' is not str or bytes')
     import re
     return re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]').sub('', s)
 
@@ -28,7 +30,7 @@ def real_length(s):
     return len(clean_ansi(s))
 
 def break_line(_inline,_len,_pad=0,_separator=' '):
-    if _len == None or _separator not in _inline:
+    if _len == None:# or _separator not in _inline:
         return [_inline]
 
     # check if line is over length provided
@@ -58,11 +60,34 @@ def break_line(_inline,_len,_pad=0,_separator=' '):
         if len(current):
             lines.append(pad(lines)+current)
 
-        return lines
+        if not len(lines):
+            lines = _inline.split('\n')
+
 
     # return original line in array
     else:
-        return _inline.split('\n')
+        lines = _inline.split('\n')
+
+    newlines = []
+    # TODO: make this work with colored text
+    for i,l in enumerate(lines):
+        if real_length(l) >= _len:
+            clean = clean_ansi(l)
+
+            buff = ''
+            for charindex,c in enumerate(clean):
+                buff += c
+                if len(buff) >= _len:
+                    newlines.append(buff)
+                    buff = ''
+
+            if len(buff):
+                newlines.append(buff)
+
+        else:
+            newlines.append(l)
+
+    return newlines
 
 def set_element_id(element,element_id):
     element.id = element_id
@@ -138,7 +163,6 @@ def container_from_dict(dic,padding=4,**kwargs):
                 if not element_id == None:
                     set_element_id(l,element_id)
                     element_id = None
-                l.parent = dicts[-1]
 
                 height_with_segment = dicts[-1].real_height + next_title*(1+dicts[-1].padding)+5
                 
@@ -182,7 +206,6 @@ def container_from_dict(dic,padding=4,**kwargs):
                 if element_id:
                     set_element_id(p,element_id)
                     element_id = None
-                p.parent = dicts[-1]
 
                 dicts[-1].add_elements(p)
  
@@ -193,7 +216,6 @@ def container_from_dict(dic,padding=4,**kwargs):
                 if element_id:
                     set_element_id(p,element_id)
                     element_id = None
-                p.parent = dicts[-1]
 
                 dicts[-1].add_elements(p)
 
@@ -207,7 +229,6 @@ def container_from_dict(dic,padding=4,**kwargs):
                     button.handler = lambda *args: None
 
                 dicts[-1].add_elements(button)
-                button.parent = dicts[-1]
             
             elif key.startswith('ui__label'):
                 justify = item.get('justify')
@@ -217,7 +238,6 @@ def container_from_dict(dic,padding=4,**kwargs):
                 if element_id:
                     set_element_id(p,element_id)
                     element_id = None
-                p.parent = dicts[-1]
 
                 label = Label(value=value,justify=justify,padding=padding)
                 dicts[-1].add_elements(label)
@@ -256,7 +276,6 @@ def container_from_dict(dic,padding=4,**kwargs):
             if element_id:
                 set_element_id(p,element_id)
                 element_id = None
-            p.parent = dicts[-1]
 
             if not delim == None:
                 p.delimiter_style = lambda: ['   ','{}']
@@ -446,6 +465,7 @@ class Container:
                 for o in self.selectables:
                     if o[0] == e:
                         self.selectables.remove(o)
+                dbg('ERROR:',type(e),'width was too long or otherwise invalid, ignoring!')
                 continue
 
             diff = len(lines)
@@ -505,6 +525,7 @@ class Container:
             self.height += e.height
 
         self.elements.append(element)
+        element.parent = self
 
         # update real_height
         self.real_height += element.height
@@ -740,10 +761,12 @@ class Container:
                 # check if self can be extended
                 if e.width+10 < WIDTH*(1/2) and e.width < self.width:
                     self.width = e.width+10
+                    e.real_value = e.value
                 else:
                     e.real_value = e.value
                     e.value = '...'
                 
+            # second check
             if real_length(str(e.label))+4 > self.width*(1/2):
                 e.label = str(e.label)[:int(self.width*(1/3))-3]+'...'
 
@@ -793,6 +816,7 @@ class Prompt:
         self.options = options
         self.padding = padding
         self.value = value
+        self.real_value = self.value
 
         # styles
         self.highlight_style = PROMPT_HIGHLIGHT_STYLE
@@ -900,6 +924,7 @@ class Prompt:
 
         if isinstance(self.options,list):
             self.value = self.options[index]
+            self.real_value = self.value
         return self.value
 
 
