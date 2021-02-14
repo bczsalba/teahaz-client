@@ -15,6 +15,7 @@
         "draculite": {
             "ui__title1": "colors",
             "title": "38;5;210",
+            "fade": "38;5;237",
             "error": "38;5;203",
             "success": "38;5;76",
             "label": "38;5;249",

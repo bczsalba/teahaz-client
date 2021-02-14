@@ -15,7 +15,7 @@ import pyperclip as clip
 from urllib.parse import urlparse
 from pytermgui import WIDTH,HEIGHT
 from pytermgui import clean_ansi,real_length,break_line
-from pytermgui import italic,bold,underline,color,highlight
+from pytermgui import italic,bold,underline,color,highlight,gradient,get_gradient
 from pytermgui import Container,Prompt,Label,container_from_dict
 
 
@@ -315,9 +315,12 @@ def return_to_infield(*args,**kwargs):
     global PIPE_OUTPUT,KEEP_PIPE
     
     #os.system('cls' if os.name == 'nt' else 'clear')
-    infield.print()
     PIPE_OUTPUT = None
     KEEP_PIPE = False
+
+    # TODO: this dont work
+    th.print_messages()
+    infield.print()
 
 
 
@@ -512,6 +515,8 @@ def handle_action(action):
     elif action == "reprint":
         fun,args,obj = UI_TRACE[-1]
         pytermgui.clr()
+        th.print_messages()
+
         fun(**args)
         return
 
@@ -1077,6 +1082,9 @@ def handle_menu(key,obj,attributes={},page=0):
 ## call menu creation
 def handle_menu_actions(action,current_file=None): 
     ui.wipe()
+    if PIPE_OUTPUT == None:
+        pytermgui.clr()
+
     menu = action.replace('menu_','')
     corners = [v for k,v in THEME['corners'].items()]
     attrs = {}
@@ -1484,61 +1492,131 @@ class TeahazServer:
             return "Client Error: Invalid message type '"+str(endpoint)+"'"
         
         endpoint = f'/{endpoint}/'
-        dbg(URL+'/api/v0'+endpoint)
 
         # return response
+        try:
+            old = json.loads(PREV_GET)
+        except ValueError as e:
+            # TODO: handle this
+            dbg(e)
+            pass
+
+        #for message in reversed(old):
+        #    dbg(message)
+        #    # TODO: this doesnt work before there are some messages
+        #    if message['username'] == BASE_DATA['username'] and message['type'] == 'text':
+        #        template = message
+
+        #template['message'] = data['message']
+
+
         response = SESSION.post(url=URL+'/api/v0'+endpoint, json=data)
         self.print_messages()
         return response.text
 
-    def print_messages(self,time=0):
-        get_result = th.get(time,'message')
-        if not PIPE_OUTPUT == None or PREV_GET == get_result:
+    def print_messages(self,start_time=0,extras=[]):
+        get_result = th.get(start_time,'message')
+
+        # return if no change happened
+        if get_result == PREV_GET and not len(extras):
             return
 
-
+        # set global
         globals()['PREV_GET'] = get_result
-        x,y = infield.pos
-        y -= 2
-        for clear_y in range(0,y+1):
-            print(f'\033[{clear_y};0H'+'\033[K')
 
+        # check if get_result is proper json, otherwise treat it like an error
         try:
             messages = json.loads(get_result)
-        except ValueError:
-            ui.create_error_dialog(message)
+        except ValueError as e:
+            dbg('Exception while converting get_result to json:',e)
+            ui.create_error_dialog(get_result)
+            return
+        
+        # get position
+        leftx,y = infield.pos
+        y -= 3
+
+        # clear affected parts of screen
+        for cleary in range(0,y+1):
+            print(f'\033[{cleary};H\033[K')
+
+        # error if return isnt a list
+        if not isinstance(messages,list):
+            dbg(messages,'isn\'t a dictionary.')
+            ui.create_error_dialog(messages)
             return
 
-        for m in reversed(messages):
+        # loop through messages
+        previous = None
+        for i,m in enumerate(reversed(messages)):
+            
+            # error if message isnt a dict
             if not isinstance(m,dict):
-                dbg(BASE_DATA)
-                dbg(messages,'isnt right')
-                break
+                dbg('message',m,'isn\'t a dictionary, skipping.')
+                continue
 
-            if m.get('type') == "text":
-                try:
-                    content = decode(m.get('message'))
-                except Exception as e:
-                    dbg(e)
-                    content = "< could not display content >"
+            # files arent implemented lol
+            elif m.get('type') != 'text':
+                raise NotImplementedError('Implement message type',m.get('type'))
+            
+            # get & convert time
+            epoch = m.get('time')
+            sendtime = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(epoch))
 
-                if m.get('username') == BASE_DATA['username']:
-                    x = WIDTH - MAX_MESSAGE_WIDTH() - 5
-                else:
-                    x = infield.pos[0]
+            # try to get content, error if content errors
+            try:
+                content = decode(m.get('message'))
+            except Exception as e:
+                dbg(e)
+                continue
 
-                lines = pytermgui.break_line(content,MAX_MESSAGE_WIDTH())
-                lines.insert(0,bold(color(m.get('nickname')+':',THEME['title'])))
+            # get lines from content, add nickname & time
+            lines = pytermgui.break_line(content,MAX_MESSAGE_WIDTH())
 
-                for line in reversed(lines):
-                    dbg(line)
-                    if y > 0:
-                        sys.stdout.write(f'\033[{y};{x}H'+line)
-                        y -= 1
+            do_infoprint = True
+            #if previous:
+            #    current_time = int(m.get('time'))
+            #    previous_time = int(m.get('time'))
+
+
+            #    if current_time-previous_time < 30:
+            #        do_infoprint = False
+                    
+            if do_infoprint:
+                lines.insert(0,color(m.get('nickname'),THEME['title']))
+                lines.append(color(sendtime,THEME['fade']))
+
+            # decide side to print on
+            if m.get('username') == BASE_DATA.get('username'):
+                x = WIDTH-max([real_length(l) for l in lines])-2
+            else:
+                x = leftx
+
+            # print all lines if their y value is printable
+            for l in reversed(lines):
+                if y > 0:
+                    sys.stdout.write(f'\033[{y};{x}H'+l)
+                y -= 1
+            
+            # add spacing between messages
             y -= 1
+
+            previous = m
+
         sys.stdout.flush()
 
 
+
+        
+
+
+
+
+
+    def get_loop(self):
+        while KEEP_GOING:
+            time.sleep(0.5)
+            self.print_messages()
 
 class ThreadWithReturnValue(threading.Thread):
     """
@@ -2046,6 +2124,7 @@ VISUAL_END = 0
 PIPE_OUTPUT = None
 PIPE_ARGS = {}
 KEEP_PIPE = False
+PREV_GET = None
 
 UI_TRACE = [[return_to_infield,{},'']]
 CURRENT_FILE = None
@@ -2160,14 +2239,15 @@ if __name__ == "__main__":
     
     switch_mode("ESCAPE")
 
+    get_loop = threading.Thread(target=th.get_loop,name='get_loop')
+    get_loop.start()
 
     # main input loop
-    g_loop = threading.Thread(target=getch_loop,name="getch_loop")
-    g_loop.start()
-    PREV_GET = None
+    getch_loop()
 
-    while True:
-        time.sleep(0.5)
-        th.print_messages()
+
+    #while True:
+    #    time.sleep(0.5)
+    #    th.print_messages()
 
         

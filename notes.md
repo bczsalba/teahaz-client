@@ -1,4 +1,4 @@
-* rn: pytermgui/break_line inert errors :(
+* rn: same user similar time messages should unset do_infoprint
 
 # BUGS
 - [ ] only the first element in multipage containers resizes
@@ -14,8 +14,8 @@
     * [ ] message
         + [x] get
         + [x] send
-        + [ ] display
-            - [ ] invent fancy formula to get pos of messages by index
+        + [x] display
+            - [x] invent fancy formula to get pos of messages by index
         + [ ] select
 
 - new binds

@@ -330,6 +330,70 @@ def color(s,col):
         col = ';'.join(col)
 
     return f'\033[{col}m'+str(s)+'\033[0m'
+    reverse = 1
+
+# get 5 length gradient including `include`
+def get_gradient(include,direction='vertical'):
+    # do rainbow gradient
+    if include == 'rainbow':
+        return ['124','208','226','82','21','57','93']
+
+    c = include
+    colors = []
+
+    # go vertically in color chart
+    if direction == 'vertical':
+        # get starting value
+        while c > 36:
+            c -= 36
+
+        # get and add values
+        while c <= 231-36:
+            c += 36
+            colors.append(str(c))
+
+    # go horizontally in color chart
+    else:
+        # get starting value
+        if c < 16:
+            c = 16
+
+        while c > 16 and not (c-16) % 6 == 0:
+            print(c-16)
+            c -= 1
+
+        # get and add values
+        for _ in range(5):
+            c += 1
+            colors.append(str(c))
+
+    return colors
+
+# apply gradient from `values` to `layer`
+def gradient(text,values,layer='fg'):
+    colors = []
+
+    # get ratio between text and value lengths
+    ratio = max(1,len(text)/len(values))
+    if not ratio.is_integer():
+        ratio = int(ratio)+1
+    else:
+        ratio = int(ratio)
+
+    # add color `ratio` times
+    for v in values:
+        for _ in range(ratio):
+            colors.append(v)
+
+    # add colored text
+    out = ''
+    for char,col in zip(text,colors):
+        if layer == 'bg':
+            out += '\033[7m'
+        out += color(char,'38;5;'+col)
+    return out
+
+
 
 
 # EVENTS #
