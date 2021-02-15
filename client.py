@@ -302,6 +302,7 @@ def get_infield_pos():
 
         if not infield.line_offset == offset:
             infield.wipe()
+            th.print_messages(reprint=True)
 
         infield.line_offset = offset
 
@@ -415,7 +416,14 @@ def login_or_register(contype,url,data):
     else:
         text = "Successfully " + ("logged in" if contype == "login" else "registered")
         BASE_DATA['username'] = d.get('username')
-        ui.create_success_dialog(text)
+         
+        if contype == "register":
+            dbg('logging in to new user')
+            login_or_register("login",URL,data)
+            return
+
+        else:
+            ui.create_success_dialog(text)
     
 
 
@@ -1514,15 +1522,19 @@ class TeahazServer:
         self.print_messages()
         return response.text
 
-    def print_messages(self,start_time=0,extras=[]):
-        get_result = th.get(start_time,'message')
+    def print_messages(self,start_time=0,extras=[],reprint=False):
+        if not reprint:
+            get_result = th.get(start_time,'message')
 
-        # return if no change happened
-        if get_result == PREV_GET and not len(extras):
-            return
+            # return if no change happened
+            if get_result == PREV_GET and not len(extras):
+                return
+            # set global
+            globals()['PREV_GET'] = get_result
 
-        # set global
-        globals()['PREV_GET'] = get_result
+        else:
+            get_result = PREV_GET
+
 
         # check if get_result is proper json, otherwise treat it like an error
         try:
@@ -1548,7 +1560,7 @@ class TeahazServer:
 
         # loop through messages
         previous = None
-        for i,m in enumerate(reversed(messages)):
+        for i,m in enumerate(messages):
             
             # error if message isnt a dict
             if not isinstance(m,dict):
@@ -1573,37 +1585,136 @@ class TeahazServer:
             # get lines from content, add nickname & time
             lines = pytermgui.break_line(content,MAX_MESSAGE_WIDTH())
 
-            do_infoprint = True
-            #if previous:
-            #    current_time = int(m.get('time'))
-            #    previous_time = int(m.get('time'))
+            # test if the current message is the start of a chunk
+            chunk_start = True
+            if 0 <= i-1:
+                previous = messages[i-1]
+            else:
+                previous = None
 
+            if previous:
+                prev_time = int(previous.get('time'))
+                current_time = int(m.get('time'))
 
-            #    if current_time-previous_time < 30:
-            #        do_infoprint = False
-                    
-            if do_infoprint:
+                if previous.get('username') == m.get('username') and current_time-prev_time > 0:
+                    chunk_start = False         
+
+            # test if current message is the end of a chunk 
+            chunk_end = True
+            if len(messages) > i+1:
+                next_msg = messages[i+1]
+            else:
+                next_msg = None
+
+            if next_msg:
+                if next_msg.get('username') == m.get('username'):
+                    chunk_end = False
+
+            # do things according to these values
+            if chunk_start:
                 lines.insert(0,color(m.get('nickname'),THEME['title']))
+
+            if chunk_end:
                 lines.append(color(sendtime,THEME['fade']))
 
             # decide side to print on
-            if m.get('username') == BASE_DATA.get('username'):
-                x = WIDTH-max([real_length(l) for l in lines])-2
+            same_user = m.get('username') == BASE_DATA.get('username')
+
+            if same_user:
+                usernamex = WIDTH-real_length(m.get('nickname'))
+                timex = WIDTH-real_length(sendtime)
             else:
-                x = leftx
+                usernamex = leftx
+                timex = leftx
 
             # print all lines if their y value is printable
-            for l in reversed(lines):
-                if y > 0:
-                    sys.stdout.write(f'\033[{y};{x}H'+l)
-                y -= 1
-            
-            # add spacing between messages
-            y -= 1
+            spacing = 0
+            x = leftx
+            for i,l in enumerate(lines):
+                if chunk_start and i == 0 and same_user:
+                    x = WIDTH-real_length(m.get('nickname'))
 
-            previous = m
+                elif chunk_end and i == len(lines)-1 and same_user:
+                    x = WIDTH-real_length(sendtime)
+
+                elif same_user:
+                    x = WIDTH-spacing-real_length(l)
+
+                else:
+                    x += spacing
+                    
+                sys.stdout.write(f'\033[{y};{x}H'+l+'\n')
+                y += 1
+
+            # add spacing between messages
+            if chunk_end:
+                sys.stdout.write('\n')
+
+
+        offset = (infield.line_offset if infield.line_offset else 0)
+        for _ in range(5+offset):
+            sys.stdout.write('\n')
 
         sys.stdout.flush()
+        
+
+        #sys.stdout.flush()
+        #for i,m in enumerate(reversed(messages)):
+        #    
+        #    # error if message isnt a dict
+        #    if not isinstance(m,dict):
+        #        dbg('message',m,'isn\'t a dictionary, skipping.')
+        #        continue
+
+        #    # files arent implemented lol
+        #    elif m.get('type') != 'text':
+        #        raise NotImplementedError('Implement message type',m.get('type'))
+        #    
+        #    # get & convert time
+        #    epoch = m.get('time')
+        #    sendtime = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(epoch))
+
+        #    # try to get content, error if content errors
+        #    try:
+        #        content = decode(m.get('message'))
+        #    except Exception as e:
+        #        dbg(e)
+        #        continue
+
+        #    # get lines from content, add nickname & time
+        #    lines = pytermgui.break_line(content,MAX_MESSAGE_WIDTH())
+
+        #    do_infoprint = True
+        #    #if previous:
+        #    #    current_time = int(m.get('time'))
+        #    #    previous_time = int(m.get('time'))
+
+
+        #    #    if current_time-previous_time < 30:
+        #    #        do_infoprint = False
+        #            
+        #    if do_infoprint:
+        #        lines.insert(0,color(m.get('nickname'),THEME['title']))
+        #        lines.append(color(sendtime,THEME['fade']))
+
+        #    # decide side to print on
+        #    if m.get('username') == BASE_DATA.get('username'):
+        #        x = WIDTH-max([real_length(l) for l in lines])-2
+        #    else:
+        #        x = leftx
+
+        #    # print all lines if their y value is printable
+        #    for l in reversed(lines):
+        #        if y > 0:
+        #            sys.stdout.write(f'\033[{y};{x}H'+l)
+        #        y -= 1
+        #    
+        #    # add spacing between messages
+        #    y -= 1
+
+        #    previous = m
+
+        #sys.stdout.flush()
 
 
 
