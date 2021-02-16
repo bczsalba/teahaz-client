@@ -323,14 +323,13 @@ def underline(s):
     return '\033[4m'+str(s)+'\033[0m'
 
 def highlight(s,fg='0'):
-    return color(clean_ansi(s),['7',fg])
+    return '\033[7m'+color(clean_ansi(s),fg)
 
-def color(s,col):
+def color(s,col,reset=True):
     if isinstance(col,list):
-        col = ';'.join(col)
+        raise Exception('color argument `col` has to be of type int or string')
 
-    return f'\033[{col}m'+str(s)+'\033[0m'
-    reverse = 1
+    return f'\033[{DEFAULT_COLOR_PREFIX};{col}m'+str(s)+('\033[0m' if reset else '')
 
 # get 5 length gradient including `include`
 def get_gradient(include,direction='vertical'):
@@ -369,13 +368,13 @@ def get_gradient(include,direction='vertical'):
 
     return colors
 
-# apply gradient from `values` to `layer`
+
 def gradient(text,values,layer='fg'):
     colors = []
 
     # get ratio between text and value lengths
     ratio = max(1,len(text)/len(values))
-    if not ratio.is_integer():
+    if not isinstance(ratio,int) and not ratio.is_integer():
         ratio = int(ratio)+1
     else:
         ratio = int(ratio)
@@ -390,7 +389,8 @@ def gradient(text,values,layer='fg'):
     for char,col in zip(text,colors):
         if layer == 'bg':
             out += '\033[7m'
-        out += color(char,'38;5;'+col)
+        out += color(char,col,reset=False)
+    out += '\033[00;00m'
     return out
 
 
@@ -511,6 +511,7 @@ class Container:
 
         # print all elements
         extra_lines = 0
+        self.lines = []
         for i,e in enumerate(self.elements):
             self.width = min(max(self.width,e.width+4),WIDTH-4)
             e.width = self.width - 4
@@ -536,7 +537,9 @@ class Container:
             new_real_height += diff
 
 
+            self.lines += lines
             for li,l in enumerate(lines):
+                dbg(l,starty+i+li)
                 line += f"\033[{starty+i+li};{x}H"+(real_length(l)+2)*' '
                 line += f"\033[{starty+i+li};{x}H "+l
 
@@ -1073,6 +1076,7 @@ ELEMENT_ATTRIBUTES = {}
 
 # styles
 ## other
+DEFAULT_COLOR_PREFIX = "38;5"
 GLOBAL_HIGHLIGHT_STYLE = highlight
 CURSOR_HIGHLIGHT_STYLE = GLOBAL_HIGHLIGHT_STYLE
 TABBAR_HIGHLIGHT_STYLE = GLOBAL_HIGHLIGHT_STYLE
@@ -1101,11 +1105,32 @@ LABEL_VALUE_STYLE = lambda item: item
 VERBOSE = 0
 
 
+def perspective(color,index):
+    chars = ( (WIDTH-1) ) * '█'
+    gradient1 = get_gradient(color)
+    gradient2 = list(reversed(gradient1))[1:]
+    values = gradient1+gradient2
+
+    adjusted = index+1
+    values.insert(adjusted,values[adjusted])
+
+
+    line = gradient(chars,values)
+    for _ in range(HEIGHT):
+        print(line)
+
 
 # TEST CODE #
 if __name__ == "__main__":
-    import json,requests
-
+#    perspective(72,3)
+    #normal = gradient('alma',get_gradient('rainbow'))
+    #print(normal)
+    #print(bold(normal))
+#    for _ in range(HEIGHT): 
+#        print(gradient('████████████████████',get_gradient(141)),gradient('████████████████████',list(reversed(get_gradient(141)))),sep='')
+#
+    import requests
+#
     r = requests.get('https://online.sprinter.hu/terkep/data.json')
     d = r.json()
     d = d[0]
@@ -1113,16 +1138,19 @@ if __name__ == "__main__":
     c = container_from_dict(d)[0]
     c.set_corner(0,'example using sprinter json')
     c.set_corner(3,'pytermgui')
-    c.set_style(Prompt,'highlight',lambda a: highlight(a,'38;5;74'))
-    c.set_style(Container,'corner',lambda a: color(a,'38;5;141'))
-    c.set_style(Container,'border',lambda a: color(a,'38;5;220'))
-    c.set_style(Prompt,'label',lambda a: color(a,'38;5;103'))
-    c.set_style(Prompt,'value',lambda a: color(a,'38;5;61'))
+    c.set_style(Prompt,'highlight',lambda a: highlight(a,'74'))
+    c.set_style(Container,'corner',lambda a: color(a,'141'))
+    c.set_style(Container,'border',lambda a: color(a,'220'))
+    c.set_style(Prompt,'label',lambda a: color(a,'103'))
+    c.set_style(Prompt,'value',lambda a: color(a,'61'))
     c.set_style(Prompt,'delimiter',lambda: ['< ',' >'])
     c.set_borders('|_|-')
     c.select(3)
-    c.center()
+    #$c.center()
+    c.move([0,HEIGHT+10])
+    repr(c)
+
     #print(c)
-    with open('sprinter.ptg','w') as f:
-        f.write(repr(c))
+    #with open('sprinter.ptg','w') as f:
+    #    f.write(repr(c))
     print(c)

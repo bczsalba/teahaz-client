@@ -133,13 +133,14 @@ def dbg(*args):
 
     method = sys._getframe().f_back.f_code.co_name
     obj = sys._getframe().f_back.f_locals.get('self')
-    filename = sys._getframe().f_back.f_code.co_filename.split('/')[-1]
-    lineno = sys._getframe().f_back.f_lineno
+    filename = eval_color(THEME['title'],sys._getframe().f_back.f_code.co_filename.split('/')[-1])
+    lineno = eval_color(THEME['value'],sys._getframe().f_back.f_lineno)
 
     get_caller = lambda: type(obj).__name__+'.'+method if obj else method
 
     with open(LOGFILE,'a') as f:
-        f.write(f"{bold(color(filename,THEME.get('title')))}/{get_caller()}:{bold(color(lineno,THEME.get('value')))} : "+s+'\n')
+        filename
+        f.write(f"{bold(filename)}/{get_caller()}:{bold(lineno)} : "+s+'\n')
 
 ### do `fun` after `ms` passes, nonblocking
 def do_after(ms,fun,control='true',args={}):
@@ -253,9 +254,6 @@ def get_index(obj):
     return obj.selected_index
 
 
-## server
-### set new chatroom, make transition to it
-
 
 ## editing
 ### split `s` by delimiters defined in `DELIMITERS`, return array of words
@@ -323,6 +321,31 @@ def return_to_infield(*args,**kwargs):
     th.print_messages()
     infield.print()
 
+## return callable with arguments from string
+def eval_color(color_in,text):
+    # get specific calls
+    if not color_in.isdigit():
+        split = split_by_delimiters(color_in)
+        fun = split[0]
+
+        if len(split[1:]):
+            args = split[1:]
+        else:
+            args = []
+
+        if fun == "gradient":
+            col = args[0]
+            if col.isdigit():
+                col = int(col)
+            else:
+                col = col
+            fun_args = tuple([get_gradient(col)])
+            fun_call = gradient
+
+        return fun_call(text,*fun_args)
+
+    else:
+        return color(text,color_in)
 
 
 
@@ -1400,7 +1423,7 @@ def replace(key,action):
 
 
 # CLASSES # 
-class TeahazServer:
+class TeahazHelper:
     def set_chatroom(self,url,index):
         global BASE_DATA
             
@@ -1509,15 +1532,6 @@ class TeahazServer:
             dbg(e)
             pass
 
-        #for message in reversed(old):
-        #    dbg(message)
-        #    # TODO: this doesnt work before there are some messages
-        #    if message['username'] == BASE_DATA['username'] and message['type'] == 'text':
-        #        template = message
-
-        #template['message'] = data['message']
-
-
         response = SESSION.post(url=URL+'/api/v0'+endpoint, json=data)
         self.print_messages()
         return response.text
@@ -1569,7 +1583,8 @@ class TeahazServer:
 
             # files arent implemented lol
             elif m.get('type') != 'text':
-                raise NotImplementedError('Implement message type',m.get('type'))
+                #raise NotImplementedError('Implement message type',m.get('type'))
+                m['message'] = encode('< '+m.get('filename')+' >')
             
             # get & convert time
             epoch = m.get('time')
@@ -1612,10 +1627,11 @@ class TeahazServer:
 
             # do things according to these values
             if chunk_start:
-                lines.insert(0,color(m.get('nickname'),THEME['title']))
+                lines.insert(0,eval_color(THEME['title'],m.get('nickname'),))
 
             if chunk_end:
-                lines.append(color(sendtime,THEME['fade']))
+                dbg(THEME['fade'])
+                lines.append(eval_color(THEME['fade'],sendtime))
 
             # decide side to print on
             same_user = m.get('username') == BASE_DATA.get('username')
@@ -1631,6 +1647,15 @@ class TeahazServer:
             spacing = 0
             x = leftx
             for i,l in enumerate(lines):
+                if chunk_start and i == 0:
+                    if same_user:
+                        align = 'right'
+                    else:
+                        align = 'left'
+                        padding = 1
+                    #x = WIDTH-real_length(m.get('nickname'))
+
+            for i,l in enumerate(lines):
                 if chunk_start and i == 0 and same_user:
                     x = WIDTH-real_length(m.get('nickname'))
 
@@ -1645,80 +1670,18 @@ class TeahazServer:
                     
                 sys.stdout.write(f'\033[{y};{x}H'+l+'\n')
                 y += 1
-
+                    
             # add spacing between messages
+            sys.stdout.write('\n')
             if chunk_end:
                 sys.stdout.write('\n')
 
 
         offset = (infield.line_offset if infield.line_offset else 0)
-        for _ in range(5+offset):
+        for _ in range(3+offset):
             sys.stdout.write('\n')
 
-        sys.stdout.flush()
-        
-
-        #sys.stdout.flush()
-        #for i,m in enumerate(reversed(messages)):
-        #    
-        #    # error if message isnt a dict
-        #    if not isinstance(m,dict):
-        #        dbg('message',m,'isn\'t a dictionary, skipping.')
-        #        continue
-
-        #    # files arent implemented lol
-        #    elif m.get('type') != 'text':
-        #        raise NotImplementedError('Implement message type',m.get('type'))
-        #    
-        #    # get & convert time
-        #    epoch = m.get('time')
-        #    sendtime = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(epoch))
-
-        #    # try to get content, error if content errors
-        #    try:
-        #        content = decode(m.get('message'))
-        #    except Exception as e:
-        #        dbg(e)
-        #        continue
-
-        #    # get lines from content, add nickname & time
-        #    lines = pytermgui.break_line(content,MAX_MESSAGE_WIDTH())
-
-        #    do_infoprint = True
-        #    #if previous:
-        #    #    current_time = int(m.get('time'))
-        #    #    previous_time = int(m.get('time'))
-
-
-        #    #    if current_time-previous_time < 30:
-        #    #        do_infoprint = False
-        #            
-        #    if do_infoprint:
-        #        lines.insert(0,color(m.get('nickname'),THEME['title']))
-        #        lines.append(color(sendtime,THEME['fade']))
-
-        #    # decide side to print on
-        #    if m.get('username') == BASE_DATA.get('username'):
-        #        x = WIDTH-max([real_length(l) for l in lines])-2
-        #    else:
-        #        x = leftx
-
-        #    # print all lines if their y value is printable
-        #    for l in reversed(lines):
-        #        if y > 0:
-        #            sys.stdout.write(f'\033[{y};{x}H'+l)
-        #        y -= 1
-        #    
-        #    # add spacing between messages
-        #    y -= 1
-
-        #    previous = m
-
-        #sys.stdout.flush()
-
-
-
-        
+        sys.stdout.flush()        
 
 
 
@@ -1727,7 +1690,8 @@ class TeahazServer:
     def get_loop(self):
         while KEEP_GOING:
             time.sleep(0.5)
-            self.print_messages()
+            if not PIPE_OUTPUT:
+                self.print_messages()
 
 class ThreadWithReturnValue(threading.Thread):
     """
@@ -2279,34 +2243,34 @@ if __name__ == "__main__":
         SESSION = requests.session()
 
     ui = UIGenerator()
-    th = TeahazServer()
+    th = TeahazHelper()
 
 
 
     # set pytermgui styles
     pytermgui.set_style(
             'container_title',
-            lambda item: bold(color(item.upper(),THEME['title'])+':').replace('_',' ')
+            lambda item: bold(eval_color(THEME['title'],item)+':').replace('_',' ')
     )
     pytermgui.set_style(
             'container_error',
-            lambda item: bold(color(item.upper(),THEME['error']))
+            lambda item: bold(eval_color(THEME['error'],item.upper()))
     ),
     pytermgui.set_style(
             'container_success',
-            lambda item: bold(color(item.upper(),THEME['success']))
+            lambda item: bold(eval_color(THEME['success'],item.upper()))
     )
     pytermgui.set_style(
             'container_label',
-            lambda item: (color(item.lower(),THEME['label']))
+            lambda item: eval_color(THEME['label'],item.lower())
     )
     pytermgui.set_style(
             'container_value',
-            lambda item: (color(item,THEME['value']))
+            lambda item: eval_color(THEME['value'],item)
     )
     pytermgui.set_style(
             'container_border',
-            lambda item: (color(item,THEME['border']))
+            lambda item: eval_color(THEME['border'],item)
     )
     pytermgui.set_style(
             'prompt_highlight',
@@ -2315,7 +2279,7 @@ if __name__ == "__main__":
     pytermgui.set_style(
             'tabbar_highlight',
             #lambda item: highlight(item,THEME['title'])
-            lambda item: color(item,THEME['title'])
+            lambda item: eval_color(THEME['title'],item)
     )
     pytermgui.set_style(
             'container_border_chars',
@@ -2332,12 +2296,11 @@ if __name__ == "__main__":
     # set default mode
     infield = getch.InputField(pos=get_infield_pos())
     infield.line_offset = None
-    infield.visual_color = lambda: '\033['+THEME['field_highlight']+'m'
+    infield.visual_color = lambda: '\033['+pytermgui.DEFAULT_COLOR_PREFIX+';'+THEME['field_highlight']+'m'
 
     if is_set('SERVERS'):
         urls = list(SERVERS.keys())
         th.set_chatroom(urls[0],0)
-        #dbg(th.get(parameter='0'))
     else:
         SERVERS = {}
         CURRENT_CHATROOM = None
