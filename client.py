@@ -1653,7 +1653,6 @@ class TeahazHelper:
                     else:
                         align = 'left'
                         padding = 1
-                    #x = WIDTH-real_length(m.get('nickname'))
 
             for i,l in enumerate(lines):
                 if chunk_start and i == 0 and same_user:

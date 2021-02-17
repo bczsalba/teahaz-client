@@ -1,12 +1,35 @@
-* rn: same user similar time messages should unset do_infoprint
-
 # BUGS
 - [ ] only the first element in multipage containers resizes
 
 
 # FEATURES 
 ## upcoming checklist
+- prerequisites for FM:
+    * [ ] make menus use global binding dicts and have them be tied into handle_action
+    * [ ] add per-menu bindings for menus ( "ui__binds": { "key": "action" } )
+
+- FileManager(Container)
+    """
+    Container derivative that would show and let users interact
+    with files.
+    """
+    main methods (other than Container's):
+        * cd : change directory
+        * search(term) : search for `term` in files
+        * open(opt: index) : open selected file with the global 
+                             filetype handlers
+        * execute(cmd,*maybe regex to match files*) : execute given command
+                             in bash on the file
 - create general picker function that other pickers can call
+
+- pytergmui.Container.get_lines()
+    """
+    would be needed for container support in messaging, 
+    as printing further than end of terminal isnt supported 
+    in the current state.
+    """
+    * [ ] keep track and return lines printed
+    * [ ] also add borders to those lines, and return them
 
 - messaging lol
     * [ ] top headerbar indicating current chatroom info
