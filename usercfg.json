@@ -8,8 +8,5 @@
             ]
         }
     },
-    "CURRENT_CHATROOM": [
-        "http://butorhaz.hopto.org:13337",
-        0
-    ]
+    "CURRENT_CHATROOM": "http://butorhaz.hopto.org:13337/0"
 }

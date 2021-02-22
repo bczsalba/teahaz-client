@@ -20,6 +20,8 @@ def set_style(key,value):
     else:
         globals()[key+'_STYLE'] = value
 
+    return key+'_STYLE'
+
 def clean_ansi(s):
     if not type(s) in [str,bytes]:
         raise Exception('Value <'+str(s)+'>\'s type ('+str(type(s))+' is not str or bytes')
@@ -125,6 +127,7 @@ def set_listener(event,func):
 # container height wouldn't fit the screen
 def container_from_dict(dic,padding=4,**kwargs):
     dic_c = Container(**kwargs)
+
     dicts = [dic_c]
     reverse_items = False
     handler = None
@@ -289,6 +292,7 @@ def container_from_dict(dic,padding=4,**kwargs):
             if dicts[-1].height + p.height > HEIGHT-5:
                 dicts.append(Container(**kwargs))
 
+
             dicts[-1].add_elements(p)
 
 
@@ -313,85 +317,95 @@ def container_from_dict(dic,padding=4,**kwargs):
 
 
 # COLORS #
-def bold(s):
-    return '\033[1m'+str(s)+'\033[0m'
+class Color:
+    def bold(s):
+        return '\033[1m'+str(s)+'\033[0m'
 
-def italic(s):
-    return '\033[3m'+str(s)+'\033[0m'
+    def italic(s):
+        return '\033[3m'+str(s)+'\033[0m'
 
-def underline(s):
-    return '\033[4m'+str(s)+'\033[0m'
+    def underline(s):
+        return '\033[4m'+str(s)+'\033[0m'
 
-def highlight(s,fg='0'):
-    return '\033[7m'+color(clean_ansi(s),fg)
+    def highlight(s,fg=None):
+        if not isinstance(fg,int) and not fg.isdigit():
+            return '\033[7m'+fg
 
-def color(s,col,reset=True):
-    if isinstance(col,list):
-        raise Exception('color argument `col` has to be of type int or string')
+        return '\033[7m'+ (Color.color(clean_ansi(s),fg) if fg else s)
 
-    return f'\033[{DEFAULT_COLOR_PREFIX};{col}m'+str(s)+('\033[0m' if reset else '')
+    def color(s,col,reset=True):
+        if isinstance(col,list):
+            raise Exception('color argument `col` has to be of type int or string')
 
-# get 5 length gradient including `include`
-def get_gradient(include,direction='vertical'):
-    # do rainbow gradient
-    if include == 'rainbow':
-        return ['124','208','226','82','21','57','93']
+        return f'\033[{DEFAULT_COLOR_PREFIX};{col}m'+str(s)+('\033[0m' if reset else '')
 
-    c = include
-    colors = []
+    # get 5 length gradient including `include`
+    def get_gradient(include,direction='vertical'):
+        # do rainbow gradient
+        if include == 'rainbow':
+            return ['124','208','226','82','21','57','93']
+        elif isinstance(include,str) and not include.isdigit():
+            raise Exception('bad include value '+include+'.')
 
-    # go vertically in color chart
-    if direction == 'vertical':
-        # get starting value
-        while c > 36:
-            c -= 36
+        c = int(include)
+        colors = []
 
-        # get and add values
-        while c <= 231-36:
-            c += 36
-            colors.append(str(c))
+        # go vertically in color chart
+        if direction == 'vertical':
+            # get starting value
+            while c > 36:
+                c -= 36
 
-    # go horizontally in color chart
-    else:
-        # get starting value
-        if c < 16:
-            c = 16
+            # get and add values
+            while c <= 231-36:
+                c += 36
+                colors.append(str(c))
 
-        while c > 16 and not (c-16) % 6 == 0:
-            print(c-16)
-            c -= 1
+        # go horizontally in color chart
+        else:
+            # get starting value
+            if c < 16:
+                c = 16
 
-        # get and add values
-        for _ in range(5):
-            c += 1
-            colors.append(str(c))
+            while c > 16 and not (c-16) % 6 == 0:
+                print(c-16)
+                c -= 1
 
-    return colors
+            # get and add values
+            for _ in range(5):
+                c += 1
+                colors.append(str(c))
 
+        return colors
 
-def gradient(text,values,layer='fg'):
-    colors = []
+    def gradient(text,color,layer='fg'):
+        colors = []
 
-    # get ratio between text and value lengths
-    ratio = max(1,len(text)/len(values))
-    if not isinstance(ratio,int) and not ratio.is_integer():
-        ratio = int(ratio)+1
-    else:
-        ratio = int(ratio)
+        if isinstance(color,list):
+            values = color
+        else:
+            values = Color.get_gradient(color)
 
-    # add color `ratio` times
-    for v in values:
-        for _ in range(ratio):
-            colors.append(v)
+        # get ratio between text and value lengths
+        ratio = max(1,len(text)/len(values))
+        if not isinstance(ratio,int) and not ratio.is_integer():
+            ratio = int(ratio)+1
+        else:
+            ratio = int(ratio)
 
-    # add colored text
-    out = ''
-    for char,col in zip(text,colors):
-        if layer == 'bg':
-            out += '\033[7m'
-        out += color(char,col,reset=False)
-    out += '\033[00;00m'
-    return out
+        # add color `ratio` times
+        for v in values:
+            for _ in range(ratio):
+                colors.append(v)
+
+        # add colored text
+        out = ''
+        for char,col in zip(text,colors):
+            if layer == 'bg':
+                out += '\033[7m'
+            out += Color.color(char,col,reset=False)
+        out += '\033[00;00m'
+        return out
 
 
 
@@ -513,7 +527,8 @@ class Container:
         extra_lines = 0
         self.lines = []
         for i,e in enumerate(self.elements):
-            self.width = min(max(self.width,e.width+4),WIDTH-4)
+            if self._do_dynamic_size:
+                self.width = min(max(self.width,e.width+4),WIDTH-4)
             e.width = self.width - 4
 
             # call event
@@ -539,7 +554,6 @@ class Container:
 
             self.lines += lines
             for li,l in enumerate(lines):
-                dbg(l,starty+i+li)
                 line += f"\033[{starty+i+li};{x}H"+(real_length(l)+2)*' '
                 line += f"\033[{starty+i+li};{x}H "+l
 
@@ -769,7 +783,6 @@ class Container:
     
     # go through object, wipe ever character contained
     def wipe(self,pos=None):
-
         if pos == None:
             pos = self.pos
 
@@ -804,6 +817,12 @@ class Container:
         y = (HEIGHT-self.height-yoffset)//2
         self.move([x,y])
 
+    def export(self,filename):
+        if not filename.endswith('.ptg'):
+            filename += '.ptg'
+
+        with open(filename,'w') as f:
+            f.write(repr(self))
 
     # EVENT: window size changed
     # - checked for during __repr__
@@ -1077,7 +1096,7 @@ ELEMENT_ATTRIBUTES = {}
 # styles
 ## other
 DEFAULT_COLOR_PREFIX = "38;5"
-GLOBAL_HIGHLIGHT_STYLE = highlight
+GLOBAL_HIGHLIGHT_STYLE = Color.highlight
 CURSOR_HIGHLIGHT_STYLE = GLOBAL_HIGHLIGHT_STYLE
 TABBAR_HIGHLIGHT_STYLE = GLOBAL_HIGHLIGHT_STYLE
 
@@ -1087,9 +1106,9 @@ CONTAINER_BORDER_STYLE = lambda item: item
 CONTAINER_LABEL_STYLE = lambda item: item
 CONTAINER_VALUE_STYLE = lambda item: item
 CONTAINER_CORNER_STYLE = lambda char: char
-CONTAINER_TITLE_STYLE = lambda item: italic(bold(item))
-CONTAINER_ERROR_STYLE = lambda item: color(bold(item),'38;5;196')
-CONTAINER_SUCCESS_STYLE = lambda item: color(bold(item),'2')
+CONTAINER_TITLE_STYLE = lambda item: Color.italic(Color.bold(item))
+CONTAINER_ERROR_STYLE = lambda item: Color.color(Color.bold(item),'38;5;196')
+CONTAINER_SUCCESS_STYLE = lambda item: Color.color(Color.bold(item),'2')
 
 ## prompt
 PROMPT_LABEL_STYLE = lambda item: item
@@ -1122,15 +1141,8 @@ def perspective(color,index):
 
 # TEST CODE #
 if __name__ == "__main__":
-#    perspective(72,3)
-    #normal = gradient('alma',get_gradient('rainbow'))
-    #print(normal)
-    #print(bold(normal))
-#    for _ in range(HEIGHT): 
-#        print(gradient('████████████████████',get_gradient(141)),gradient('████████████████████',list(reversed(get_gradient(141)))),sep='')
-#
     import requests
-#
+
     r = requests.get('https://online.sprinter.hu/terkep/data.json')
     d = r.json()
     d = d[0]

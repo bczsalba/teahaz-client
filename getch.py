@@ -2,7 +2,7 @@
 # fun note: it was posted 18 years ago and still works!
 # originally written by Danny Yoo
 
-import os, sys, tty, codecs, select, termios
+import os, sys, codecs, select
 from contextlib import contextmanager
 
 
@@ -178,7 +178,7 @@ class InputField:
 
 
         # construct line
-        line = left + highlighter + visual_color + charUnderCursor + '\033[0m' + self.field_color + right + '\033[0m'
+        line = self.field_color + left + highlighter + visual_color + charUnderCursor + '\033[0m' + self.field_color + right + '\033[0m'
 
         if return_line:
             return line
@@ -240,20 +240,7 @@ class _Getch:
             self.impl = _GetchWindows()
         except ImportError:
             self.impl = _GetchUnix()
-        self.keycodes = self.impl.keycodes
         
-
-    def __call__(self):
-        key = self.impl()
-
-        # return human-readable name if found
-        if key in self.keycodes.keys():
-            return self.keycodes[key]
-        else:
-            return key
-
-class _GetchUnix:
-    def __init__(self):
         self.keycodes = {
             # SIGNALS: not captured currently
             "\x03": "SIGTERM",
@@ -298,6 +285,20 @@ class _GetchUnix:
             "\x1b[D": "ARROW_LEFT",
             "\x1bOD": "ARROW_LEFT",
         }
+        
+    def __call__(self):
+        key = self.impl()
+
+        # return human-readable name if found
+        if key in self.keycodes.keys():
+            return self.keycodes[key]
+        else:
+            return key
+
+class _GetchUnix:
+    def __init__(self):
+        global tty,termios
+        import tty,termios
 
         self.stream = OSReadWrapper(sys.stdin)
 
@@ -331,19 +332,11 @@ class _GetchUnix:
 class _GetchWindows:
     def __init__(self):
         import msvcrt
-        # TODO: add more compatibility
-        self.keycodes = {
-            "\x1b": "ESC",
-            "\n": "ENTER",
-            "\r": "ENTER",
-            "\x7b": "BACKSPACE",
-        }
 
     def __call__(self):
-        global key
-
         import msvcrt
-        return msvcrt.getch()
+
+        return msvcrt.wgetch()
 
 
 

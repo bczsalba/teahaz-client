@@ -5,6 +5,7 @@ import os
 import sys
 import json
 import time
+import types
 import getch
 import base64
 import pickle
@@ -15,7 +16,16 @@ import pyperclip as clip
 from urllib.parse import urlparse
 from pytermgui import WIDTH,HEIGHT
 from pytermgui import clean_ansi,real_length,break_line
-from pytermgui import italic,bold,underline,color,highlight,gradient,get_gradient
+from pytermgui import Color
+italic       =  Color.italic
+bold         =  Color.bold
+underline    =  Color.underline
+color        =  Color.color
+highlight    =  Color.highlight
+gradient     =  Color.gradient
+get_gradient =  Color.get_gradient
+
+#import italic,bold,underline,color,highlight,gradient,get_gradient
 from pytermgui import Container,Prompt,Label,container_from_dict
 
 
@@ -43,7 +53,7 @@ def decode(a):
 
 ## settings
 ### import settings from json
-def import_json(name):
+def import_json(name) -> None:
     with open(os.path.join(PATH,name+'.json'),'r') as f:
         globals()[name.upper()] = json.load(f)
         d = globals()[name.upper()]
@@ -58,7 +68,7 @@ def import_json(name):
         globals()['THEME'] = d['THEMES'][current_colorscheme]
 
 ## edit setting in json (needed because lambda cannot do assignments)
-def edit_json(key,value,json_path,keys=[]):
+def edit_json(json_path,key,value) -> None:
     # get value if needed
     okey = key
     ovalue = value
@@ -69,10 +79,10 @@ def edit_json(key,value,json_path,keys=[]):
         with open(os.path.join(PATH,json_path),'r') as f:
             data = json.load(f)
 
+    keys = key.split('/')
+    setting = keys.pop(-1)
     if len(keys) == 0:
-        keys = [key]
-
-    setting = keys[-1]
+        keys = [setting]
 
     # eval value if needed
     if callable(value):
@@ -84,23 +94,24 @@ def edit_json(key,value,json_path,keys=[]):
         root = data
 
     elif len(keys) == 2:
-        one,two = keys
+        one,_ = keys
         root = data[one]
 
     elif len(keys) == 3:
-        one,two,three = keys
+        one,two,_ = keys
         root = data[one][two]
 
     elif len(keys) == 4:
-        one,two,three,four = keys
+        one,two,three,_ = keys
         root = data[one][two][three]
     
     # this shouldnt happen lol
     else:
         dbg('ERROR: invalid len(keys)',keys)
-        return
+        #return
 
     # apply change
+    dbg(root,setting,value)
     root[setting] = value
 
     # write to file
@@ -112,7 +123,7 @@ def edit_json(key,value,json_path,keys=[]):
     import_json('settings')
     infield.pos = get_infield_pos()
 
-def load_path(path,key=None):
+def load_path(path,key=None) -> dict:
     if isinstance(path,dict):
         return path
 
@@ -125,32 +136,35 @@ def load_path(path,key=None):
 
 ## miscellaneous
 ### send args to logfile
-def dbg(*args):
+def dbg(*args,do_color=True) -> None:
     if not DO_DEBUG:
         return
 
     s = ' '.join([str(a) for a in args])
 
-    method = sys._getframe().f_back.f_code.co_name
-    obj = sys._getframe().f_back.f_locals.get('self')
-    filename = eval_color(THEME['title'],sys._getframe().f_back.f_code.co_filename.split('/')[-1])
-    lineno = eval_color(THEME['value'],sys._getframe().f_back.f_lineno)
+    method    = sys._getframe().f_back.f_code.co_name
+    obj       = sys._getframe().f_back.f_locals.get('self')
+    filename  = sys._getframe().f_back.f_code.co_filename.split('/')[-1]
+    lineno    = sys._getframe().f_back.f_lineno
+
+    if do_color:
+        filename = parse_color(THEME['title'],filename)
+        lineno = parse_color(THEME['value'],lineno)
 
     get_caller = lambda: type(obj).__name__+'.'+method if obj else method
 
     with open(LOGFILE,'a') as f:
-        filename
         f.write(f"{bold(filename)}/{get_caller()}:{bold(lineno)} : "+s+'\n')
 
 ### do `fun` after `ms` passes, nonblocking
-def do_after(ms,fun,control='true',args={}):
+def do_after(ms,fun,control='true',args={}) -> None:
     timed = lambda: (time.sleep(ms/1000),
                      fun(**args) if is_set(control) else 0)
 
     threading.Thread(target=timed).start()
 
 ### merge two dicts together, on conflict overwrite one's values
-def merge(one,two):
+def merge(one,two) -> dict:
     merged = one.copy()
     for key in two.keys():
         for subkey,value in two[key].items():
@@ -158,7 +172,7 @@ def merge(one,two):
     return merged
 
 ### look up key in dict by value
-def reverse_dict_lookup(d,value):
+def reverse_dict_lookup(d,value) -> [dict,None]:
     keys = list(d.keys())
     values = list(d.values())
 
@@ -168,23 +182,20 @@ def reverse_dict_lookup(d,value):
     else:
         return None
 
-def ignore_input(*args):
-    dbg('ignoring',args[0])
-
 
 ## variables
 ### check if variable is in scope
-def is_set(var,scope=None):
+def is_set(var,scope=None) -> bool:
     if scope == None:
         scope = globals()
     return (var in scope and scope[var])
 
-def toggle_option(options,current):
+def toggle_option(options,current) -> any:
     current_index = options.index(current)
     return options[len(options)-1-current_index]
 
 ## switch to input mode, set globals
-def switch_mode(target):
+def switch_mode(target) -> None:
     global MODE, VALID_KEYS, BINDS
 
     if VIMMODE:
@@ -215,7 +226,7 @@ def switch_mode(target):
     VALID_KEYS = [v for k,v in BINDS[MODE].items() if not k.startswith('ui__')]
 
 ### add caller of ui element to ui trace
-def add_to_trace(arr):
+def add_to_trace(arr) -> None:
     global UI_TRACE
 
     frame = sys._getframe().f_back
@@ -238,7 +249,7 @@ def add_to_trace(arr):
         UI_TRACE.append(arr)
 
 ### redirect getch_loop to `fun` with `args`
-def set_pipe(fun,arg,keep=1):
+def set_pipe(fun,arg,keep=1) -> None:
     global PIPE_OUTPUT, KEEP_PIPE
 
     PIPE_OUTPUT = fun,arg
@@ -246,18 +257,54 @@ def set_pipe(fun,arg,keep=1):
         KEEP_PIPE = keep
 
 ### set current ui file, accepts file paths and dicts
-def set_current_file(value):
+def set_current_file(value) -> None:
     globals()['CURRENT_FILE'] = value
 
+def add_new_colorscheme(name="new") -> dict:
+    global SETTINGS
+
+    def empty_dict(d) -> dict:
+        for k,v in d.items():
+            if k.startswith('ui__'):
+                continue
+
+            if isinstance(v,dict):
+                d[k] = empty_dict(v)
+            else:
+                d[k] = type(k)()
+        return d
+
+    base = THEMES[list(THEMES.keys())[0]].copy()
+    skeleton = empty_dict(base)
+
+    #padder = SETTINGS['THEMES']['ui__padding']
+    button = SETTINGS['THEMES']['ui__button']
+
+    #del SETTINGS['THEMES']['ui__padding']
+    del SETTINGS['THEMES']['ui__button']
+
+    with open('settings.json','w') as f:
+        f.write(json.dumps(SETTINGS,indent=4))
+    import_json('settings')
+    
+    edit_json('settings.json',f"THEMES/{name}",skeleton)
+    edit_json('settings.json',"THEMES/ui__button",button)
+
+    themes = list(SETTINGS["ui__prompt_options__colorscheme"])
+    edit_json('settings.json',"ui__prompt_options__colorscheme",themes+[name])
+
 ### return current index of object
-def get_index(obj):
+def get_index(obj) -> int:
     return obj.selected_index
+
+def ignore_input(*args):
+    dbg('fixme')
 
 
 
 ## editing
 ### split `s` by delimiters defined in `DELIMITERS`, return array of words
-def split_by_delimiters(s,return_indices=False):
+def split_by_delimiters(s,return_indices=False) -> list:
     # set up variables
     wordlist = []
     indices = []
@@ -283,7 +330,7 @@ def split_by_delimiters(s,return_indices=False):
         return wordlist
 
 ### return True if the given `index` is part of the last word in the strong
-def is_in_last_word(index,string):
+def is_in_last_word(index,string) -> bool:
     wordlist = split_by_delimiters(string)
     last_word_index = len(string)-len(wordlist[-1])
     return (last_word_index <= index)
@@ -294,7 +341,7 @@ def is_in_last_word(index,string):
 # UI FUNCTIONS #
 
 ## get what position infield should be at
-def get_infield_pos():
+def get_infield_pos() -> list:
     if 'infield' in globals().keys() and len(infield.value):
         offset = (len(infield.value)+1)//WIDTH
 
@@ -310,7 +357,7 @@ def get_infield_pos():
     return [3,HEIGHT-2-offset]
 
 ## return to normal input
-def return_to_infield(*args,**kwargs):
+def return_to_infield(*args,**kwargs) -> None:
     global PIPE_OUTPUT,KEEP_PIPE
     
     #os.system('cls' if os.name == 'nt' else 'clear')
@@ -318,42 +365,64 @@ def return_to_infield(*args,**kwargs):
     KEEP_PIPE = False
 
     # TODO: this dont work
-    th.print_messages()
+    th.print_messages(reprint=True)
     infield.print()
+    dbg('jaj')
 
-## return callable with arguments from string
-def eval_color(color_in,text):
-    # get specific calls
-    if not color_in.isdigit():
-        split = split_by_delimiters(color_in)
-        fun = split[0]
-
-        if len(split[1:]):
-            args = split[1:]
+def parse_color(_color,s,level=0) -> types.FunctionType:
+    output = []
+    if _color.isdigit():
+        if level == 0:
+            return color(s,_color)
         else:
-            args = []
+            return _color
 
-        if fun == "gradient":
-            col = args[0]
-            if col.isdigit():
-                col = int(col)
-            else:
-                col = col
-            fun_args = tuple([get_gradient(col)])
-            fun_call = gradient
+    elements = _color.split('+')
 
-        return fun_call(text,*fun_args)
+    # go through all +-d elements
+    for e in elements:
+        # handle simple color calls
+        if e.isdigit():
+            output.append(e)#color(s,e))
+            continue
+        
+        # find inner start & end
+        inner_start = e.find('(')
+        if inner_start == -1:
+            inner_start = real_length(e)
+        inner_end = min(real_length(e)-e[::-1].find(')'),real_length(e))
 
-    else:
-        return color(text,color_in)
+        # check if outer is callable
+        outer_s = e[:inner_start]
+        if outer_s in globals().keys() and callable(globals()[outer_s]):
+            outer = globals()[outer_s]
+        else:
+            output.append(outer_s)
+            continue
 
+        # get inner value recursively
+        inner_stripped = e[inner_start:inner_end].strip('(').strip(')')
+        inner = parse_color(inner_stripped,s,level+1)
+        
+        # get value to be added
+        #dbg(outer.__name__+'('+str(inner)+')',do_color=0)
+        #dbg('inner_stripped',inner_stripped,do_color=0)
+        try:
+            out = outer(s,inner)
+        except TypeError:
+            out = outer(inner)
+
+        # add value
+        output.append(out)
+
+    return ''.join(output)
 
 
 
 # NETWORK FUNCTIONS #
 
 # start threaded connection, TODO: ignore input, add loading screeen
-def start_connection(contype,menu=None,**kwargs):
+def start_connection(contype,menu=None,**kwargs) -> int:
     def _connect(*args,**kwargs):
         # decide function to use
         dbg('started')
@@ -391,30 +460,18 @@ def start_connection(contype,menu=None,**kwargs):
     t.start()
     ret_val = t.join()
 
-    # NOTE to self: error button handler needs to have a handle_menu("ESC") at the end.
-    #if not menu == None:
-    #    handler = lambda prev,_: {
-    #        prev.wipe(),
-    #        handle_menu_actions(
-    #            'menu_'+str(menu),
-    #            pytermgui.get_object_by_id(str(menu)+"-button_submit").parent.dict_path)}
-    #else:
-    #    handler = lambda prev,_: {
-    #        prev.wipe(),
-    #        handle_menu('ESC',prev)}
-
     if isinstance(ret_val,list):
         ui.create_error_dialog(ret_val[0],'try again')
         return False
 
     elif not 200 <= ret_val.status_code < 300:
         ui.create_error_dialog(ret_val.text.strip(),'try again')
-        return False
+        return 0
 
     else:
         return ret_val
         
-def login_or_register(contype,url,data):
+def login_or_register(contype,url,data) -> None:
     dbg('logging in to',url)
     if contype == "login":
         d = {
@@ -455,7 +512,7 @@ def login_or_register(contype,url,data):
 # INPUT #
 
 ## key intercepter loop, separate thread
-def getch_loop(): 
+def getch_loop() -> None: 
     global PIPE_OUTPUT,infield
 
     buff = ''
@@ -525,7 +582,7 @@ def getch_loop():
 
 
 ## act on action
-def handle_action(action):
+def handle_action(action) -> None:
     global KEEP_GOING,PIPE_OUTPUT,PIPE_ARGS,VISUAL_START,VISUAL_END,infield,CURRENT_FILE
     
     ## MENU ACTIONS
@@ -928,7 +985,7 @@ def handle_action(action):
 
 
 ## handle action but for menus
-def handle_menu(key,obj,attributes={},page=0):
+def handle_menu(key,obj,attributes={},page=0) -> None:
     global PIPE_OUTPUT,UI_TRACE
 
     if isinstance(obj,list):
@@ -986,7 +1043,8 @@ def handle_menu(key,obj,attributes={},page=0):
         elif key == "ENTER":
             # edit setting
             new = obj.submit()
-            edit_json(json_path=CURRENT_FILE,keys=obj.__ui_keys,key=obj.setting,value=new)
+            dbg(obj.__ui_keys)
+            edit_json(json_path=CURRENT_FILE,key=f"{'/'.join(obj.__ui_keys)}/{obj.setting}",value=new)
 
             # edit previous ui to show changes
             fun,kwargs,newobj = UI_TRACE[-2]
@@ -1047,7 +1105,6 @@ def handle_menu(key,obj,attributes={},page=0):
 
             edit_json(
                     json_path=CURRENT_FILE,
-                    keys=[selected.real_label],
                     key=selected.real_label,
                     value=toggle_option(selected.__ui_options, selected.real_value)
             )
@@ -1111,7 +1168,7 @@ def handle_menu(key,obj,attributes={},page=0):
 
 
 ## call menu creation
-def handle_menu_actions(action,current_file=None): 
+def handle_menu_actions(action,current_file=None) -> int: 
     ui.wipe()
     if PIPE_OUTPUT == None:
         pytermgui.clr()
@@ -1121,8 +1178,13 @@ def handle_menu_actions(action,current_file=None):
     attrs = {}
 
     if menu == "settings":
-        corners[1] = "settings"
+        corners[3] = "settings"
         source = os.path.join(PATH,'settings.json')
+        pytermgui.set_attribute_for_id('settings-themes_showcolors','handler',
+                lambda prev,self: (prev.wipe(),ui.create_colormenu()))
+
+        pytermgui.set_attribute_for_id('colorschemes-button_add','handler',
+                lambda prev,self: (add_new_colorscheme('test'),handle_action('reprint')))
     
     elif menu == "login_type":
         pytermgui.set_attribute_for_id('login_type-prompt','handler',lambda prev,self: {
@@ -1140,7 +1202,7 @@ def handle_menu_actions(action,current_file=None):
         chatid = SERVERS[address]['chatrooms'][chatindex]
 
         name = chatid+' @ '+address
-        corners[1] = menu
+        corners[3] = menu
         pytermgui.set_attribute_for_id(menu+'-button_submit','address',address)
         pytermgui.set_attribute_for_id(menu+'-button_submit','handler',
                 lambda prev,self: login_or_register(menu,self.address,self.parent.dict_path))
@@ -1213,19 +1275,21 @@ def handle_menu_actions(action,current_file=None):
         return
     
     else:
-        return True
+        return 1
 
     #globals()['CURRENT_FILE'] = path
     set_current_file(source)
 
     # call menu handler
-    d = ui.create_menu(source=[load_path,{'path': source}],corners=corners)
+    d = ui.create_menu(source=[load_path,{'path': source}])
 
     for key,value in attrs.items():
         if key == "id":
             pytermgui.set_element_id(d,value)
         else:
             setattr(d,key,value)
+
+    return 0
 
 
 
@@ -1234,7 +1298,7 @@ def handle_menu_actions(action,current_file=None):
 # ACTION HANDLER FUNCTIONS #
 
 ## do `action` in infield.value, using get_indices for start/end
-def do_in(param, action):
+def do_in(param, action) -> None:
     global infield, VISUAL_START, VISUAL_END
 
     # react on error in indices
@@ -1284,7 +1348,7 @@ def do_in(param, action):
         infield.set_value(left+right,cursor)
         
 ## find start,end indices for type `param` in infield
-def get_indices(param):
+def get_indices(param) -> tuple:
     valid = ["w","W","'",'"','[]','{}','()','<>']
 
     # set up start, end pairs
@@ -1361,7 +1425,7 @@ def get_indices(param):
     return start,end
 
 ## find key, set cursor to index+offset
-def find(key,offset=0,reverse=False):
+def find(key,offset=0,reverse=False) -> None:
     global infield,VISUAL_END
 
     # set variables
@@ -1396,7 +1460,7 @@ def find(key,offset=0,reverse=False):
     else:
         infield.print()
     
-def replace(key,action):
+def replace(key,action) -> None:
     dbg('action',action)
     val = infield.value
 
@@ -1454,7 +1518,7 @@ class TeahazHelper:
 
         # set new globals
         else:
-            edit_json('CURRENT_CHATROOM',[url,index],'usercfg.json')
+            edit_json('usercfg.json','CURRENT_CHATROOM',f'{url}/{index}')
 
         dbg('chatroom set to',url,'/',chatrooms[index])
 
@@ -1473,7 +1537,7 @@ class TeahazHelper:
             SERVERS[address]['username'] = None
             SERVERS[address]['chatrooms'] = [chatroom]
 
-        edit_json('SERVERS',SERVERS,'usercfg.json')
+        edit_json('usercfg.json','SERVERS',SERVERS)
         import_json('usercfg')
 
         return address,SERVERS[address]['chatrooms'].index(chatroom)
@@ -1543,6 +1607,7 @@ class TeahazHelper:
             # return if no change happened
             if get_result == PREV_GET and not len(extras):
                 return
+
             # set global
             globals()['PREV_GET'] = get_result
 
@@ -1627,11 +1692,10 @@ class TeahazHelper:
 
             # do things according to these values
             if chunk_start:
-                lines.insert(0,eval_color(THEME['title'],m.get('nickname'),))
+                lines.insert(0,parse_color(THEME['title'],m.get('nickname'),))
 
             if chunk_end:
-                dbg(THEME['fade'])
-                lines.append(eval_color(THEME['fade'],sendtime))
+                lines.append(parse_color(THEME['fade'],sendtime))
 
             # decide side to print on
             same_user = m.get('username') == BASE_DATA.get('username')
@@ -1819,7 +1883,7 @@ class UIGenerator:
             obj.wipe()
 
     # create menu from a dictionary source
-    def create_menu(self,source,corners,width=None,index=None,dict_index=0,**container_args):
+    def create_menu(self,source,corners=[None]*4,width=None,index=None,dict_index=0,**container_args):
         source_arg = source
 
         if isinstance(source,list):
@@ -1839,11 +1903,16 @@ class UIGenerator:
             if not source_arg == source:
                 o.dict_path = kwargs['path']
 
+            # set theme corners
             for i,c in enumerate([v for k,v in THEME['corners'].items()]):
                 if not c == None:
                     o.set_corner(i,c)
+            
+            # set overwrite corners
+            for i,c in enumerate(corners):
+                if c:
+                    o.set_corner(i,c)
 
-            #o.width = min(WIDTH-5,o.width)
             o.center()
 
         c = objects[dict_index]
@@ -1936,6 +2005,7 @@ class UIGenerator:
     # create menu picker menu, likely only for dbg
     def create_menu_picker(self):
         d = Container(width=50)
+
         title = Label(value="pick your menu",justify='center',padding=0)
         title.set_style("value",pytermgui.CONTAINER_TITLE_STYLE)
         d.add_elements([title,Label()])
@@ -2034,7 +2104,7 @@ class UIGenerator:
             p = Prompt(options=[url],justify_options="center")
             p.file = f
             p.handler = lambda _,self: {
-                    edit_json('address',self.real_value,self.file),handle_menu('ESC',self.parent)}
+                    edit_json(self.file,'address',self.real_value),handle_menu('ESC',self.parent)}
 
             d.add_elements(p)
 
@@ -2245,52 +2315,25 @@ if __name__ == "__main__":
     th = TeahazHelper()
 
 
+    #for style in ['title','error','success','label','value','border']:
+    #    dbg('container_'+style,THEME[style],parse_color(THEME[style],'a'))
+    #    value = THEME[style]
+    #    pytermgui.set_style('container_'+style, lambda item: parse_color(value,item))
 
-    # set pytermgui styles
-    pytermgui.set_style(
-            'container_title',
-            lambda item: bold(eval_color(THEME['title'],item)+':').replace('_',' ')
-    )
-    pytermgui.set_style(
-            'container_error',
-            lambda item: bold(eval_color(THEME['error'],item.upper()))
-    ),
-    pytermgui.set_style(
-            'container_success',
-            lambda item: bold(eval_color(THEME['success'],item.upper()))
-    )
-    pytermgui.set_style(
-            'container_label',
-            lambda item: eval_color(THEME['label'],item.lower())
-    )
-    pytermgui.set_style(
-            'container_value',
-            lambda item: eval_color(THEME['value'],item)
-    )
-    pytermgui.set_style(
-            'container_border',
-            lambda item: eval_color(THEME['border'],item)
-    )
-    pytermgui.set_style(
-            'prompt_highlight',
-            lambda item: highlight(item,THEME['value'])
-    )
-    pytermgui.set_style(
-            'tabbar_highlight',
-            #lambda item: highlight(item,THEME['title'])
-            lambda item: eval_color(THEME['title'],item)
-    )
-    pytermgui.set_style(
-            'container_border_chars',
-            lambda: [bold(v) for v in THEME['border_chars']]
-    )
-    pytermgui.set_style(
-            'prompt_delimiter_style',
-            lambda: THEME['prompt_delimiters']
-    )
+    ## set pytermgui styles
+    pytermgui.set_style('container_title',lambda item: parse_color(THEME['title'],item).replace('_',' '))
+    pytermgui.set_style('container_error',lambda item: parse_color(THEME['error'],item.upper())),
+    pytermgui.set_style('container_success',lambda item: parse_color(THEME['success'],item.upper()))
+    pytermgui.set_style('container_label',lambda item: parse_color(THEME['label'],item.lower()))
+    pytermgui.set_style('container_value',lambda item: parse_color(THEME['value'],item))
+    pytermgui.set_style('container_border',lambda item: parse_color(THEME['border'],item))
 
-    pytermgui.set_attribute_for_id('settings-themes_showcolors','handler',lambda prev,self: (prev.wipe(),ui.create_colormenu()))
-    
+    pytermgui.set_style('prompt_highlight',lambda item: highlight(item,THEME['value']))
+    pytermgui.set_style('tabbar_highlight',lambda item: parse_color(THEME['title'],item))
+
+    pytermgui.set_style('container_border_chars',lambda: [bold(v) for v in THEME['border_chars']])
+    pytermgui.set_style('prompt_delimiter_style',lambda: THEME['prompt_delimiters'])
+ 
 
     # set default mode
     infield = getch.InputField(pos=get_infield_pos())

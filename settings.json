@@ -14,20 +14,20 @@
     "THEMES": {
         "draculite": {
             "ui__title1": "colors",
-            "title": "gradient(210)",
-            "fade": "237",
+            "title": "210",
+            "fade": "238",
             "error": "203",
             "success": "76",
-            "label": "249",
+            "label": "245",
             "value": "72",
             "border": "60",
             "field_highlight": "210",
             "mode_indicator": "72",
             "ui__title2": "characters",
             "corners": {
-                "top_left": "X",
+                "top_left": "x",
                 "top_right": "x",
-                "bottom_left": "x",
+                "bottom_left": "X",
                 "bottom_right": "X"
             },
             "border_chars": "|-",
@@ -37,10 +37,16 @@
                 "{}"
             ],
             "prompt_delimiters": "<>",
+            "ui__padding": 0,
             "ui__button": {
                 "id": "settings-themes_showcolors",
                 "value": "show color guide"
             }
+        },
+        "ui__nopadding_": 0,
+        "ui__nobutton": {
+            "id": "colorschemes-button_add",
+            "value": "add new"
         }
     },
     "ui__title3": "messaging",
@@ -165,6 +171,5 @@
             "selection_change": "c",
             "selection_copy": "y"
         }
-    },
-    "prompt_delimiters": "<>"
+    }
 }

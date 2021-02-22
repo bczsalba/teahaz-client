@@ -1,18 +1,18 @@
 # BUGS
+- [ ] messages dont get seperated by time :(
+- [ ] fix add_new button in themes
 - [ ] only the first element in multipage containers resizes
 
 
 # FEATURES 
 ## upcoming checklist
-- prerequisites for FM:
-    * [ ] make menus use global binding dicts and have them be tied into handle_action
-    * [ ] add per-menu bindings for menus ( "ui__binds": { "key": "action" } )
-
 - FileManager(Container)
+
     """
     Container derivative that would show and let users interact
     with files.
     """
+
     main methods (other than Container's):
         * cd : change directory
         * search(term) : search for `term` in files
@@ -20,16 +20,38 @@
                              filetype handlers
         * execute(cmd,*maybe regex to match files*) : execute given command
                              in bash on the file
+
+- add title to create_menu objects
+
+- windows compatibility:
+    * [x] move os specific imports to their proper place
+    * [ ] add more keys to keybinds for windows (specifically CTRL_*)
+    * [x] convert \_GetchWindows \__call__ to use wgetch || decode getch output
+    * [ ] test on windows
+
+- restructure
+    * [x] create Color class in pytermgui.py and move color things under it
+
+
+- prerequisites for FM:
+    * [ ] make menus use global binding dicts and have them be tied into handle_action
+    * [ ] add per-menu bindings for menus ( "ui__binds": { "key": "action" } )
+
+
 - create general picker function that other pickers can call
 
+
 - pytergmui.Container.get_lines()
+
     """
     would be needed for container support in messaging, 
     as printing further than end of terminal isnt supported 
     in the current state.
     """
+
     * [ ] keep track and return lines printed
     * [ ] also add borders to those lines, and return them
+
 
 - messaging lol
     * [ ] top headerbar indicating current chatroom info
