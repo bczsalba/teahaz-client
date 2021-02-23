@@ -412,6 +412,7 @@ def parse_color(_color,s,level=0) -> types.FunctionType:
         #dbg('inner_stripped',inner_stripped,do_color=0)
         try:
             dbg(f'{outer.__name__}({s},{inner})',do_color=0)
+            dbg(f'{outer.__name__}({s},{inner})',do_color=0)
             out = outer(s,inner)
         except TypeError:
             dbg(f'{outer.__name__}({inner})',do_color=0)
@@ -421,6 +422,23 @@ def parse_color(_color,s,level=0) -> types.FunctionType:
         output.append(out)
 
     return ''.join(output)
+
+def parse_inline_codes(s) -> str:
+    chars = ['*','**','***','__']
+    # TODO: underline doesnt work
+    functions = list(THEME['message_styles'].keys())[::-1]
+
+    for i,c in enumerate(reversed(chars)):
+        while s.count(c) >= 2:
+            start = s.find(c)+len(c)
+            end = start+s[start:].find(c)
+            text = s[start:end]
+
+            s = s[:start-len(c)]+parse_color(f"{functions[i]}({text})",text)+s[end+len(c):]
+    return s
+            
+
+        
 
 
 
@@ -1208,7 +1226,7 @@ def handle_menu_actions(action,current_file=None) -> int:
         pytermgui.set_attribute_for_id('colorschemes-button_add','handler',
                 lambda prev,self: (add_new_colorscheme('test'),handle_action('reprint')))
     
-    elif menu == "login_type":
+    elif menu == "login/register":
         pytermgui.set_attribute_for_id('login_type-prompt','handler',lambda prev,self: {
                 prev.wipe(), handle_action("menu_"+self.submit())})
 
@@ -1272,9 +1290,6 @@ def handle_menu_actions(action,current_file=None) -> int:
                     prev.wipe(),
                     handle_menu('ESC',self.parent) if not th.add_new_server(prev.dict_path) else None})
 
-        #pytermgui.set_attribute_for_id('server_new-prompt_address','handler', lambda _,self: {
-        #            ui.wipe(),
-        #            ui.create_address_picker(self)})
         source = {
                 "ui__title": "Add new connection",
                 "ui__padding0": 0,
@@ -1509,6 +1524,116 @@ def replace(key,action) -> None:
 
 
 # CLASSES # 
+class InputDialog(Container):
+    """
+    Class extending pytermgui.Container to add support 
+    for more field types, a submit() method and to act
+    as a prefab to the common dialog type Containers
+    """
+    def __init__(self,options=None,label_value='',label_justify="center",label_underpad=0,field_value='',dialog_type=None,**kwargs):
+        super().__init__(**kwargs)
+        gui = pytermgui.__dict__
+        
+        # set up label class
+        self.label = Label(value=label_value,justify=label_justify)
+        self.label.set_style('value',gui['CONTAINER_TITLE_STYLE'])
+
+        # set up field depending on options given
+        self.options = options
+        self.dialog_type = dialog_type
+
+        if self.dialog_type == None:
+            if isinstance(options,list):
+                self.dialog_type = "prompt"
+            else:
+                self.dialog_type = "field"
+
+        if self.dialog_type == "prompt":
+            self.field = Prompt(options=options,width=self.width)
+            self.field.set_style('value',gui['CONTAINER_VALUE_STYLE'])
+            self.field.set_style('label',gui['CONTAINER_LABEL_STYLE'])
+        
+        elif self.dialog_type == "field":
+            self.field = InputDialogField(default=field_value,print_at_start=False)
+            self.field.set_style('value',gui['CONTAINER_VALUE_STYLE'])
+            self.field.field_color = '\033['+THEME['value']+'m'
+            self.width = WIDTH
+            borders = self.borders
+            label_underpad += 2
+            self.set_borders(['',borders[1],'',borders[3]])
+
+        # add label
+        self.add_elements(self.label)
+
+        # add paddings under label
+        for _ in range(label_underpad):
+            self.add_elements(Label())
+
+        # add field
+        self.add_elements(self.field)
+        
+        # set xlimit of field
+        self.field.xlimit = self.width-3
+
+    def submit(self):
+        self.value = self.field.submit()
+        return self.value
+
+    def __repr__(self):
+        self.width = max(self.width,self.field.width)
+        #self.get_border()
+        #self.center()
+        #self.wipe()
+
+        return super().__repr__()
+
+class InputDialogField(getch.InputField):
+    """
+    Class to extend getch's InputField to add compatibility
+    for pytermgui Containers.
+    """
+
+    def __init__(self,**kwargs):
+        super().__init__(**kwargs)
+
+        self.width = len(self.value)
+        self.height = 1
+        self._is_selectable = False
+        self.options = None
+
+        self.value_style = lambda item: item
+
+    # return text of self
+    def __repr__(self):
+        value = self.print(return_line=True)
+        line = self.value_style(value)
+        return line
+    
+    def set_style(self,key,value):
+        setattr(self,key+'_style',value)
+
+    # return value
+    def submit(self):
+        return self.value
+
+class ThreadWithReturnValue(threading.Thread):
+    """
+    Thread object that returns its value in the `join` method.
+    taken from: https://stackoverflow.com/a/40344234
+    """
+
+    def __init__(self,**kwargs):
+        super().__init__(**kwargs)
+        self._return = None
+
+    def run(self):
+        if self._target is not None:
+            self._return = self._target(*self._args, **self._kwargs)
+
+    def join(self,timeout=None):
+        super().join(timeout=timeout)
+        return self._return
+
 class TeahazHelper:
     def is_connected(self,url):
         for cookie in SESSION.cookies:
@@ -1525,46 +1650,60 @@ class TeahazHelper:
         if index == 'invalid' or index == 'register':
             return
 
-
+        # set og data to restore in case of problems
         ogdata = BASE_DATA.copy()
         ogurl = URL
 
+        # set global values
         globals()['URL'] = url
-        chatrooms = SERVERS[url]['chatrooms']
         globals()['CURRENT_CHATROOM'] = url,index
 
+        # update header
         if is_set('CONV_HEADER'):
             ogvalue = CONV_HEADER_LABEL.value
             CONV_HEADER_LABEL.value = f'{url}: {chatrooms[index]}'
 
+        # set BASE_DATA
+        chatrooms = SERVERS[url]['chatrooms']
         BASE_DATA['username'] = SERVERS[url]['username']
         BASE_DATA['chatroom'] = chatrooms[index]
         
+        # update json
         edit_json('usercfg.json','CURRENT_CHATROOM',[url,index])
 
         # get login or register 
         if not th.is_connected(url):
             handle_action('menu_login_type')
             return "login"
+
         # set new globals
         else:
             # test if server works
+            error = False
             ret = th.get(0,'message')
 
-            error = False
+            # try to convert ret into json
             try:
                 m = json.loads(ret)
+
+                # type needs to be list
                 if not isinstance(m,list):
                     error = True
+
             except ValueError:
                 error = True
 
             if error:
+                # create error box
                 ui.create_error_dialog('Error while switching servers: '+ret,'try again')
+
+                # restore values
                 BASE_DATA = ogdata
                 URL = ogurl
                 if is_set('ogvalue',locals()):
                     CONV_HEADER_LABEL.value = ogvalue
+
+                # return non-0
                 return ret
 
 
@@ -1590,7 +1729,6 @@ class TeahazHelper:
         edit_json('usercfg.json','SERVERS',SERVERS)
         import_json('usercfg')
 
-        dbg(th.is_connected(address))
         self.set_chatroom(address,len(SERVERS[address]['chatrooms'])-1)
         if not th.is_connected(address):
             handle_action('menu_login_type')
@@ -1731,8 +1869,15 @@ class TeahazHelper:
                 dbg(e)
                 continue
 
+            inline = parse_inline_codes(content)
+            if inline == content:
+                do_subdivision = False
+            else:
+                content = inline
+                do_subdivision = True
+
             # get lines from content, add nickname & time
-            lines = pytermgui.break_line(content,MAX_MESSAGE_WIDTH())
+            lines = pytermgui.break_line(content,MAX_MESSAGE_WIDTH(),do_subdivision=do_subdivision)
 
             # test if the current message is the start of a chunk
             chunk_start = True
@@ -1838,116 +1983,6 @@ class TeahazHelper:
             time.sleep(0.5)
             if not PIPE_OUTPUT:
                 self.print_messages()
-
-class ThreadWithReturnValue(threading.Thread):
-    """
-    Thread object that returns its value in the `join` method.
-    taken from: https://stackoverflow.com/a/40344234
-    """
-
-    def __init__(self,**kwargs):
-        super().__init__(**kwargs)
-        self._return = None
-
-    def run(self):
-        if self._target is not None:
-            self._return = self._target(*self._args, **self._kwargs)
-
-    def join(self,timeout=None):
-        super().join(timeout=timeout)
-        return self._return
-
-class InputDialog(Container):
-    """
-    Class extending pytermgui.Container to add support 
-    for more field types, a submit() method and to act
-    as a prefab to the common dialog type Containers
-    """
-    def __init__(self,options=None,label_value='',label_justify="center",label_underpad=0,field_value='',dialog_type=None,**kwargs):
-        super().__init__(**kwargs)
-        gui = pytermgui.__dict__
-        
-        # set up label class
-        self.label = Label(value=label_value,justify=label_justify)
-        self.label.set_style('value',gui['CONTAINER_TITLE_STYLE'])
-
-        # set up field depending on options given
-        self.options = options
-        self.dialog_type = dialog_type
-
-        if self.dialog_type == None:
-            if isinstance(options,list):
-                self.dialog_type = "prompt"
-            else:
-                self.dialog_type = "field"
-
-        if self.dialog_type == "prompt":
-            self.field = Prompt(options=options,width=self.width)
-            self.field.set_style('value',gui['CONTAINER_VALUE_STYLE'])
-            self.field.set_style('label',gui['CONTAINER_LABEL_STYLE'])
-        
-        elif self.dialog_type == "field":
-            self.field = InputDialogField(default=field_value,print_at_start=False)
-            self.field.set_style('value',gui['CONTAINER_VALUE_STYLE'])
-            self.field.field_color = '\033['+THEME['value']+'m'
-            self.width = WIDTH
-            borders = self.borders
-            label_underpad += 2
-            self.set_borders(['',borders[1],'',borders[3]])
-
-        # add label
-        self.add_elements(self.label)
-
-        # add paddings under label
-        for _ in range(label_underpad):
-            self.add_elements(Label())
-
-        # add field
-        self.add_elements(self.field)
-        
-        # set xlimit of field
-        self.field.xlimit = self.width-3
-
-    def submit(self):
-        self.value = self.field.submit()
-        return self.value
-
-    def __repr__(self):
-        self.width = max(self.width,self.field.width)
-        #self.get_border()
-        #self.center()
-        #self.wipe()
-
-        return super().__repr__()
-
-class InputDialogField(getch.InputField):
-    """
-    Class to extend getch's InputField to add compatibility
-    for pytermgui Containers.
-    """
-
-    def __init__(self,**kwargs):
-        super().__init__(**kwargs)
-
-        self.width = len(self.value)
-        self.height = 1
-        self._is_selectable = False
-        self.options = None
-
-        self.value_style = lambda item: item
-
-    # return text of self
-    def __repr__(self):
-        value = self.print(return_line=True)
-        line = self.value_style(value)
-        return line
-    
-    def set_style(self,key,value):
-        setattr(self,key+'_style',value)
-
-    # return value
-    def submit(self):
-        return self.value
 
 class UIGenerator:
     """
@@ -2249,7 +2284,6 @@ class UIGenerator:
 
     # unified way to create success dialog
     def create_success_dialog(self,text,button="dismiss"):
-        ui.wipe()
         source = {
                 "ui__success_title": text,
                 "ui__padding": "",
@@ -2261,8 +2295,9 @@ class UIGenerator:
 
         ui.wipe()
 
-        pytermgui.set_attribute_for_id('success-button_'+button,'handler',lambda prev,self: { handle_menu('ESC',prev), handle_menu('ESC',UI_TRACE[-1][2])})
-        d = self.create_menu(source,corners=[[],[],[],"success"],width=25)
+        pytermgui.set_attribute_for_id('success-button_'+button,'handler',
+                lambda prev,self: { handle_menu('ESC',prev), handle_menu('ESC',UI_TRACE[-1][2])})
+        d = self.create_menu(source,width=25)
         return d
 
     # color code menu for settings/themes
@@ -2335,7 +2370,7 @@ MENUS = [
     # "menu_address_picker",
     # "menu_server_new",
     # "menu_serverregister",
-    "menu_login_type",
+    "menu_login/register",
     # "menu_login",
     # "menu_settings",
     # "menu_picker"
@@ -2420,7 +2455,6 @@ if __name__ == "__main__":
     infield = getch.InputField(pos=get_infield_pos())
     infield.line_offset = None
     infield.visual_color = lambda text: parse_color(THEME['field_highlight'],text)
-    # infield.visual_color = lambda: '\033['+pytermgui.DEFAULT_COLOR_PREFIX+';'+THEME['field_highlight']+'m'
 
     # set up defaults
     if is_set('CURRENT_CHATROOM'):

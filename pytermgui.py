@@ -31,8 +31,8 @@ def clean_ansi(s):
 def real_length(s):
     return len(clean_ansi(s))
 
-def break_line(_inline,_len,_pad=0,_separator=' '):
-    if _len == None:# or _separator not in _inline:
+def break_line(_inline,_len,_pad=0,_separator=' ',do_subdivision=True):
+    if _len == None:
         return [_inline]
 
     # check if line is over length provided
@@ -70,24 +70,27 @@ def break_line(_inline,_len,_pad=0,_separator=' '):
     else:
         lines = _inline.split('\n')
 
-    newlines = []
-    # TODO: make this work with colored text
-    for i,l in enumerate(lines):
-        if real_length(l) >= _len:
-            clean = clean_ansi(l)
+    if do_subdivision:
+        newlines = []
+        # TODO: make this work with colored text
+        for i,l in enumerate(lines):
+            if real_length(l) >= _len:
+                clean = clean_ansi(l)
 
-            buff = ''
-            for charindex,c in enumerate(clean):
-                buff += c
-                if len(buff) >= _len:
+                buff = ''
+                for charindex,c in enumerate(clean):
+                    buff += c
+                    if len(buff) >= _len:
+                        newlines.append(buff)
+                        buff = ''
+
+                if len(buff):
                     newlines.append(buff)
-                    buff = ''
 
-            if len(buff):
-                newlines.append(buff)
-
-        else:
-            newlines.append(l)
+            else:
+                newlines.append(l)
+    else:
+        newlines = lines
 
     return newlines
 

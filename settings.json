@@ -21,15 +21,9 @@
             "label": "245",
             "value": "72",
             "border": "60",
-            "field_highlight": "gradient(210)",
+            "field_highlight": "gradient(72)",
             "mode_indicator": "72",
             "ui__title2": "characters",
-            "corners": {
-                "top_left": "x",
-                "top_right": "x",
-                "bottom_left": "X",
-                "bottom_right": "X"
-            },
             "border_chars": "|-",
             "ui__prompt_options__delimiters": [
                 "<>",
@@ -37,6 +31,18 @@
                 "{}"
             ],
             "prompt_delimiters": "<>",
+            "corners": {
+                "top_left": "x",
+                "top_right": "x",
+                "bottom_left": "X",
+                "bottom_right": "X"
+            },
+            "message_styles": {
+                "italic": "italic()",
+                "bold": "bold()",
+                "underline": "underline()",
+                "italic-bold": "italic(bold())"
+            },
             "ui__padding": 0,
             "ui__button": {
                 "id": "settings-themes_showcolors",

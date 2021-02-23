@@ -1,3 +1,14 @@
+* rn : 
+    - [ ] look into sorting functions under classes:
+        - InputHandlers could be one
+        - maybe Handlers in general
+    - [ ] add prev_get support, extra messages before they send
+    - [ ] add inline formatting symbols
+        - [x] italic
+        - [x] bold
+        - [ ] italic_bold
+        - [ ] underline
+
 # BUGS
 - [ ] add_new button in themes
 - [ ] value style doesnt work with parser
