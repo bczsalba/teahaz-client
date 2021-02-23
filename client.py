@@ -1566,6 +1566,7 @@ class TeahazHelper:
         dbg('chatroom set to',url,'/',chatrooms[index])
 
     def add_new_server(self,values):
+        dbg(values)
         d = {}
         for key,value in values.items():
             if not key.startswith('ui__'):
@@ -1585,6 +1586,7 @@ class TeahazHelper:
         edit_json('usercfg.json','SERVERS',SERVERS)
         import_json('usercfg')
 
+        dbg(th.is_connected(address))
         if not th.is_connected(address):
             self.set_chatroom(address,len(SERVERS[address]['chatrooms'])-1)
             handle_action('menu_login_type')
@@ -2430,9 +2432,11 @@ if __name__ == "__main__":
     CONV_HEADER_LABEL.set_style('value',pytermgui.CONTAINER_VALUE_STYLE)
     if CURRENT_CHATROOM:
         url,index = CURRENT_CHATROOM
-        value = f"{URL}: {SERVERS[URL]['chatrooms'][index]}"
+        value = f"{url}: {SERVERS[url]['chatrooms'][index]}"
     else:
         value = ''
+        SESSION = requests.session()
+
     CONV_HEADER_LABEL.value = value
     CONV_HEADER.add_elements(CONV_HEADER_LABEL)
     CONV_HEADER.hidden = False
