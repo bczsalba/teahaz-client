@@ -109,7 +109,7 @@ def edit_json(json_path,key,value) -> None:
         #return
 
     # apply change
-    dbg(root,setting,value)
+    #dbg(root,setting,value)
     root[setting] = value
 
     # write to file
@@ -1041,7 +1041,7 @@ def handle_menu(key,obj,attributes={},page=0) -> None:
         elif key == "ENTER":
             # edit setting
             new = obj.submit()
-            dbg(obj.__ui_keys)
+            #dbg(f"{'/'.join(obj.__ui_keys)}/{obj.setting}")
             edit_json(json_path=CURRENT_FILE,key=f"{'/'.join(obj.__ui_keys)}/{obj.setting}",value=new)
 
             # edit previous ui to show changes
@@ -1077,7 +1077,14 @@ def handle_menu(key,obj,attributes={},page=0) -> None:
         UI_TRACE[-1][1]['index'] = index
 
         # add to depth
-        obj.__ui_keys.append(selected.real_label)
+        if is_set('objects',locals()):
+            for o in objects:
+                o.__ui_keys.append(selected.real_label)
+            keys = obj.__ui_keys
+        else:
+            obj.__ui_keys.append(selected.real_label)
+            keys = obj.__ui_keys
+        dbg(keys)
 
         # create menu
         d = ui.create_submenu(selected)
@@ -1087,7 +1094,7 @@ def handle_menu(key,obj,attributes={},page=0) -> None:
             d.selected_index = [o for o in d.options].index(selected.real_value)
             d.select()
 
-        d.__ui_keys = obj.__ui_keys
+        #d.__ui_keys = keys
 
         # print
         d.select()
@@ -1487,7 +1494,7 @@ def replace(key,action) -> None:
 # CLASSES # 
 class TeahazHelper:
     def set_chatroom(self,url,index):
-        global BASE_DATA,CONV_HEADER
+        global BASE_DATA,CONV_HEADER,URL
             
         # return if certain values are passed
         if index == 'invalid' or index == 'register':
@@ -1502,11 +1509,15 @@ class TeahazHelper:
         else:
             found = False
 
+        ogdata = BASE_DATA.copy()
+        ogurl = URL
+
         globals()['URL'] = url
         chatrooms = SERVERS[url]['chatrooms']
         globals()['CURRENT_CHATROOM'] = url,index
 
         if is_set('CONV_HEADER'):
+            ogvalue = CONV_HEADER_LABEL.value
             CONV_HEADER_LABEL.value = f'{url}: {chatrooms[index]}'
 
         BASE_DATA['username'] = SERVERS[url]['username']
@@ -1531,6 +1542,10 @@ class TeahazHelper:
 
             if error:
                 ui.create_error_dialog('Error while switching servers: '+ret,'try again')
+                BASE_DATA = ogdata
+                URL = ogurl
+                if is_set('ogvalue',locals()):
+                    CONV_HEADER_LABEL.value = ogvalue
                 return ret
 
             edit_json('usercfg.json','CURRENT_CHATROOM',f'{url}/{index}')
@@ -1630,12 +1645,18 @@ class TeahazHelper:
             get_result = PREV_GET
 
 
+        # this happens when reprint=True and there haven't been any
+        # previous get-s
+        if get_result == None:
+            return
+
         # check if get_result is proper json, otherwise treat it like an error
         try:
             messages = json.loads(get_result)
         except ValueError as e:
-            dbg('Exception while converting get_result to json:',e)
-            ui.create_error_dialog(get_result)
+            value = 'Exception while converting get_result to json: '+str(e)
+            dbg(value)
+            ui.create_error_dialog(value)
             return
         
         # get position
