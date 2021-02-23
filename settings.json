@@ -50,7 +50,7 @@
         }
     },
     "ui__title3": "messaging",
-    "MESSAGE_SEPARATE_TIME": "30",
+    "MESSAGE_SEPARATE_TIME": "60",
     "FILETYPE_DEFAULTS": {
         "image": "kitty +kitten icat {path} --scale_up",
         "video": "mpv {path}",
@@ -90,6 +90,7 @@
     "VIMBINDS": {
         "ESCAPE": {
             "ui__title1": "modes & misc",
+            "toggle_header": " ",
             "menu_server_picker": "TAB",
             "menu_settings": "CTRL_/",
             "menu_picker": "CTRL_T",
@@ -169,9 +170,5 @@
             "selection_change": "c",
             "selection_copy": "y"
         }
-    },
-    "goto_line_0th": "a",
-    "mode_escape": "ESC",
-    "mode_visual": "v",
-    "delete_line_end": "DA"
+    }
 }

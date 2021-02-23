@@ -77,8 +77,14 @@ def edit_json(json_path,key,value) -> None:
         with open(os.path.join(PATH,json_path),'r') as f:
             data = json.load(f)
 
-    keys = key.split('/')
-    setting = keys.pop(-1)
+    if isinstance(key,str):
+        keys = key.split('/')
+        setting = keys[-1]
+    else:
+        keys = key
+        setting = keys[-1]
+
+
     if len(keys) == 0:
         keys = [setting]
 
@@ -322,7 +328,8 @@ def split_by_delimiters(s,return_indices=False) -> list:
     wordlist.append(buff)
 
     if return_indices:
-        indices.append(i)
+        #if is_set('i',locals()):
+        #    indices.append(i)
         return wordlist,indices
     else:
         return wordlist
@@ -358,14 +365,11 @@ def get_infield_pos(reprint_messages=True) -> list:
 def return_to_infield(*args,**kwargs) -> None:
     global PIPE_OUTPUT,KEEP_PIPE
     
-    #os.system('cls' if os.name == 'nt' else 'clear')
     PIPE_OUTPUT = None
     KEEP_PIPE = False
 
-    # TODO: this dont work
     th.print_messages(reprint=True)
     infield.print()
-    dbg('jaj')
 
 def parse_color(_color,s,level=0) -> types.FunctionType:
     output = []
@@ -406,8 +410,10 @@ def parse_color(_color,s,level=0) -> types.FunctionType:
         #dbg(outer.__name__+'('+str(inner)+')',do_color=0)
         #dbg('inner_stripped',inner_stripped,do_color=0)
         try:
+            dbg(f'{outer.__name__}({s},{inner})',do_color=0)
             out = outer(s,inner)
         except TypeError:
+            dbg(f'{outer.__name__}({inner})',do_color=0)
             out = outer(inner)
 
         # add value
@@ -494,6 +500,7 @@ def login_or_register(contype,url,data) -> None:
     else:
         text = "Successfully " + ("logged in" if contype == "login" else "registered")
         BASE_DATA['username'] = d.get('username')
+        edit_json('usercfg.json',['SERVERS',url,'username'],d.get('username'))
          
         if contype == "register":
             dbg('logging in to new user')
@@ -605,6 +612,14 @@ def handle_action(action) -> None:
 
         fun(**args)
         return
+
+    elif action == "toggle_header":
+        CONV_HEADER.hidden = not CONV_HEADER.hidden
+
+        if CONV_HEADER.hidden:
+            handle_action('reprint')
+        else:
+            print(CONV_HEADER)
 
     # message binds
     elif action == "message_send":
@@ -780,6 +795,9 @@ def handle_action(action) -> None:
 
             # find the w/W the cursor is in
             buff = 0
+            if not len(indices):
+                return
+
             for i,index in enumerate(indices):
                 if index >= infield.cursor:
                     break
@@ -1041,8 +1059,8 @@ def handle_menu(key,obj,attributes={},page=0) -> None:
         elif key == "ENTER":
             # edit setting
             new = obj.submit()
-            #dbg(f"{'/'.join(obj.__ui_keys)}/{obj.setting}")
-            edit_json(json_path=CURRENT_FILE,key=f"{'/'.join(obj.__ui_keys)}/{obj.setting}",value=new)
+            #dbg(obj.__ui_keys+[obj.setting])
+            edit_json(json_path=CURRENT_FILE,key=obj.__ui_keys,value=new)
 
             # edit previous ui to show changes
             fun,kwargs,newobj = UI_TRACE[-2]
@@ -1077,14 +1095,7 @@ def handle_menu(key,obj,attributes={},page=0) -> None:
         UI_TRACE[-1][1]['index'] = index
 
         # add to depth
-        if is_set('objects',locals()):
-            for o in objects:
-                o.__ui_keys.append(selected.real_label)
-            keys = obj.__ui_keys
-        else:
-            obj.__ui_keys.append(selected.real_label)
-            keys = obj.__ui_keys
-        dbg(keys)
+        obj.__ui_keys.append(selected.real_label)
 
         # create menu
         d = ui.create_submenu(selected)
@@ -1094,13 +1105,17 @@ def handle_menu(key,obj,attributes={},page=0) -> None:
             d.selected_index = [o for o in d.options].index(selected.real_value)
             d.select()
 
-        #d.__ui_keys = keys
+        # add path to all new objects
+        newobjects = PIPE_OUTPUT[1]['obj']
+        if isinstance(newobjects,list):
+            for new in newobjects:
+                new.__ui_keys = obj.__ui_keys
 
         # print
         d.select()
         print(d)
         return
-      
+    
     elif key == " ":
         selected,_,index = obj.selected
         if selected.__ui_options and len(selected.__ui_options) == 2:
@@ -1252,8 +1267,7 @@ def handle_menu_actions(action,current_file=None) -> int:
     elif menu == "server_new":
         pytermgui.set_attribute_for_id('server_new-button_add','handler',
                 lambda prev,self: {
-                    th.add_new_server(prev.dict_path),
-                    handle_menu('ESC',self.parent)})
+                    handle_menu('ESC',self.parent) if not th.add_new_server(prev.dict_path) else None})
 
         #pytermgui.set_attribute_for_id('server_new-prompt_address','handler', lambda _,self: {
         #            ui.wipe(),
@@ -1493,6 +1507,13 @@ def replace(key,action) -> None:
 
 # CLASSES # 
 class TeahazHelper:
+    def is_connected(self,url):
+        for cookie in SESSION.cookies:
+            if cookie.domain == urlparse(url).netloc.split(':')[0]:
+                return True
+        else:
+            return False
+
     def set_chatroom(self,url,index):
         global BASE_DATA,CONV_HEADER,URL
             
@@ -1500,14 +1521,6 @@ class TeahazHelper:
         if index == 'invalid' or index == 'register':
             return
 
-        
-        # look for url in cookies
-        for cookie in SESSION.cookies:
-            if cookie.domain == urlparse(url).netloc.split(':')[0]:
-                found = True
-                break
-        else:
-            found = False
 
         ogdata = BASE_DATA.copy()
         ogurl = URL
@@ -1524,7 +1537,7 @@ class TeahazHelper:
         BASE_DATA['chatroom'] = chatrooms[index]
         
         # get login or register 
-        if not found:
+        if not th.is_connected(url):
             handle_action('menu_login_type')
             return "login"
         # set new globals
@@ -1559,6 +1572,8 @@ class TeahazHelper:
                 d[key] = value
 
         address = values.get('address')
+        globals()['URL'] = address
+
         chatroom = values.get('chatroom')
         if SERVERS.get(address):
             SERVERS[address]['chatrooms'].append(chatroom)
@@ -1569,6 +1584,13 @@ class TeahazHelper:
 
         edit_json('usercfg.json','SERVERS',SERVERS)
         import_json('usercfg')
+
+        if not th.is_connected(address):
+            self.set_chatroom(address,len(SERVERS[address]['chatrooms'])-1)
+            handle_action('menu_login_type')
+            return 'not connected'
+
+        
 
         return address,SERVERS[address]['chatrooms'].index(chatroom)
 
@@ -1796,7 +1818,8 @@ class TeahazHelper:
             print(f'\033[{iy};{ix}H'+repr(MODE_LABEL))
             
         # print top bar
-        print(CONV_HEADER)
+        if not CONV_HEADER.hidden:
+            print(CONV_HEADER)
 
 
 
@@ -2301,9 +2324,9 @@ MAX_MESSAGE_WIDTH = lambda: int(WIDTH*4/10)
 MENUS = [
     "menu_server_picker",
     #"menu_address_picker",
-    "menu_server_new",
+    #"menu_server_new",
     #"menu_serverregister",
-    "menu_login_type",
+    #"menu_login_type",
     #"menu_login",
     #"menu_settings",
     #"menu_picker"
@@ -2367,11 +2390,6 @@ if __name__ == "__main__":
     th = TeahazHelper()
 
 
-    #for style in ['title','error','success','label','value','border']:
-    #    dbg('container_'+style,THEME[style],parse_color(THEME[style],'a'))
-    #    value = THEME[style]
-    #    pytermgui.set_style('container_'+style, lambda item: parse_color(value,item))
-
     ## set pytermgui styles
     pytermgui.set_style('container_title',lambda item: parse_color(THEME['title'],item).replace('_',' '))
     pytermgui.set_style('container_error',lambda item: parse_color(THEME['error'],item.upper())),
@@ -2408,7 +2426,8 @@ if __name__ == "__main__":
 
     # set up top bar to indicate current conv
     CONV_HEADER = Container(width=WIDTH,dynamic_size=False)
-    CONV_HEADER_LABEL = Label(value=CURRENT_CHATROOM[0],justify='center')
+    CONV_HEADER_LABEL = Label(justify='center')
+    CONV_HEADER_LABEL.set_style('value',pytermgui.CONTAINER_VALUE_STYLE)
     if CURRENT_CHATROOM:
         url,index = CURRENT_CHATROOM
         value = f"{URL}: {SERVERS[URL]['chatrooms'][index]}"
@@ -2416,6 +2435,7 @@ if __name__ == "__main__":
         value = ''
     CONV_HEADER_LABEL.value = value
     CONV_HEADER.add_elements(CONV_HEADER_LABEL)
+    CONV_HEADER.hidden = False
     
     # set up startin gmode
     switch_mode("ESCAPE")

@@ -1,6 +1,6 @@
 # BUGS
-- [ ] messages dont get seperated by time :(
-- [ ] fix add_new button in themes
+- [ ] add_new button in themes
+- [ ] value style doesnt work with parser
 - [ ] only the first element in multipage containers resizes
 
 
@@ -29,17 +29,12 @@
     * [x] convert \_GetchWindows \__call__ to use wgetch || decode getch output
     * [ ] test on windows
 
-- restructure
-    * [x] create Color class in pytermgui.py and move color things under it
-
 
 - prerequisites for FM:
     * [ ] make menus use global binding dicts and have them be tied into handle_action
     * [ ] add per-menu bindings for menus ( "ui__binds": { "key": "action" } )
 
-
 - create general picker function that other pickers can call
-
 
 - pytergmui.Container.get_lines()
 
@@ -54,8 +49,6 @@
 
 
 - messaging lol
-    * [ ] top headerbar indicating current chatroom info
-
     * [ ] message
         + [x] get
         + [x] send
@@ -134,4 +127,7 @@
             - [x] login function
             - [x] register function
 
+    * [x] top headerbar indicating current chatroom info
 
+- restructure
+    * [x] create Color class in pytermgui.py and move color things under it
