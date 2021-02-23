@@ -50,6 +50,7 @@
         }
     },
     "ui__title3": "messaging",
+    "MESSAGE_SEPARATE_TIME": "30",
     "FILETYPE_DEFAULTS": {
         "image": "kitty +kitten icat {path} --scale_up",
         "video": "mpv {path}",

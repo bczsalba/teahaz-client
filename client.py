@@ -24,8 +24,6 @@ color        =  Color.color
 highlight    =  Color.highlight
 gradient     =  Color.gradient
 get_gradient =  Color.get_gradient
-
-#import italic,bold,underline,color,highlight,gradient,get_gradient
 from pytermgui import Container,Prompt,Label,container_from_dict
 
 
@@ -603,7 +601,7 @@ def handle_action(action) -> None:
     elif action == "reprint":
         fun,args,obj = UI_TRACE[-1]
         pytermgui.clr()
-        th.print_messages()
+        th.print_messages(reprint=True)
 
         fun(**args)
         return
@@ -1672,12 +1670,13 @@ class TeahazHelper:
             else:
                 previous = None
 
+            current_time = int(m.get('time'))
             if previous:
                 prev_time = int(previous.get('time'))
-                current_time = int(m.get('time'))
 
-                if previous.get('username') == m.get('username') and current_time-prev_time > 0:
-                    chunk_start = False         
+                if previous.get('username') == m.get('username'):
+                    if current_time-prev_time < int(MESSAGE_SEPARATE_TIME):
+                        chunk_start = False         
 
             # test if current message is the end of a chunk 
             chunk_end = True
@@ -1687,8 +1686,10 @@ class TeahazHelper:
                 next_msg = None
 
             if next_msg:
+                next_time = int(next_msg.get('time'))
                 if next_msg.get('username') == m.get('username'):
-                    chunk_end = False
+                    if next_time-current_time < int(MESSAGE_SEPARATE_TIME):
+                        chunk_end = False
 
             # do things according to these values
             if chunk_start:
