@@ -172,13 +172,13 @@ class InputField:
         # set highlighter according to highlight param
         highlighter = ('\033[7m' if highlight else '')
         if callable(self.visual_color):
-            visual_color = self.visual_color()
+            selected_text = self.visual_color(charUnderCursor)
         else:
-            visual_color = self.visual_color
+            selected_text = self.visual_color + charUnderCursor
 
 
         # construct line
-        line = self.field_color + left + highlighter + visual_color + charUnderCursor + '\033[0m' + self.field_color + right + '\033[0m'
+        line = self.field_color + left + highlighter + selected_text + '\033[0m' + self.field_color + right + '\033[0m'
 
         if return_line:
             return line
@@ -213,20 +213,18 @@ class InputField:
         right = self.value[end:]
 
         highlight = '\033[7m'
-        if callable(self.visual_color):
-            visual_color = self.visual_color()
-        else:
-            visual_color = self.visual_color
-
         self.selected = selected
         self.selected_start = start
         self.selected_end = end
+
+        if callable(self.visual_color):
+            selected_text = self.visual_color(selected)
+        else:
+            selected_text = self.visual+color + selected
+
         
         self.wipe()
-
-        line = left+highlight+visual_color+selected+self.field_color+right
-        from client import dbg
-        dbg('col',self.field_color)
+        line = left+highlight+selected_text+self.field_color+right
 
         # write to stdout
         x,y = self.pos

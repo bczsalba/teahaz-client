@@ -67,6 +67,7 @@ def import_json(name) -> None:
 
 ## edit setting in json (needed because lambda cannot do assignments)
 def edit_json(json_path,key,value) -> None:
+    dbg(key)
     # get value if needed
     okey = key
     ovalue = value
@@ -508,6 +509,7 @@ def login_or_register(contype,url,data) -> None:
             return
 
         else:
+            ui.wipe()
             ui.create_success_dialog(text)
     
 
@@ -1267,6 +1269,7 @@ def handle_menu_actions(action,current_file=None) -> int:
     elif menu == "server_new":
         pytermgui.set_attribute_for_id('server_new-button_add','handler',
                 lambda prev,self: {
+                    prev.wipe(),
                     handle_menu('ESC',self.parent) if not th.add_new_server(prev.dict_path) else None})
 
         #pytermgui.set_attribute_for_id('server_new-prompt_address','handler', lambda _,self: {
@@ -1515,6 +1518,7 @@ class TeahazHelper:
             return False
 
     def set_chatroom(self,url,index):
+        dbg('called')
         global BASE_DATA,CONV_HEADER,URL
             
         # return if certain values are passed
@@ -1536,6 +1540,8 @@ class TeahazHelper:
         BASE_DATA['username'] = SERVERS[url]['username']
         BASE_DATA['chatroom'] = chatrooms[index]
         
+        edit_json('usercfg.json','CURRENT_CHATROOM',[url,index])
+
         # get login or register 
         if not th.is_connected(url):
             handle_action('menu_login_type')
@@ -1561,12 +1567,10 @@ class TeahazHelper:
                     CONV_HEADER_LABEL.value = ogvalue
                 return ret
 
-            edit_json('usercfg.json','CURRENT_CHATROOM',f'{url}/{index}')
 
         dbg('chatroom set to',url,'/',chatrooms[index])
 
     def add_new_server(self,values):
-        dbg(values)
         d = {}
         for key,value in values.items():
             if not key.startswith('ui__'):
@@ -1587,10 +1591,12 @@ class TeahazHelper:
         import_json('usercfg')
 
         dbg(th.is_connected(address))
+        self.set_chatroom(address,len(SERVERS[address]['chatrooms'])-1)
         if not th.is_connected(address):
-            self.set_chatroom(address,len(SERVERS[address]['chatrooms'])-1)
             handle_action('menu_login_type')
             return 'not connected'
+        else:
+            handle_menu('ESC',UI_TRACE[-1][2])
 
         
 
@@ -2322,16 +2328,17 @@ LOGFILE = os.path.join(PATH,'log')
 DELIMITERS = "!@#$%^&*()[]{}|\\;':\",.<>/? \t"
 MAX_MESSAGE_WIDTH = lambda: int(WIDTH*4/10)
 
+
 # menus for handle_menu_actions
 MENUS = [
     "menu_server_picker",
-    #"menu_address_picker",
-    #"menu_server_new",
-    #"menu_serverregister",
-    #"menu_login_type",
-    #"menu_login",
-    #"menu_settings",
-    #"menu_picker"
+    # "menu_address_picker",
+    # "menu_server_new",
+    # "menu_serverregister",
+    "menu_login_type",
+    # "menu_login",
+    # "menu_settings",
+    # "menu_picker"
 ]
 
 KEEP_GOING = True
@@ -2381,6 +2388,8 @@ if __name__ == "__main__":
             print()
         sys.exit(1)
 
+
+    # load session.obj
     SESSIONLOCATION = os.path.join(PATH,'session.obj')
     if os.path.exists(SESSIONLOCATION):
         with open(SESSIONLOCATION,'rb') as f:
@@ -2410,11 +2419,13 @@ if __name__ == "__main__":
     # set default mode
     infield = getch.InputField(pos=get_infield_pos())
     infield.line_offset = None
-    infield.visual_color = lambda: '\033['+pytermgui.DEFAULT_COLOR_PREFIX+';'+THEME['field_highlight']+'m'
+    infield.visual_color = lambda text: parse_color(THEME['field_highlight'],text)
+    # infield.visual_color = lambda: '\033['+pytermgui.DEFAULT_COLOR_PREFIX+';'+THEME['field_highlight']+'m'
 
-    if is_set('SERVERS'):
-        urls = list(SERVERS.keys())
-        th.set_chatroom(urls[0],0)
+    # set up defaults
+    if is_set('CURRENT_CHATROOM'):
+        url,chatroom = CURRENT_CHATROOM
+        th.set_chatroom(url,chatroom)
     else:
         SERVERS = {}
         CURRENT_CHATROOM = None
@@ -2437,6 +2448,7 @@ if __name__ == "__main__":
         value = ''
         SESSION = requests.session()
 
+    # set header values
     CONV_HEADER_LABEL.value = value
     CONV_HEADER.add_elements(CONV_HEADER_LABEL)
     CONV_HEADER.hidden = False
@@ -2444,6 +2456,7 @@ if __name__ == "__main__":
     # set up startin gmode
     switch_mode("ESCAPE")
 
+    # start get loop
     get_loop = threading.Thread(target=th.get_loop,name='get_loop')
     get_loop.start()
 

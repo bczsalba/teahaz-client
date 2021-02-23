@@ -21,7 +21,7 @@
             "label": "245",
             "value": "72",
             "border": "60",
-            "field_highlight": "210",
+            "field_highlight": "gradient(210)",
             "mode_indicator": "72",
             "ui__title2": "characters",
             "corners": {
