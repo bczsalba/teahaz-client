@@ -339,11 +339,11 @@ def is_in_last_word(index,string) -> bool:
 # UI FUNCTIONS #
 
 ## get what position infield should be at
-def get_infield_pos() -> list:
+def get_infield_pos(reprint_messages=True) -> list:
     if 'infield' in globals().keys() and len(infield.value):
         offset = (len(infield.value)+1)//WIDTH
 
-        if not infield.line_offset == offset:
+        if not infield.line_offset == offset and reprint_messages:
             infield.wipe()
             th.print_messages(reprint=True)
 
@@ -1746,6 +1746,12 @@ class TeahazHelper:
             sys.stdout.write('\n')
 
         sys.stdout.flush()        
+
+        if MODE != 'ESCAPE':
+            ix,iy = get_infield_pos(reprint_messages=False)
+            ix -= 1
+            iy += 1
+            print(f'\033[{iy};{ix}H'+repr(MODE_LABEL))
 
 
 
