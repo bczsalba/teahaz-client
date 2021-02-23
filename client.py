@@ -1487,7 +1487,7 @@ def replace(key,action) -> None:
 # CLASSES # 
 class TeahazHelper:
     def set_chatroom(self,url,index):
-        global BASE_DATA
+        global BASE_DATA,CONV_HEADER
             
         # return if certain values are passed
         if index == 'invalid' or index == 'register':
@@ -1506,6 +1506,9 @@ class TeahazHelper:
         chatrooms = SERVERS[url]['chatrooms']
         globals()['CURRENT_CHATROOM'] = url,index
 
+        if is_set('CONV_HEADER'):
+            CONV_HEADER_LABEL.value = f'{url}: {chatrooms[index]}'
+
         BASE_DATA['username'] = SERVERS[url]['username']
         BASE_DATA['chatroom'] = chatrooms[index]
         
@@ -1513,9 +1516,23 @@ class TeahazHelper:
         if not found:
             handle_action('menu_login_type')
             return "login"
-
         # set new globals
         else:
+            # test if server works
+            ret = th.get(0,'message')
+
+            error = False
+            try:
+                m = json.loads(ret)
+                if not isinstance(m,list):
+                    error = True
+            except ValueError:
+                error = True
+
+            if error:
+                ui.create_error_dialog('Error while switching servers: '+ret,'try again')
+                return ret
+
             edit_json('usercfg.json','CURRENT_CHATROOM',f'{url}/{index}')
 
         dbg('chatroom set to',url,'/',chatrooms[index])
@@ -1638,6 +1655,9 @@ class TeahazHelper:
         # loop through messages
         previous = None
         for i,m in enumerate(messages):
+            # return if a menu started showing
+            if PIPE_OUTPUT:
+                return
             
             # error if message isnt a dict
             if not isinstance(m,dict):
@@ -1747,11 +1767,15 @@ class TeahazHelper:
 
         sys.stdout.flush()        
 
+        # print mode label
         if MODE != 'ESCAPE':
             ix,iy = get_infield_pos(reprint_messages=False)
             ix -= 1
             iy += 1
             print(f'\033[{iy};{ix}H'+repr(MODE_LABEL))
+            
+        # print top bar
+        print(CONV_HEADER)
 
 
 
@@ -2168,7 +2192,7 @@ class UIGenerator:
 
         pytermgui.set_attribute_for_id('error-button_'+button,'handler',handler)
 
-        d = self.create_menu(source,corners=[[],[],[],"error"])
+        d = self.create_menu(source)
         return d
 
     # unified way to create success dialog
@@ -2355,11 +2379,24 @@ if __name__ == "__main__":
         CURRENT_CHATROOM = None
         handle_action('menu_server_new')
     
+    # set up bottom mode label
     MODE_LABEL = Label('-- ESCAPE --',justify='left')
     MODE_LABEL.set_style('value',lambda item: color(item,THEME['mode_indicator']))
     x,y = get_infield_pos()
     MODE_LABEL.pos = [x,y+5]
+
+    # set up top bar to indicate current conv
+    CONV_HEADER = Container(width=WIDTH,dynamic_size=False)
+    CONV_HEADER_LABEL = Label(value=CURRENT_CHATROOM[0],justify='center')
+    if CURRENT_CHATROOM:
+        url,index = CURRENT_CHATROOM
+        value = f"{URL}: {SERVERS[URL]['chatrooms'][index]}"
+    else:
+        value = ''
+    CONV_HEADER_LABEL.value = value
+    CONV_HEADER.add_elements(CONV_HEADER_LABEL)
     
+    # set up startin gmode
     switch_mode("ESCAPE")
 
     get_loop = threading.Thread(target=th.get_loop,name='get_loop')
