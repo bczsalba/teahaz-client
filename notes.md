@@ -1,23 +1,23 @@
 * rn : 
-    - [ ] look into sorting functions under classes:
-        - InputHandlers could be one
-        - maybe Handlers in general
+    - [ ] add loading screens to server functions
+        + [ ] global object gets created, whos value can be set by functions
+        + [ ] it launches a thread, then is killed by the caller
+
     - [ ] add prev_get support, extra messages before they send
-    - [ ] add inline formatting symbols
-        - [x] italic
-        - [x] bold
-        - [x] italic_bold
-        - [x] underline
-        - [x] strikethrough
-        - [ ] make multiple of same type work in one string
-        - [ ] make symbols escapable
+
+    - [ ] look into sorting functions under classes:
+        + InputHandlers could be one
+        + maybe Handlers in general
+
 
 
 # BUGS
 - [ ] add_new button in themes
-- [ ] value style doesnt work with parser
 - [ ] only the first element in multipage containers resizes
 
+# TODO
+- [ ] improve parse_inline_codes (refer to comment)
+- [ ] restructure this file pls
 
 # FEATURES 
 ## upcoming checklist
@@ -146,3 +146,11 @@
 
 - restructure
     * [x] create Color class in pytermgui.py and move color things under it
+
+
+- add inline formatting symbols
+    + [x] italic
+    + [x] bold
+    + [x] italic_bold
+    + [x] underline
+    + [x] strikethrough

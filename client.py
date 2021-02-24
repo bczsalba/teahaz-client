@@ -1712,7 +1712,7 @@ class TeahazHelper:
 
         # get login or register 
         if not th.is_connected(url):
-            handle_action('menu_login_type')
+            handle_action('menu_login/register')
             return "login"
 
         # set new globals
@@ -1735,6 +1735,7 @@ class TeahazHelper:
             if error:
                 # create error box
                 ui.create_error_dialog('Error while switching servers: '+ret,'try again')
+                dbg(data)
 
                 # restore values
                 BASE_DATA = ogdata
@@ -1770,7 +1771,7 @@ class TeahazHelper:
 
         self.set_chatroom(address,len(SERVERS[address]['chatrooms'])-1)
         if not th.is_connected(address):
-            handle_action('menu_login_type')
+            handle_action('menu_login/register')
             return 'not connected'
         else:
             handle_menu('ESC',UI_TRACE[-1][2])
@@ -1794,6 +1795,7 @@ class TeahazHelper:
             return "Client Error: Invalid get mode '"+str(mode)+"'"
 
         # return response
+        # dbg('sending',URL+'/api/v0'+endpoint,BASE_DATA) 
         response = SESSION.get(url=URL+'/api/v0'+endpoint,headers=BASE_DATA)
         return response.text
 
