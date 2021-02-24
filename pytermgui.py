@@ -329,6 +329,9 @@ class Color:
 
     def underline(s):
         return '\033[4m'+str(s)+'\033[0m'
+    
+    def strikethrough(s):
+        return '\033[9m'+str(s)+'\033[0m'
 
     def highlight(s,fg=None):
         if not isinstance(fg,int) and not fg.isdigit():
@@ -503,6 +506,8 @@ class Container:
     # text representation of self
     def __repr__(self):
         global WIDTH,HEIGHT
+
+        self._repr_pre()
 
         nWIDTH,nHEIGHT = os.get_terminal_size()
         if not [WIDTH,HEIGHT] == [nWIDTH,nHEIGHT]:
@@ -799,6 +804,11 @@ class Container:
 
         sys.stdout.flush()
 
+    def wipe_all_containing(self):
+        px,py = self.pos
+        for y in range(py+1,py+self.height+3):
+            sys.stdout.write(f'\033[{y};0H'+'\033[K')
+        sys.stdout.flush()
     
     # transform self to new position
     def move(self,pos,wipe=False):
@@ -809,15 +819,18 @@ class Container:
 
 
     # center container
-    def center(self,xoffset=0,yoffset=5):
+    def center(self,axes="both",xoffset=0,yoffset=5):
         self._is_centered = True
         if HEIGHT//2 < self.height-yoffset:
             yoffset = 0
         if WIDTH//2 < self.width-xoffset:
             xoffset = 0
-
-        x = (WIDTH-self.width-xoffset)//2
-        y = (HEIGHT-self.height-yoffset)//2
+        
+        x,y = self.pos
+        if axes == "both" or axes == "x":
+            x = (WIDTH-self.width-xoffset)//2
+        elif axes == "both" or axes == "y":
+            y = (HEIGHT-self.height-yoffset)//2
         self.move([x,y])
 
     def export(self,filename):
@@ -859,7 +872,11 @@ class Container:
             if real_length(str(e.label))+4 > self.width*(1/2):
                 e.label = str(e.label)[:int(self.width*(1/3))-3]+'...'
 
-    
+    # EVENT: start of repr
+    # - called before any repr logic
+    def _repr_pre(self):
+        return
+
     # EVENT: selection changed
     # - called during select() method, useful in extending select behaviour
     @staticmethod

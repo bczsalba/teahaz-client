@@ -17,13 +17,14 @@ from urllib.parse import urlparse
 from pytermgui import WIDTH,HEIGHT
 from pytermgui import clean_ansi,real_length,break_line
 from pytermgui import Color
-italic       =  Color.italic
-bold         =  Color.bold
-underline    =  Color.underline
-color        =  Color.color
-highlight    =  Color.highlight
-gradient     =  Color.gradient
-get_gradient =  Color.get_gradient
+italic         =  Color.italic
+bold           =  Color.bold
+underline      =  Color.underline
+strikethrough  =  Color.strikethrough
+color          =  Color.color
+highlight      =  Color.highlight
+gradient       =  Color.gradient
+get_gradient   =  Color.get_gradient
 from pytermgui import Container,Prompt,Label,container_from_dict
 
 
@@ -406,16 +407,17 @@ def parse_color(_color,s,level=0) -> types.FunctionType:
         # get inner value recursively
         inner_stripped = e[inner_start:inner_end].strip('(').strip(')')
         inner = parse_color(inner_stripped,s,level+1)
+        if inner == "":
+            inner = s
         
         # get value to be added
-        #dbg(outer.__name__+'('+str(inner)+')',do_color=0)
+        # dbg(outer.__name__+'('+str(inner)+')',do_color=0)
         #dbg('inner_stripped',inner_stripped,do_color=0)
         try:
-            dbg(f'{outer.__name__}({s},{inner})',do_color=0)
-            dbg(f'{outer.__name__}({s},{inner})',do_color=0)
+            # dbg(f'{outer.__name__}({s},{inner})',do_color=0)
             out = outer(s,inner)
-        except TypeError:
-            dbg(f'{outer.__name__}({inner})',do_color=0)
+        except TypeError as e:
+            # dbg(f'{outer.__name__}({inner})',do_color=0)
             out = outer(inner)
 
         # add value
@@ -424,18 +426,55 @@ def parse_color(_color,s,level=0) -> types.FunctionType:
     return ''.join(output)
 
 def parse_inline_codes(s) -> str:
-    chars = ['*','**','***','__']
-    # TODO: underline doesnt work
-    functions = list(THEME['message_styles'].keys())[::-1]
+    # TODO: add support for multiple codes/str
+    for i,(c,func) in enumerate(reversed(THEME['message_styles'].items())):
+        indices = []
+        doubles = []
+        offset = 0
+        current = s
+        while 1:
+            new = current.find(c)
+            # # dbg(new)
 
-    for i,c in enumerate(reversed(chars)):
-        while s.count(c) >= 2:
-            start = s.find(c)+len(c)
-            end = start+s[start:].find(c)
+            if new == -1:
+                # # dbg('c','end',new,indices)
+                break
+            new += real_length(c)
+
+            doubles.append(offset+new)
+            if len(doubles) == 2:
+                doubles[1] -= real_length(c)
+                indices.append(doubles)
+                doubles = []
+
+            offset += new
+            current = current[offset:]
+            # dbg(current)
+
+        if not len(indices):
+            continue
+
+        for start,end in indices:
             text = s[start:end]
-
-            s = s[:start-len(c)]+parse_color(f"{functions[i]}({text})",text)+s[end+len(c):]
+            # dbg(func,text,start,end)
+            s = s[:start-real_length(c)]+parse_color(func,text)+s[end+real_length(c):]
+            # dbg(s)
+        
+        continue
     return s
+
+        # while s.count(c) >= 2:
+            # start = s.find(c)+len(c)
+            # dbg(s[start-len(c)-1] == "\\")
+            # if 0 < start and s[start-len(c)-1] == '\\':
+                # dbg('cont')
+                # continue
+# 
+            # end = start+s[start:].find(c)
+            # text = s[start:end]
+# 
+            # s = s[:start-1]+parse_color(func,text)+s[end+1:]
+    # return s
             
 
         
@@ -1871,10 +1910,11 @@ class TeahazHelper:
 
             inline = parse_inline_codes(content)
             if inline == content:
-                do_subdivision = False
+                do_subdivision = True
             else:
                 content = inline
-                do_subdivision = True
+                do_subdivision = False
+            #dbg(do_subdivision)
 
             # get lines from content, add nickname & time
             lines = pytermgui.break_line(content,MAX_MESSAGE_WIDTH(),do_subdivision=do_subdivision)
@@ -2409,10 +2449,15 @@ if __name__ == "__main__":
     ## clear screen
     print('\033[2J')
 
+
     if DO_DEBUG:
         open(LOGFILE,'w').close()
     dbg('starting teahaz at size',str(WIDTH),str(HEIGHT))
     pytermgui.set_debugger(dbg)
+
+    #print(parse_inline_codes('*italic* **bold** ***italic_bold*** __underline__ ~~strikethrough~~ *italic again* <rainbow<'))
+    #print(parse_inline_codes('~~strikethrough~~ ~~strikethrough~~'))
+    #sys.exit()
 
     if WIDTH < 37:
         w = Container(height=3)
@@ -2472,7 +2517,10 @@ if __name__ == "__main__":
     MODE_LABEL.pos = [x,y+5]
 
     # set up top bar to indicate current conv
-    CONV_HEADER = Container(width=WIDTH,dynamic_size=False)
+    CONV_HEADER = Container(width=int(WIDTH*0.75),dynamic_size=False)
+    CONV_HEADER._repr_pre = CONV_HEADER.wipe_all_containing
+    #CONV_HEADER.wipe = lambda *args: dbg('wipe your ass')#CONV_HEADER.wipe_all_containing
+    CONV_HEADER.center(axes='x')
     CONV_HEADER_LABEL = Label(justify='center')
     CONV_HEADER_LABEL.set_style('value',pytermgui.CONTAINER_VALUE_STYLE)
     if CURRENT_CHATROOM:

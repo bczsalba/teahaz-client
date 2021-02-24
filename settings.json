@@ -38,10 +38,12 @@
                 "bottom_right": "X"
             },
             "message_styles": {
-                "italic": "italic()",
-                "bold": "bold()",
-                "underline": "underline()",
-                "italic-bold": "italic(bold())"
+                "*": "italic",
+                "**": "bold",
+                "***": "italic(bold())",
+                "__": "underline",
+                "~~": "strikethrough",
+                "%%": "gradient(rainbow)"
             },
             "ui__padding": 0,
             "ui__button": {

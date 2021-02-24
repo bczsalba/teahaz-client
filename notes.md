@@ -9,6 +9,7 @@
         - [ ] italic_bold
         - [ ] underline
 
+
 # BUGS
 - [ ] add_new button in themes
 - [ ] value style doesnt work with parser
