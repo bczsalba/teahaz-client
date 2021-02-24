@@ -6,8 +6,11 @@
     - [ ] add inline formatting symbols
         - [x] italic
         - [x] bold
-        - [ ] italic_bold
-        - [ ] underline
+        - [x] italic_bold
+        - [x] underline
+        - [x] strikethrough
+        - [ ] make multiple of same type work in one string
+        - [ ] make symbols escapable
 
 
 # BUGS

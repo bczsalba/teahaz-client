@@ -1698,12 +1698,12 @@ class TeahazHelper:
         globals()['CURRENT_CHATROOM'] = url,index
 
         # update header
+        chatrooms = SERVERS[url]['chatrooms']
         if is_set('CONV_HEADER'):
             ogvalue = CONV_HEADER_LABEL.value
             CONV_HEADER_LABEL.value = f'{url}: {chatrooms[index]}'
 
         # set BASE_DATA
-        chatrooms = SERVERS[url]['chatrooms']
         BASE_DATA['username'] = SERVERS[url]['username']
         BASE_DATA['chatroom'] = chatrooms[index]
         
