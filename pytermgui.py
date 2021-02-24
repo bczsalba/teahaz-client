@@ -829,7 +829,7 @@ class Container:
         x,y = self.pos
         if axes == "both" or axes == "x":
             x = (WIDTH-self.width-xoffset)//2
-        elif axes == "both" or axes == "y":
+        if axes == "both" or axes == "y":
             y = (HEIGHT-self.height-yoffset)//2
         self.move([x,y])
 
