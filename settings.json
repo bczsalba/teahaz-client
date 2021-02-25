@@ -43,7 +43,7 @@
                 "***": "italic(bold())",
                 "__": "underline",
                 "~~": "strikethrough",
-                "%%": "gradient(rainbow)"
+                "%%": "gradient(72)"
             },
             "ui__padding": 0,
             "ui__button": {

@@ -1,4 +1,5 @@
 * rn : 
+    - fix handle_operation, extra message thingie
     - [ ] add loading screens to server functions
         + [ ] global object gets created, whos value can be set by functions
         + [ ] it launches a thread, then is killed by the caller
@@ -18,9 +19,19 @@
 # TODO
 - [ ] improve parse_inline_codes (refer to comment)
 - [ ] restructure this file pls
+- handle errors:
+    * these should get you stuck in an infinite loop
+    * [ ] Connection Refused
+    * [ ] bad url
 
 # FEATURES 
 ## upcoming checklist
+- PopupCompleter(Container)
+
+    """
+    Container derivative for autocomplete function
+    """
+
 - FileManager(Container)
 
     """
@@ -28,7 +39,7 @@
     with files.
     """
 
-    main methods (other than Container's):
+    - main methods (other than Container's):
         * cd : change directory
         * search(term) : search for `term` in files
         * open(opt: index) : open selected file with the global 

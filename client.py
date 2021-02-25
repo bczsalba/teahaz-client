@@ -683,10 +683,10 @@ def handle_action(action) -> None:
     # message binds
     elif action == "message_send":
         msg = infield.value
-        ret = th.send(msg,'message')
-        dbg(ret)
-        if 'OK' in ret:
-            infield.clear_value()
+        th.send(msg,'message')
+        # dbg(ret)
+        # if 'OK' in ret:
+        infield.clear_value()
 
     # TODO
     elif action == "insert_newline":
@@ -1674,6 +1674,21 @@ class ThreadWithReturnValue(threading.Thread):
         return self._return
 
 class TeahazHelper:
+    def handle_operation(self,method,*args,**kwargs):
+        def _do_operation(*args,**kwargs):
+            if method == "post":
+                fun = SESSION.post
+            elif method == "get":
+                fun = SESSION.get
+ 
+            try:
+                self.operation_return = fun(**kwargs)
+            except Exception as e:
+                dbg(e)
+
+        self.operation_thread = threading.Thread(target=_do_operation,args=args,kwargs=kwargs)
+        self.operation_thread.start()
+
     def is_connected(self,url):
         for cookie in SESSION.cookies:
             if cookie.domain == urlparse(url).netloc.split(':')[0]:
@@ -1776,7 +1791,6 @@ class TeahazHelper:
         else:
             handle_menu('ESC',UI_TRACE[-1][2])
 
-        
 
         return address,SERVERS[address]['chatrooms'].index(chatroom)
 
@@ -1835,9 +1849,15 @@ class TeahazHelper:
             dbg(e)
             pass
 
-        response = SESSION.post(url=URL+'/api/v0'+endpoint, json=data)
-        self.print_messages()
-        return response.text
+        self.handle_operation(method='post',url=URL+'/api/v0'+endpoint, json=data)
+        temp = MESSAGE_TEMPLATE.copy()
+        temp['time'] = time.time()
+        temp['username'] = BASE_DATA.get('username')
+        temp['nickname'] = "sending message"
+        temp['message'] = message
+            
+        self.print_messages(extras=[temp])
+        #return response.text
 
     def print_messages(self,start_time=0,extras=[],reprint=False):
         if not reprint:
@@ -1884,7 +1904,7 @@ class TeahazHelper:
 
         # loop through messages
         previous = None
-        for i,m in enumerate(messages):
+        for i,m in enumerate(messages+extras):
             # return if a menu started showing
             if PIPE_OUTPUT:
                 return
@@ -2016,14 +2036,13 @@ class TeahazHelper:
         if not CONV_HEADER.hidden:
             print(CONV_HEADER)
 
-
-
-
-
     def get_loop(self):
+        global WIDTH,HEIGHT
+
         while KEEP_GOING:
             time.sleep(0.5)
             if not PIPE_OUTPUT:
+                WIDTH,HEIGHT = os.get_terminal_size()
                 self.print_messages()
 
 class UIGenerator:
@@ -2436,6 +2455,16 @@ CURRENT_FILE = None
 
 # given by server
 COOKIE = "flamingoestothestore"
+MESSAGE_TEMPLATE = {
+    "time": 0,
+    "username": "",
+    "nickname": "",
+    "chatroom": "",
+    "type": "text",
+    "message": "",
+    "filename": None,
+    "extension": None
+}
 
 # base data array to append to
 URL = None
