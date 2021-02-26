@@ -162,6 +162,18 @@ def dbg(*args,do_color=True) -> None:
     with open(LOGFILE,'a') as f:
         f.write(f"{bold(filename)}/{get_caller()}:{bold(lineno)} : "+s+'\n')
 
+def get_caller(depth=1):
+    frame = sys._getframe()
+    for _ in range(depth+1):
+        frame = getattr(frame,'f_back')
+
+    method    = frame.f_code.co_name
+    obj       = frame.f_locals.get('self')
+    lineno    = frame.f_lineno
+
+    return type(obj).__name__+'.'+method if obj else method
+
+
 ### do `fun` after `ms` passes, nonblocking
 def do_after(ms,fun,control='true',args={}) -> None:
     timed = lambda: (time.sleep(ms/1000),
@@ -483,7 +495,9 @@ def parse_inline_codes(s) -> str:
 
 # NETWORK FUNCTIONS #
 
-# start threaded connection, TODO: ignore input, add loading screeen
+# start threaded connection, TODO: this is the worst use of Thread humanity has ever witnessed.
+# TODO TODO TODO
+# also this should be under TeahazHelper
 def start_connection(contype,menu=None,**kwargs) -> int:
     def _connect(*args,**kwargs):
         # decide function to use
@@ -1674,18 +1688,22 @@ class ThreadWithReturnValue(threading.Thread):
         return self._return
 
 class TeahazHelper:
-    def handle_operation(self,method,*args,**kwargs):
+    def handle_operation(self,method,output,*args,**kwargs):
         def _do_operation(*args,**kwargs):
+            dbg(method+'-ing to variable self.'+output)
             if method == "post":
                 fun = SESSION.post
             elif method == "get":
                 fun = SESSION.get
  
             try:
-                self.operation_return = fun(**kwargs)
+                setattr(self,output,fun(**kwargs))
             except Exception as e:
                 dbg(e)
 
+            dbg('self.'+output+' set.')
+
+        setattr(self,output,'incomplete')
         self.operation_thread = threading.Thread(target=_do_operation,args=args,kwargs=kwargs)
         self.operation_thread.start()
 
@@ -1841,27 +1859,24 @@ class TeahazHelper:
         
         endpoint = f'/{endpoint}/'
 
-        # return response
-        try:
-            old = json.loads(PREV_GET)
-        except ValueError as e:
-            # TODO: handle this
-            dbg(e)
-            pass
-
-        self.handle_operation(method='post',url=URL+'/api/v0'+endpoint, json=data)
+        self.handle_operation(method='post',output='message_send_return',url=URL+'/api/v0'+endpoint, json=data)
         temp = MESSAGE_TEMPLATE.copy()
         temp['time'] = time.time()
         temp['username'] = BASE_DATA.get('username')
         temp['nickname'] = "sending message"
         temp['message'] = message
             
+        infield.clear_value()
         self.print_messages(extras=[temp])
-        #return response.text
 
-    def print_messages(self,start_time=0,extras=[],reprint=False):
+    def old_print_messages(self,extras=[],reprint=False):
+        global MESSAGES
+        dbg(get_caller(),reprint)
+
         if not reprint:
-            get_result = th.get(start_time,'message')
+            tmp = SESSION.last_get
+            SESSION.last_get = time.time()
+            get_result = th.get(tmp,'message')
 
             # return if no change happened
             if get_result == PREV_GET and not len(extras):
@@ -1881,7 +1896,7 @@ class TeahazHelper:
 
         # check if get_result is proper json, otherwise treat it like an error
         try:
-            messages = json.loads(get_result)
+            MESSAGES += json.loads(get_result)
         except ValueError as e:
             value = 'Exception while converting get_result to json: '+str(e)
             dbg(value)
@@ -1897,14 +1912,22 @@ class TeahazHelper:
             print(f'\033[{cleary};H\033[K')
 
         # error if return isnt a list
-        if not isinstance(messages,list):
+        if not isinstance(MESSAGES,list):
             dbg(messages,'isn\'t a dictionary.')
             ui.create_error_dialog(messages)
             return
 
         # loop through messages
         previous = None
-        for i,m in enumerate(messages+extras):
+
+        if get_result == PREV_GET and len(extras):
+            messagelist = extras
+        else:
+            messagelist = MESSAGES+extras
+
+        for i,m in enumerate(messagelist):
+            original = m
+
             # return if a menu started showing
             if PIPE_OUTPUT:
                 return
@@ -1941,10 +1964,14 @@ class TeahazHelper:
             # get lines from content, add nickname & time
             lines = pytermgui.break_line(content,MAX_MESSAGE_WIDTH(),do_subdivision=do_subdivision)
 
+            if original in extras:
+                for li,l in enumerate(lines):
+                    lines[li] = parse_color(THEME['fade'],l)
+
             # test if the current message is the start of a chunk
             chunk_start = True
             if 0 <= i-1:
-                previous = messages[i-1]
+                previous = MESSAGES[i-1]
             else:
                 previous = None
 
@@ -1958,8 +1985,8 @@ class TeahazHelper:
 
             # test if current message is the end of a chunk 
             chunk_end = True
-            if len(messages) > i+1:
-                next_msg = messages[i+1]
+            if len(MESSAGES) > i+1:
+                next_msg = MESSAGES[i+1]
             else:
                 next_msg = None
 
@@ -2013,7 +2040,7 @@ class TeahazHelper:
                 sys.stdout.write(f'\033[{y};{x}H'+l+'\n')
                 y += 1
                     
-            # add spacing between messages
+            # add spacing between MESSAGES
             sys.stdout.write('\n')
             if chunk_end:
                 sys.stdout.write('\n')
@@ -2036,14 +2063,156 @@ class TeahazHelper:
         if not CONV_HEADER.hidden:
             print(CONV_HEADER)
 
+    def print_messages(self,messages=[],extras=[],reprint=False):
+        global MESSAGES,PREV_MESSAGES
+
+        # get positions
+        leftx,y = infield.pos
+        y -= 3
+        usernamex = leftx
+        timex = leftx
+
+        if reprint:
+            messagelist = MESSAGES
+
+        # add given messages to global and print all
+        elif len(messages):
+            PREV_MESSAGES = MESSAGES
+            MESSAGES += messages
+            messagelist = MESSAGES
+
+        # only print extra messages
+        elif len(extras):
+           messagelist = extras 
+
+        # return if there's nothng to print
+        else:
+            dbg('nothing to print')
+            return 
+
+
+        for i,m in enumerate(messagelist):
+            # set up values
+            username     = m.get('username')
+            nickname     = m.get('nickname')
+            m_time       = m.get('time')
+            current_time = int(m_time)
+            sendtime     = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(m_time))
+            content = m.get('message')
+
+
+            # handle message content
+            if content:
+                if m in extras:
+                    decoded = content
+                else:
+                    decoded = decode(content)
+                inline = parse_inline_codes(decoded)
+                content = decoded
+                if inline == decoded:
+                    do_subdivision = True
+                else:
+                    content = inline
+                    do_subdivision = False
+                lines = pytermgui.break_line(content,MAX_MESSAGE_WIDTH(),do_subdivision=do_subdivision)
+            else:
+                content = '< '+m.get('filename')+' >'
+
+
+            # test if the current message is the start of a chunk
+            chunk_start = True
+            if 0 <= i-1:
+                previous = MESSAGES[i-1]
+            else:
+                previous = None
+
+            if previous:
+                prev_time = int(previous.get('time'))
+
+                if previous.get('username') == username:
+                    if current_time-prev_time < int(MESSAGE_SEPARATE_TIME):
+                        chunk_start = False         
+
+
+            # test if current message is the end of a chunk 
+            chunk_end = True
+            if len(MESSAGES) > i+1:
+                next_msg = MESSAGES[i+1]
+            else:
+                next_msg = None
+
+            if next_msg:
+                next_time = int(next_msg.get('time'))
+                if next_msg.get('username') == username:
+                    if next_time-current_time < int(MESSAGE_SEPARATE_TIME):
+                        chunk_end = False
+
+
+            # handle coloring
+            if m in extras:
+                for i,l in enumerate(lines):
+                    lines[i] = parse_color(THEME['fade'],l)
+            
+            
+            # add extra elements as needed
+            if chunk_start:
+                #TODO: this color will eventually be given by the server
+                lines.insert(0,parse_color(THEME['title'],nickname))
+
+            if chunk_end:
+                lines.append(parse_color(THEME['fade'],sendtime))
+
+            
+            # print lines:
+            for i,l in enumerate(lines):
+                # set cursor location
+                if username == BASE_DATA.get('username'):
+                    sys.stdout.write(f'\033[{y};{WIDTH-real_length(l)}H')
+                else:
+                    sys.stdout.write(f'\033[{y};{leftx}H')
+
+                sys.stdout.write(l+'\n')
+                y += 1
+
+            sys.stdout.write('\n')
+            if chunk_end:
+                sys.stdout.write('\n')
+
+        sys.stdout.flush()
+            
+
+
+
+
     def get_loop(self):
         global WIDTH,HEIGHT
 
         while KEEP_GOING:
-            time.sleep(0.5)
+            time.sleep(1)
             if not PIPE_OUTPUT:
                 WIDTH,HEIGHT = os.get_terminal_size()
-                self.print_messages()
+
+                if not is_set('messages_get_return',self.__dict__):
+                    get_time = SESSION.last_get
+                    SESSION.last_get = time.time()
+                    data = BASE_DATA
+                    data['time'] = str(get_time)
+                    dbg(data)
+                    self.handle_operation(method='get',output='messages_get_return',url=URL+'/api/v0/message',headers=data)
+                elif not self.messages_get_return == 'incomplete':
+                    dbg(self.messages_get_return)
+                    try:
+                        messages = json.loads(self.messages_get_return.text)
+                    except ValueError as e:
+                        dbg('can\'t convert messages: '+str(e))
+                        continue
+
+                    dbg(len(messages),len(PREV_MESSAGES))
+                    if not messages == PREV_MESSAGES:
+                        self.print_messages(messages)
+                    else:
+                        dbg('no change')
+                    self.messages_get_return = None
 
 class UIGenerator:
     """
@@ -2335,8 +2504,8 @@ class UIGenerator:
 
         ui.wipe()
 
-        #if True or handler == None:
-        handler = lambda _,self: handle_menu("ESC",self.parent)
+        if handler == None:
+            handler = lambda _,self: handle_menu("ESC",self.parent)
 
         pytermgui.set_attribute_for_id('error-button_'+button,'handler',handler)
 
@@ -2420,6 +2589,7 @@ else:
         f.write('{}')
 
 
+
 LOGFILE = os.path.join(PATH,'log')
 DELIMITERS = "!@#$%^&*()[]{}|\\;':\",.<>/? \t"
 MAX_MESSAGE_WIDTH = lambda: int(WIDTH*4/10)
@@ -2453,8 +2623,8 @@ PREV_GET = None
 UI_TRACE = [[return_to_infield,{},'']]
 CURRENT_FILE = None
 
-# given by server
-COOKIE = "flamingoestothestore"
+MESSAGES = []
+PREV_MESSAGES = []
 MESSAGE_TEMPLATE = {
     "time": 0,
     "username": "",
@@ -2472,6 +2642,7 @@ BASE_DATA = {
     "username": None,
     "chatroom": None,
 }
+
 
 
 
@@ -2505,11 +2676,16 @@ if __name__ == "__main__":
     if os.path.exists(SESSIONLOCATION):
         with open(SESSIONLOCATION,'rb') as f:
             SESSION = pickle.load(f)
+            if not hasattr(SESSION,'last_get'):
+                SESSION.last_get = 0
     else:
         SESSION = requests.session()
+        SESSION.last_get = 0
+
 
     ui = UIGenerator()
     th = TeahazHelper()
+
 
 
     ## set pytermgui styles
@@ -2570,6 +2746,7 @@ if __name__ == "__main__":
     switch_mode("ESCAPE")
 
     # start get loop
+    MESSAGES = json.loads(th.get(0))
     get_loop = threading.Thread(target=th.get_loop,name='get_loop')
     get_loop.start()
 
