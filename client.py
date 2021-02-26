@@ -1688,9 +1688,11 @@ class ThreadWithReturnValue(threading.Thread):
         return self._return
 
 class TeahazHelper:
-    def handle_operation(self,method,output,*args,**kwargs):
+    def __init__(self):
+        self.message_y = infield.pos[1]-3
+
+    def handle_operation(self,method,output,handler=None,*args,**kwargs):
         def _do_operation(*args,**kwargs):
-            dbg(method+'-ing to variable self.'+output)
             if method == "post":
                 fun = SESSION.post
             elif method == "get":
@@ -1701,7 +1703,8 @@ class TeahazHelper:
             except Exception as e:
                 dbg(e)
 
-            dbg('self.'+output+' set.')
+            if handler:
+                handler(*args,**kwargs)
 
         setattr(self,output,'incomplete')
         self.operation_thread = threading.Thread(target=_do_operation,args=args,kwargs=kwargs)
@@ -1859,13 +1862,13 @@ class TeahazHelper:
         
         endpoint = f'/{endpoint}/'
 
-        self.handle_operation(method='post',output='message_send_return',url=URL+'/api/v0'+endpoint, json=data)
         temp = MESSAGE_TEMPLATE.copy()
         temp['time'] = time.time()
         temp['username'] = BASE_DATA.get('username')
         temp['nickname'] = "sending message"
         temp['message'] = message
-            
+        self.handle_operation(method='post',output='message_send_return',url=URL+'/api/v0'+endpoint, json=data)
+
         infield.clear_value()
         self.print_messages(extras=[temp])
 
@@ -2067,19 +2070,17 @@ class TeahazHelper:
         global MESSAGES,PREV_MESSAGES
 
         # get positions
-        leftx,y = infield.pos
-        y -= 3
-        usernamex = leftx
-        timex = leftx
+        leftx = infield.pos[0]
 
         if reprint:
+            self.message_y = infield.pos[1]-3
             messagelist = MESSAGES
 
         # add given messages to global and print all
         elif len(messages):
             PREV_MESSAGES = MESSAGES
             MESSAGES += messages
-            messagelist = MESSAGES
+            messagelist = messages
 
         # only print extra messages
         elif len(extras):
@@ -2089,6 +2090,8 @@ class TeahazHelper:
         else:
             dbg('nothing to print')
             return 
+
+        infield.wipe()
 
 
         for i,m in enumerate(messagelist):
@@ -2167,12 +2170,15 @@ class TeahazHelper:
             for i,l in enumerate(lines):
                 # set cursor location
                 if username == BASE_DATA.get('username'):
-                    sys.stdout.write(f'\033[{y};{WIDTH-real_length(l)}H')
+                    sys.stdout.write(f'\033[{self.message_y};{WIDTH-real_length(l)}H')
                 else:
-                    sys.stdout.write(f'\033[{y};{leftx}H')
+                    sys.stdout.write(f'\033[{self.message_y};{leftx}H')
 
                 sys.stdout.write(l+'\n')
-                y += 1
+                self.message_y += 1
+
+            if m in extras:
+                self.message_y -= i
 
             sys.stdout.write('\n')
             if chunk_end:
@@ -2180,10 +2186,6 @@ class TeahazHelper:
 
         sys.stdout.flush()
             
-
-
-
-
     def get_loop(self):
         global WIDTH,HEIGHT
 
@@ -2199,15 +2201,14 @@ class TeahazHelper:
                     data['time'] = str(get_time)
                     dbg(data)
                     self.handle_operation(method='get',output='messages_get_return',url=URL+'/api/v0/message',headers=data)
+
                 elif not self.messages_get_return == 'incomplete':
-                    dbg(self.messages_get_return)
                     try:
                         messages = json.loads(self.messages_get_return.text)
                     except ValueError as e:
                         dbg('can\'t convert messages: '+str(e))
                         continue
 
-                    dbg(len(messages),len(PREV_MESSAGES))
                     if not messages == PREV_MESSAGES:
                         self.print_messages(messages)
                     else:
@@ -2623,6 +2624,7 @@ PREV_GET = None
 UI_TRACE = [[return_to_infield,{},'']]
 CURRENT_FILE = None
 
+SENDING = []
 MESSAGES = []
 PREV_MESSAGES = []
 MESSAGE_TEMPLATE = {
@@ -2683,11 +2685,6 @@ if __name__ == "__main__":
         SESSION.last_get = 0
 
 
-    ui = UIGenerator()
-    th = TeahazHelper()
-
-
-
     ## set pytermgui styles
     pytermgui.set_style('container_title',lambda item: parse_color(THEME['title'],item).replace('_',' '))
     pytermgui.set_style('container_error',lambda item: parse_color(THEME['error'],item.upper())),
@@ -2707,6 +2704,9 @@ if __name__ == "__main__":
     infield = getch.InputField(pos=get_infield_pos())
     infield.line_offset = None
     infield.visual_color = lambda text: parse_color(THEME['field_highlight'],text)
+
+    ui = UIGenerator()
+    th = TeahazHelper()
 
     # set up defaults
     if is_set('CURRENT_CHATROOM'):
