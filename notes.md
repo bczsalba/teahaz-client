@@ -30,11 +30,33 @@
 
 # FEATURES 
 ## upcoming checklist
-- PopupCompleter(Container)
+- InputFieldCompleter(Container)
 
     """
     Container derivative for autocomplete function
     """
+
+    - main goals:
+        * this object can get a field in the constructor,
+          or create one for itself
+        * it uses FuzzyWuzzy for autocompletion
+        * intercepts field's keys to look for RETURN, up/down
+        * it gets a list of strings to look for, and it uses
+          FW to get the 5 best matches
+          NOTE: this list should be refreshable
+        * in the first iteration used by FileManager and emoji
+          search
+        * matching parts of string are highlighted (with settable
+          style)
+
+```
+    _________________________
+    | your input matters    |
+    | your input's cool     |
+    | your input sucks      |
+    | > your input          |
+    -------------------------
+```
 
 - FileManager(Container)
 
