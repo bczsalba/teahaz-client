@@ -1964,7 +1964,7 @@ class TeahazHelper:
 
             # test if current message is the end of a chunk 
             chunk_end = True
-            if len(MESSAGES) > i+1:
+            if len(MESSAGES) > i+1 and not i == len(messagelist)-1:
                 next_msg = MESSAGES[i+1]
             else:
                 next_msg = None
@@ -2008,8 +2008,9 @@ class TeahazHelper:
             sys.stdout.write('\n')
             if chunk_end:
                 sys.stdout.write('\n')
+
         sys.stdout.write('\n')
-        PREV_MESSAGE = m
+        # PREV_MESSAGE = m
         # dbg(PREV_MESSAGE)
 
 

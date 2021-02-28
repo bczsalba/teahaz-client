@@ -318,7 +318,6 @@ mode_visual	settings.json	/^            "mode_visual": "CTRL_L",$/;"	s	object:BA
 mode_visual	settings.json	/^            "mode_visual": "v",$/;"	s	object:VIMBINDS.ESCAPE
 move	pytermgui.py	/^    def move(self,pos,wipe=False):$/;"	m	class:Container
 notification system	devlog.md	/^## notification system$/;"	s	chapter:2020/12/20
-old_print_messages	client.py	/^    def old_print_messages(self,extras=[],reprint=False):$/;"	m	class:TeahazHelper
 pad	pytermgui.py	/^        pad = lambda l: (_pad*' ' if len(l) else '')$/;"	f	function:break_line	file:
 parse_color	client.py	/^def parse_color(_color,s,level=0) -> types.FunctionType:$/;"	f	typeref:typename:types.FunctionType
 parse_inline_codes	client.py	/^def parse_inline_codes(s) -> str:$/;"	f	typeref:typename:str
