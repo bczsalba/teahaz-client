@@ -11,214 +11,34 @@
 *	settings.json	/^                "*": "italic",$/;"	s	object:THEMES.draculite.message_styles
 **	settings.json	/^                "**": "bold",$/;"	s	object:THEMES.draculite.message_styles
 ***	settings.json	/^                "***": "italic(bold())",$/;"	s	object:THEMES.draculite.message_styles
-0	asztal.json	/^			"display": ["average","average reversed","time","length"],$/;"	s	array:1.values.display
-0	asztal.json	/^			"display": ["average","average reversed","time","length"],$/;"	s	array:2.values.display
-0	asztal.json	/^			"display": ["lesson","day"],$/;"	s	array:5.values.display
-0	asztal.json	/^			"display": ["none","weight","grade","full"],$/;"	s	array:3.values.display
-0	asztal.json	/^			"display": ["on","off"],$/;"	s	array:0.values.display
-0	asztal.json	/^			"display": ["yes","no"],$/;"	s	array:4.values.display
-0	asztal.json	/^			"display": ["yes","no"],$/;"	s	array:6.values.display
-0	asztal.json	/^			"internal": ["None","weight","grade","full"]$/;"	s	array:3.values.internal
-0	asztal.json	/^			"internal": ["True","False"]$/;"	s	array:0.values.internal
-0	asztal.json	/^			"internal": ["True","False"]$/;"	s	array:4.values.internal
-0	asztal.json	/^			"internal": ["True","False"]$/;"	s	array:6.values.internal
-0	asztal.json	/^			"internal": ["getAvg","getAvgR","time","getLen"]$/;"	s	array:1.values.internal
-0	asztal.json	/^			"internal": ["getAvg","getAvgR","time","getLen"]$/;"	s	array:2.values.internal
-0	asztal.json	/^			"internal": ["l","d"]$/;"	s	array:5.values.internal
-0	asztal.json	/^	{$/;"	o
-0	asztal.json	/^                    "displayValues": ["classic","scrolling"],$/;"	s	array:8.values.displayValues
-0	asztal.json	/^                    "internalValues": ["classic","scrolling"]$/;"	s	array:8.values.internalValues
 0	settings.json	/^                "<>",$/;"	s	array:THEMES.draculite.ui__prompt_options__delimiters
+0	settings.json	/^                "minimal",$/;"	s	array:THEMES.draculite.ui__prompt_options_highlight
 0	settings.json	/^        "draculite"$/;"	s	array:ui__prompt_options__colorscheme
 0	settings.json	/^        true,$/;"	b	array:ui__prompt_options__debug
 0	settings.json	/^        true,$/;"	b	array:ui__prompt_options__keep_cursor
 0	settings.json	/^        true,$/;"	b	array:ui__prompt_options__vimmode
-0	test.json	/^            ""$/;"	s	array:24.lines
-0	test.json	/^            ""$/;"	s	array:25.lines
-0	test.json	/^            ""$/;"	s	array:26.lines
-0	test.json	/^            ""$/;"	s	array:33.lines
-0	test.json	/^            "\\u001b[A"$/;"	s	array:15.lines
-0	test.json	/^            "`.md`",$/;"	s	array:11.lines
-0	test.json	/^            "`.md`",$/;"	s	array:4.lines
-0	test.json	/^            "`.md`",$/;"	s	array:5.lines
-0	test.json	/^            "`.md`",$/;"	s	array:6.lines
-0	test.json	/^            "`.md`",$/;"	s	array:7.lines
-0	test.json	/^            "`.py`",$/;"	s	array:19.lines
-0	test.json	/^            "df"$/;"	s	array:10.lines
-0	test.json	/^            "dic",$/;"	s	array:1.lines
-0	test.json	/^            "ehy",$/;"	s	array:36.lines
-0	test.json	/^            "fuck"$/;"	s	array:2.lines
-0	test.json	/^            "fuck"$/;"	s	array:3.lines
-0	test.json	/^            "fuck",$/;"	s	array:0.lines
-0	test.json	/^            "fudk"$/;"	s	array:9.lines
-0	test.json	/^            "get your",$/;"	s	array:29.lines
-0	test.json	/^            "heuyhuae",$/;"	s	array:32.lines
-0	test.json	/^            "hey now",$/;"	s	array:20.lines
-0	test.json	/^            "hey now",$/;"	s	array:37.lines
-0	test.json	/^            "hey now",$/;"	s	array:39.lines
-0	test.json	/^            "hey this",$/;"	s	array:30.lines
-0	test.json	/^            "hey this",$/;"	s	array:35.lines
-0	test.json	/^            "hey"$/;"	s	array:13.lines
-0	test.json	/^            "hey",$/;"	s	array:27.lines
-0	test.json	/^            "hey",$/;"	s	array:34.lines
-0	test.json	/^            "hey",$/;"	s	array:40.lines
-0	test.json	/^            "ljljkljljk"$/;"	s	array:16.lines
-0	test.json	/^            "message",$/;"	s	array:23.lines
-0	test.json	/^            "no"$/;"	s	array:12.lines
-0	test.json	/^            "so other",$/;"	s	array:31.lines
-0	test.json	/^            "sumeothing"$/;"	s	array:8.lines
-0	test.json	/^            "sup"$/;"	s	array:14.lines
-0	test.json	/^            "this is a",$/;"	s	array:21.lines
-0	test.json	/^            "this is",$/;"	s	array:22.lines
-0	test.json	/^            "wassup"$/;"	s	array:17.lines
-0	test.json	/^            "wassup",$/;"	s	array:18.lines
-0	test.json	/^            "wassup",$/;"	s	array:38.lines
-0	test.json	/^            "youre an",$/;"	s	array:28.lines
-0	test.json	/^    {$/;"	o
-0	usercfg-old.json	/^                "conv1"$/;"	s	array:SERVERS.http://butorhaz.hopto.org:13337.chatrooms
-0	usercfg-old.json	/^        "http:\/\/butorhaz.hopto.org:13337",$/;"	s	array:CURRENT_CHATROOM
-0	usercfg.json	/^                "conv1"$/;"	s	array:SERVERS.http://butorhaz.hopto.org:13337.chatrooms
-0	usercfg.json	/^        "http:\/\/butorhaz.hopto.org:13337",$/;"	s	array:CURRENT_CHATROOM
 06:06 PM	devlog.md	/^## 06:06 PM$/;"	s	chapter:2021/01/06
-1	asztal.json	/^			"display": ["average","average reversed","time","length"],$/;"	s	array:1.values.display
-1	asztal.json	/^			"display": ["average","average reversed","time","length"],$/;"	s	array:2.values.display
-1	asztal.json	/^			"display": ["lesson","day"],$/;"	s	array:5.values.display
-1	asztal.json	/^			"display": ["none","weight","grade","full"],$/;"	s	array:3.values.display
-1	asztal.json	/^			"display": ["on","off"],$/;"	s	array:0.values.display
-1	asztal.json	/^			"display": ["yes","no"],$/;"	s	array:4.values.display
-1	asztal.json	/^			"display": ["yes","no"],$/;"	s	array:6.values.display
-1	asztal.json	/^			"internal": ["None","weight","grade","full"]$/;"	s	array:3.values.internal
-1	asztal.json	/^			"internal": ["True","False"]$/;"	s	array:0.values.internal
-1	asztal.json	/^			"internal": ["True","False"]$/;"	s	array:4.values.internal
-1	asztal.json	/^			"internal": ["True","False"]$/;"	s	array:6.values.internal
-1	asztal.json	/^			"internal": ["getAvg","getAvgR","time","getLen"]$/;"	s	array:1.values.internal
-1	asztal.json	/^			"internal": ["getAvg","getAvgR","time","getLen"]$/;"	s	array:2.values.internal
-1	asztal.json	/^			"internal": ["l","d"]$/;"	s	array:5.values.internal
-1	asztal.json	/^	{$/;"	o
-1	asztal.json	/^                    "displayValues": ["classic","scrolling"],$/;"	s	array:8.values.displayValues
-1	asztal.json	/^                    "internalValues": ["classic","scrolling"]$/;"	s	array:8.values.internalValues
 1	settings.json	/^                "[]",$/;"	s	array:THEMES.draculite.ui__prompt_options__delimiters
+1	settings.json	/^                "custom"$/;"	s	array:THEMES.draculite.ui__prompt_options_highlight
 1	settings.json	/^        false$/;"	b	array:ui__prompt_options__debug
 1	settings.json	/^        false$/;"	b	array:ui__prompt_options__keep_cursor
 1	settings.json	/^        false$/;"	b	array:ui__prompt_options__vimmode
-1	test.json	/^            "allstar"$/;"	s	array:28.lines
-1	test.json	/^            "also a",$/;"	s	array:22.lines
-1	test.json	/^            "blue"$/;"	s	array:18.lines
-1	test.json	/^            "boy"$/;"	s	array:38.lines
-1	test.json	/^            "file."$/;"	s	array:11.lines
-1	test.json	/^            "file."$/;"	s	array:19.lines
-1	test.json	/^            "file."$/;"	s	array:4.lines
-1	test.json	/^            "file."$/;"	s	array:5.lines
-1	test.json	/^            "file."$/;"	s	array:6.lines
-1	test.json	/^            "file."$/;"	s	array:7.lines
-1	test.json	/^            "game on,",$/;"	s	array:29.lines
-1	test.json	/^            "hey "$/;"	s	array:39.lines
-1	test.json	/^            "is long,",$/;"	s	array:30.lines
-1	test.json	/^            "isf a key"$/;"	s	array:35.lines
-1	test.json	/^            "njeh hey "$/;"	s	array:32.lines
-1	test.json	/^            "now hey"$/;"	s	array:37.lines
-1	test.json	/^            "now"$/;"	s	array:27.lines
-1	test.json	/^            "now"$/;"	s	array:34.lines
-1	test.json	/^            "now"$/;"	s	array:40.lines
-1	test.json	/^            "now",$/;"	s	array:36.lines
-1	test.json	/^            "pic"$/;"	s	array:1.lines
-1	test.json	/^            "send"$/;"	s	array:23.lines
-1	test.json	/^            "test"$/;"	s	array:21.lines
-1	test.json	/^            "than a bug",$/;"	s	array:31.lines
-1	test.json	/^            "whats up"$/;"	s	array:20.lines
-1	test.json	/^            "you"$/;"	s	array:0.lines
-1	test.json	/^    {$/;"	o
-1	usercfg-old.json	/^        0$/;"	n	array:CURRENT_CHATROOM
-1	usercfg.json	/^        0$/;"	n	array:CURRENT_CHATROOM
-10	test.json	/^    {$/;"	o
-11	test.json	/^    {$/;"	o
 11:33 PM	devlog.md	/^## 11:33 PM$/;"	s	chapter:2021/01/06
-12	test.json	/^    {$/;"	o
-13	test.json	/^    {$/;"	o
-14	test.json	/^    {$/;"	o
-15	test.json	/^    {$/;"	o
-16	test.json	/^    {$/;"	o
-17	test.json	/^    {$/;"	o
-18	test.json	/^    {$/;"	o
-19	test.json	/^    {$/;"	o
-2	asztal.json	/^			"display": ["average","average reversed","time","length"],$/;"	s	array:1.values.display
-2	asztal.json	/^			"display": ["average","average reversed","time","length"],$/;"	s	array:2.values.display
-2	asztal.json	/^			"display": ["none","weight","grade","full"],$/;"	s	array:3.values.display
-2	asztal.json	/^			"internal": ["None","weight","grade","full"]$/;"	s	array:3.values.internal
-2	asztal.json	/^			"internal": ["getAvg","getAvgR","time","getLen"]$/;"	s	array:1.values.internal
-2	asztal.json	/^			"internal": ["getAvg","getAvgR","time","getLen"]$/;"	s	array:2.values.internal
-2	asztal.json	/^	{$/;"	o
-2	settings.json	/^                "{}"$/;"	s	array:THEMES.draculite.ui__prompt_options__delimiters
-2	test.json	/^            ""$/;"	s	array:36.lines
-2	test.json	/^            "go, play!"$/;"	s	array:29.lines
-2	test.json	/^            "mind",$/;"	s	array:30.lines
-2	test.json	/^            "test!"$/;"	s	array:22.lines
-2	test.json	/^            "with esca",$/;"	s	array:31.lines
-2	test.json	/^    {$/;"	o
-2 threads:	notes.docs.md	/^### 2 threads:$/;"	S	section:Teahaz Client""display stuff
-20	test.json	/^    {$/;"	o
+2	settings.json	/^                "{}",$/;"	s	array:THEMES.draculite.ui__prompt_options__delimiters
 2020/12/20	devlog.md	/^# 2020\/12\/20$/;"	c
 2020/12/22	devlog.md	/^# 2020\/12\/22$/;"	c
 2021/01/06	devlog.md	/^# 2021\/01\/06$/;"	c
 2021/01/11	devlog.md	/^# 2021\/01\/11$/;"	c
-21	test.json	/^    {$/;"	o
-22	test.json	/^    {$/;"	o
-23	test.json	/^    {$/;"	o
-24	test.json	/^    {$/;"	o
-25	test.json	/^    {$/;"	o
-26	test.json	/^    {$/;"	o
-27	test.json	/^    {$/;"	o
-28	test.json	/^    {$/;"	o
-29	test.json	/^    {$/;"	o
-3	asztal.json	/^			"display": ["average","average reversed","time","length"],$/;"	s	array:1.values.display
-3	asztal.json	/^			"display": ["average","average reversed","time","length"],$/;"	s	array:2.values.display
-3	asztal.json	/^			"display": ["none","weight","grade","full"],$/;"	s	array:3.values.display
-3	asztal.json	/^			"internal": ["None","weight","grade","full"]$/;"	s	array:3.values.internal
-3	asztal.json	/^			"internal": ["getAvg","getAvgR","time","getLen"]$/;"	s	array:1.values.internal
-3	asztal.json	/^			"internal": ["getAvg","getAvgR","time","getLen"]$/;"	s	array:2.values.internal
-3	asztal.json	/^	{$/;"	o
-3	test.json	/^            "being",$/;"	s	array:31.lines
-3	test.json	/^            "shortening",$/;"	s	array:30.lines
-3	test.json	/^    {$/;"	o
-30	test.json	/^    {$/;"	o
-31	test.json	/^    {$/;"	o
-32	test.json	/^    {$/;"	o
-33	test.json	/^    {$/;"	o
-34	test.json	/^    {$/;"	o
-35	test.json	/^    {$/;"	o
-36	test.json	/^    {$/;"	o
-37	test.json	/^    {$/;"	o
-38	test.json	/^    {$/;"	o
-39	test.json	/^    {$/;"	o
-4	asztal.json	/^	{$/;"	o
-4	test.json	/^            "it for me?",$/;"	s	array:30.lines
-4	test.json	/^            "registered",$/;"	s	array:31.lines
-4	test.json	/^    {$/;"	o
-40	test.json	/^    {$/;"	o
-5	asztal.json	/^	{$/;"	o
-5	test.json	/^            ":)"$/;"	s	array:30.lines
-5	test.json	/^            "as a",$/;"	s	array:31.lines
-5	test.json	/^    {$/;"	o
-6	asztal.json	/^	{$/;"	o
-6	test.json	/^            "single key",$/;"	s	array:31.lines
-6	test.json	/^    {$/;"	o
-7	asztal.json	/^	{$/;"	o
-7	test.json	/^            "i have I",$/;"	s	array:31.lines
-7	test.json	/^    {$/;"	o
-8	asztal.json	/^	{$/;"	o
-8	test.json	/^            "and A",$/;"	s	array:31.lines
-8	test.json	/^    {$/;"	o
-9	test.json	/^            "working"$/;"	s	array:31.lines
-9	test.json	/^    {$/;"	o
+3	settings.json	/^                null$/;"	z	array:THEMES.draculite.ui__prompt_options__delimiters
 BASEBINDS	settings.json	/^    "BASEBINDS": {$/;"	o
 BASE_DATA	client.py	/^BASE_DATA = {$/;"	v
 BIND system	docs.md	/^## BIND system$/;"	s	chapter:documentation
-BORDERS	borderstest.py	/^BORDERS = Container(width=int(WIDTH*(5\/6)-1),height=HEIGHT-2,center_elements=False,dynamic_size/;"	v
 BUGS	README.md	/^# BUGS$/;"	c
 BUGS	notes.md	/^# BUGS$/;"	c
 CONTAINER_BORDER_CHARS	pytermgui.py	/^CONTAINER_BORDER_CHARS = lambda: "|-"$/;"	f
 CONTAINER_BORDER_STYLE	pytermgui.py	/^CONTAINER_BORDER_STYLE = lambda item: item$/;"	f
 CONTAINER_CORNER_STYLE	pytermgui.py	/^CONTAINER_CORNER_STYLE = lambda char: char$/;"	f
+CONTAINER_CORNER_STYLE	pytermgui.py	/^CONTAINER_CORNER_STYLE = lambda item: item$/;"	f
 CONTAINER_ERROR_STYLE	pytermgui.py	/^CONTAINER_ERROR_STYLE = lambda item: Color.color(Color.bold(item),'38;5;196')$/;"	f
 CONTAINER_LABEL_STYLE	pytermgui.py	/^CONTAINER_LABEL_STYLE = lambda item: item$/;"	f
 CONTAINER_SUCCESS_STYLE	pytermgui.py	/^CONTAINER_SUCCESS_STYLE = lambda item: Color.color(Color.bold(item),'2')$/;"	f
@@ -227,8 +47,6 @@ CONTAINER_VALUE_STYLE	pytermgui.py	/^CONTAINER_VALUE_STYLE = lambda item: item$/
 CONV_HEADER	client.py	/^    CONV_HEADER = Container(width=int(WIDTH*0.75),dynamic_size=False)$/;"	v
 CONV_HEADER_LABEL	client.py	/^    CONV_HEADER_LABEL = Label(justify='center')$/;"	v
 CURRENT_CHATROOM	client.py	/^        CURRENT_CHATROOM = None$/;"	v
-CURRENT_CHATROOM	usercfg-old.json	/^    "CURRENT_CHATROOM": [$/;"	a
-CURRENT_CHATROOM	usercfg.json	/^    "CURRENT_CHATROOM": [$/;"	a
 CURRENT_FILE	client.py	/^CURRENT_FILE = None$/;"	v
 CURSOR_HIGHLIGHT_STYLE	pytermgui.py	/^CURSOR_HIGHLIGHT_STYLE = GLOBAL_HIGHLIGHT_STYLE$/;"	v
 Color	pytermgui.py	/^class Color:$/;"	c
@@ -246,8 +64,6 @@ FEATURES	README.md	/^# FEATURES $/;"	c
 FEATURES	notes.md	/^# FEATURES $/;"	c
 FILETYPE_DEFAULTS	settings.json	/^    "FILETYPE_DEFAULTS": {$/;"	o
 GLOBAL_HIGHLIGHT_STYLE	pytermgui.py	/^GLOBAL_HIGHLIGHT_STYLE = Color.highlight$/;"	v
-GROUPS	pytermconf.py	/^GROUPS = {$/;"	v
-HEIGHT	borderstest.py	/^WIDTH,HEIGHT = os.get_terminal_size()$/;"	v
 HEIGHT	pytermgui.py	/^WIDTH,HEIGHT = os.get_terminal_size()$/;"	v
 INPUT	client.py	/^INPUT = ""$/;"	v
 INPUT_CURSOR	client.py	/^INPUT_CURSOR = 0$/;"	v
@@ -255,11 +71,8 @@ INSERT	settings.json	/^        "INSERT": {$/;"	o	object:BASEBINDS
 INSERT	settings.json	/^        "INSERT": {$/;"	o	object:VIMBINDS
 Important notes	docs.md	/^### Important notes$/;"	S	section:documentation""Variables
 InputDialog	client.py	/^class InputDialog(Container):$/;"	c
-InputDialog	ui.py	/^class InputDialog(Container):$/;"	c
 InputDialogField	client.py	/^class InputDialogField(getch.InputField):$/;"	c
-InputDialogField	ui.py	/^class InputDialogField(getch.InputField):$/;"	c
 InputField	getch.py	/^class InputField:$/;"	c
-InputField	getch_multiline.py	/^class InputField:$/;"	c
 KEEP_CURSOR_AFTER_SELECT	settings.json	/^    "KEEP_CURSOR_AFTER_SELECT": true,$/;"	b
 KEEP_GOING	client.py	/^KEEP_GOING = True$/;"	v
 KEEP_PIPE	client.py	/^KEEP_PIPE = False$/;"	v
@@ -275,7 +88,6 @@ MESSAGE_TEMPLATE	client.py	/^MESSAGE_TEMPLATE = {$/;"	v
 MODE_LABEL	client.py	/^    MODE_LABEL = ModeLabel(value='-- ESCAPE --',justify='left')$/;"	v
 ModeLabel	client.py	/^class ModeLabel(Label):$/;"	c
 OSReadWrapper	getch.py	/^class OSReadWrapper(object):$/;"	c
-OSReadWrapper	getch_multiline.py	/^class OSReadWrapper(object):$/;"	c
 PATH	client.py	/^PATH = os.path.abspath(os.path.dirname(__file__))$/;"	v
 PIPE_ARGS	client.py	/^PIPE_ARGS = {}$/;"	v
 PIPE_OUTPUT	client.py	/^PIPE_OUTPUT = None$/;"	v
@@ -287,11 +99,8 @@ PROMPT_HIGHLIGHT_STYLE	pytermgui.py	/^PROMPT_HIGHLIGHT_STYLE = GLOBAL_HIGHLIGHT_
 PROMPT_LABEL_STYLE	pytermgui.py	/^PROMPT_LABEL_STYLE = lambda item: item$/;"	f
 PROMPT_VALUE_STYLE	pytermgui.py	/^PROMPT_VALUE_STYLE = lambda item: item$/;"	f
 Prompt	pytermgui.py	/^class Prompt:$/;"	c
-SEAMLESS_MODE	borderstest.py	/^SEAMLESS_MODE = False$/;"	v
 SELECTED_THEME	settings.json	/^    "SELECTED_THEME": "draculite",$/;"	s
 SENDING	client.py	/^SENDING = []$/;"	v
-SERVERS	usercfg-old.json	/^    "SERVERS": {$/;"	o
-SERVERS	usercfg.json	/^    "SERVERS": {$/;"	o
 SESSION	client.py	/^            SESSION = pickle.load(f)$/;"	v
 SESSION	client.py	/^        SESSION = requests.session()$/;"	v
 SESSIONLOCATION	client.py	/^    SESSIONLOCATION = os.path.join(PATH,'session.obj')$/;"	v
@@ -299,7 +108,6 @@ TABBAR_HIGHLIGHT_STYLE	pytermgui.py	/^TABBAR_HIGHLIGHT_STYLE = GLOBAL_HIGHLIGHT_
 THEMES	settings.json	/^    "THEMES": {$/;"	o
 TODO	README.md	/^# TODO$/;"	c
 TODO	notes.md	/^# TODO$/;"	c
-Teahaz Client	notes.docs.md	/^# Teahaz Client$/;"	c
 TeahazHelper	client.py	/^class TeahazHelper:$/;"	c
 ThreadWithReturnValue	client.py	/^class ThreadWithReturnValue(threading.Thread):$/;"	c
 UIGenerator	client.py	/^class UIGenerator:$/;"	c
@@ -314,21 +122,14 @@ VISUAL_END	client.py	/^VISUAL_END = 0$/;"	v
 VISUAL_START	client.py	/^VISUAL_START = 0$/;"	v
 Variables	docs.md	/^## Variables$/;"	s	chapter:documentation
 WARNING: nothing here is stable, for now this is only early development stuff.	docs.md	/^## WARNING: nothing here is stable, for now this is only early development stuff.$/;"	s	chapter:documentation
-WIDTH	borderstest.py	/^WIDTH,HEIGHT = os.get_terminal_size()$/;"	v
 WIDTH	pytermgui.py	/^WIDTH,HEIGHT = os.get_terminal_size()$/;"	v
 _Getch	getch.py	/^class _Getch:$/;"	c
-_Getch	getch_multiline.py	/^class _Getch:$/;"	c
 _GetchUnix	getch.py	/^class _GetchUnix:$/;"	c
-_GetchUnix	getch_multiline.py	/^class _GetchUnix:$/;"	c
 _GetchWindows	getch.py	/^class _GetchWindows:$/;"	c
-_GetchWindows	getch_multiline.py	/^class _GetchWindows:$/;"	c
 __	settings.json	/^                "__": "underline",$/;"	s	object:THEMES.draculite.message_styles
 __call__	getch.py	/^    def __call__(self):$/;"	m	class:_Getch
 __call__	getch.py	/^    def __call__(self):$/;"	m	class:_GetchUnix
 __call__	getch.py	/^    def __call__(self):$/;"	m	class:_GetchWindows
-__call__	getch_multiline.py	/^    def __call__(self):$/;"	m	class:_Getch
-__call__	getch_multiline.py	/^    def __call__(self):$/;"	m	class:_GetchUnix
-__call__	getch_multiline.py	/^    def __call__(self):$/;"	m	class:_GetchWindows
 __init__	client.py	/^    def __init__(self):$/;"	m	class:TeahazHelper
 __init__	client.py	/^    def __init__(self,**kwargs):$/;"	m	class:InputDialogField
 __init__	client.py	/^    def __init__(self,**kwargs):$/;"	m	class:ModeLabel
@@ -339,24 +140,15 @@ __init__	getch.py	/^    def __init__(self):$/;"	m	class:_GetchUnix
 __init__	getch.py	/^    def __init__(self):$/;"	m	class:_GetchWindows
 __init__	getch.py	/^    def __init__(self, stream, encoding=None):$/;"	m	class:OSReadWrapper
 __init__	getch.py	/^    def __init__(self,pos=None,linecap=0,default="",xlimit=None,ylimit=None,print_at_start=False/;"	m	class:InputField
-__init__	getch_multiline.py	/^    def __init__(self):$/;"	m	class:_Getch
-__init__	getch_multiline.py	/^    def __init__(self):$/;"	m	class:_GetchUnix
-__init__	getch_multiline.py	/^    def __init__(self):$/;"	m	class:_GetchWindows
-__init__	getch_multiline.py	/^    def __init__(self, stream, encoding=None):$/;"	m	class:OSReadWrapper
-__init__	getch_multiline.py	/^    def __init__(self,pos=None,linecap=0,default="",xlimit=None,ylimit=None):$/;"	m	class:InputField
 __init__	pytermgui.py	/^    def __init__(self,pos=None,border=None,width=None,height=None,dynamic_size=True,center_eleme/;"	m	class:Container
 __init__	pytermgui.py	/^    def __init__(self,value="",justify="center",width=None,padding=1):$/;"	m	class:Label
 __init__	pytermgui.py	/^    def __init__(self,width=None,options=None,label=None,real_label=None,justify_options='center/;"	m	class:Prompt
-__init__	ui.py	/^    def __init__(self,**kwargs):$/;"	m	class:InputDialogField
-__init__	ui.py	/^    def __init__(self,options=None,label_value='',label_justify="center",label_underpad=0,field_/;"	m	class:InputDialog
 __repr__	client.py	/^    def __repr__(self):$/;"	m	class:InputDialog
 __repr__	client.py	/^    def __repr__(self):$/;"	m	class:InputDialogField
 __repr__	client.py	/^    def __repr__(self):$/;"	m	class:ModeLabel
 __repr__	pytermgui.py	/^    def __repr__(self):$/;"	m	class:Container
 __repr__	pytermgui.py	/^    def __repr__(self):$/;"	m	class:Label
 __repr__	pytermgui.py	/^    def __repr__(self):$/;"	m	class:Prompt
-__repr__	ui.py	/^    def __repr__(self):$/;"	m	class:InputDialog
-__repr__	ui.py	/^    def __repr__(self):$/;"	m	class:InputDialogField
 _add_element	pytermgui.py	/^    def _add_element(self,element):$/;"	m	class:Container
 _connect	client.py	/^    def _connect(*args,**kwargs):$/;"	f	function:start_connection	file:
 _do_operation	client.py	/^        def _do_operation(*args,**kwargs):$/;"	f	member:TeahazHelper.handle_operation	file:
@@ -371,16 +163,13 @@ add_new_colorscheme	client.py	/^def add_new_colorscheme(name="new") -> dict:$/;"
 add_new_server	client.py	/^    def add_new_server(self,values):$/;"	m	class:TeahazHelper
 add_to_trace	client.py	/^def add_to_trace(arr) -> None:$/;"	f	typeref:typename:None
 bold	client.py	/^bold           =  Color.bold$/;"	v
-bold	parser.py	/^bold         =  Color.bold$/;"	v
 bold	pytermgui.py	/^    def bold(s):$/;"	m	class:Color
 border	settings.json	/^            "border": "60",$/;"	s	object:THEMES.draculite
-border_chars	settings.json	/^            "border_chars": "|-",$/;"	s	object:THEMES.draculite
-bottom_left	settings.json	/^                "bottom_left": "X",$/;"	s	object:THEMES.draculite.corners
-bottom_right	settings.json	/^                "bottom_right": "X"$/;"	s	object:THEMES.draculite.corners
-break_line	getch_multiline.py	/^def break_line(_inline,_len,_pad=0,_separator=' '):$/;"	f
+border_chars	settings.json	/^            "border_chars": "\\u2502\\u2500",$/;"	s	object:THEMES.draculite
+bottom_left	settings.json	/^                "bottom_left": "\\u2514",$/;"	s	object:THEMES.draculite.corners
+bottom_right	settings.json	/^                "bottom_right": "\\u2518"$/;"	s	object:THEMES.draculite.corners
 break_line	pytermgui.py	/^def break_line(_inline,_len,_pad=0,_separator=' ',do_subdivision=True):$/;"	f
 buffer	getch.py	/^    def buffer(self):$/;"	m	class:OSReadWrapper
-buffer	getch_multiline.py	/^    def buffer(self):$/;"	m	class:OSReadWrapper
 c	pytermgui.py	/^    c = container_from_dict(d)[0]$/;"	v
 center	pytermgui.py	/^    def center(self,axes="both",xoffset=0,yoffset=5):$/;"	m	class:Container
 change_in	settings.json	/^            "change_in": "ci",$/;"	s	object:VIMBINDS.ESCAPE
@@ -388,86 +177,26 @@ change_line_end	settings.json	/^            "change_line_end": "C",$/;"	s	object
 change_word_end	settings.json	/^            "change_word_end": "cw",$/;"	s	object:VIMBINDS.ESCAPE
 character_delete	settings.json	/^            "character_delete": "x",$/;"	s	object:VIMBINDS.ESCAPE
 chatroom	client.py	/^        url,chatroom = CURRENT_CHATROOM$/;"	v
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:0
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:1
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:10
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:11
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:12
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:13
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:14
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:15
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:16
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:17
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:18
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:19
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:2
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:20
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:21
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:22
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:23
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:24
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:25
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:26
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:27
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:28
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:29
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:3
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:30
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:31
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:32
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:33
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:34
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:35
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:36
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:37
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:38
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:39
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:4
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:40
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:5
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:6
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:7
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:8
-chatroom	test.json	/^        "chatroom": "conv1",$/;"	s	object:9
-chatrooms	usercfg-old.json	/^            "chatrooms": [$/;"	a	object:SERVERS.http://butorhaz.hopto.org:13337
-chatrooms	usercfg.json	/^            "chatrooms": [$/;"	a	object:SERVERS.http://butorhaz.hopto.org:13337
-clean_ansi	getch_multiline.py	/^def clean_ansi(s):$/;"	f
 clean_ansi	pytermgui.py	/^def clean_ansi(s):$/;"	f
 clear_value	getch.py	/^    def clear_value(self):$/;"	m	class:InputField
-clear_value	getch_multiline.py	/^    def clear_value(self):$/;"	m	class:InputField
 clip	client.py	/^import pyperclip as clip$/;"	I	nameref:module:pyperclip
 clr	pytermgui.py	/^def clr():$/;"	f
 color	client.py	/^color          =  Color.color$/;"	v
-color	parser.py	/^color        =  Color.color$/;"	v
 color	pytermgui.py	/^    def color(s,col,reset=True):$/;"	m	class:Color
 container_from_dict	pytermgui.py	/^def container_from_dict(dic,padding=4,**kwargs):$/;"	f
 context	getch.py	/^    def context(self):$/;"	m	class:_GetchUnix
-context	getch_multiline.py	/^    def context(self):$/;"	m	class:_GetchUnix
 copy_line	settings.json	/^            "copy_line": "yy",$/;"	s	object:VIMBINDS.ESCAPE
+corners	pytermgui.py	/^    corners = ["┌","┐","└","┘"]$/;"	v
 corners	settings.json	/^            "corners": {$/;"	o	object:THEMES.draculite
 create_address_picker	client.py	/^    def create_address_picker(self,caller_prompt):$/;"	m	class:UIGenerator
 create_colormenu	client.py	/^    def create_colormenu(self,dict_index=0):$/;"	m	class:UIGenerator
 create_error_dialog	client.py	/^    def create_error_dialog(self,text,button="ignore",handler=None):$/;"	m	class:UIGenerator
-create_error_dialog	ui.py	/^def create_error_dialog(text,button="ignore",handler=None):$/;"	f
 create_menu	client.py	/^    def create_menu(self,source,corners=[None]*4,width=None,index=None,dict_index=0,**container_/;"	m	class:UIGenerator
-create_menu	ui.py	/^def create_menu(source,corners,index=None,dict_index=0,**container_args):$/;"	f
 create_menu_picker	client.py	/^    def create_menu_picker(self):$/;"	m	class:UIGenerator
-create_menu_picker	ui.py	/^def create_menu_picker():$/;"	f
 create_server_picker	client.py	/^    def create_server_picker(self):$/;"	m	class:UIGenerator
-create_server_picker	old_functions.py	/^def create_server_picker(self,source):$/;"	f
-create_server_picker	ui.py	/^def create_server_picker(source):$/;"	f
 create_submenu	client.py	/^    def create_submenu(self,source,index=None,dict_index=0):$/;"	m	class:UIGenerator
-create_submenu	ui.py	/^def create_submenu(source,index=None,dict_index=0):$/;"	f
 create_success_dialog	client.py	/^    def create_success_dialog(self,text,button="dismiss"):$/;"	m	class:UIGenerator
-current	asztal.json	/^			"current": "False",$/;"	s	object:0.values
-current	asztal.json	/^			"current": "True",$/;"	s	object:4.values
-current	asztal.json	/^			"current": "True",$/;"	s	object:6.values
-current	asztal.json	/^			"current": "grade",$/;"	s	object:3.values
-current	asztal.json	/^			"current": "l",$/;"	s	object:5.values
-current	asztal.json	/^			"current": "time",$/;"	s	object:1.values
-current	asztal.json	/^			"current": "time",$/;"	s	object:2.values
-current	asztal.json	/^			"current": 3$/;"	n	object:7.values
-current	asztal.json	/^                    "current": "scrolling",$/;"	s	object:8.values
+custom_prompt_highlight	settings.json	/^            "custom_prompt_highlight": "highlight(72)",$/;"	s	object:THEMES.draculite
 d	pytermgui.py	/^    d = d[0]$/;"	v
 d	pytermgui.py	/^    d = r.json()$/;"	v
 dbg	client.py	/^def dbg(*args,do_color=True) -> None:$/;"	f	typeref:typename:None
@@ -477,24 +206,6 @@ delete_in	settings.json	/^            "delete_in": "di",$/;"	s	object:VIMBINDS.E
 delete_line	settings.json	/^            "delete_line": "dd"$/;"	s	object:VIMBINDS.ESCAPE
 delete_line_end	settings.json	/^            "delete_line_end": "D",$/;"	s	object:VIMBINDS.ESCAPE
 delete_word_end	settings.json	/^            "delete_word_end": "dw",$/;"	s	object:VIMBINDS.ESCAPE
-display	asztal.json	/^			"display": ""$/;"	s	object:8.names
-display	asztal.json	/^			"display": "Animation time (x\/1000s)"$/;"	s	object:7.names
-display	asztal.json	/^			"display": "Color display profile"$/;"	s	object:3.names
-display	asztal.json	/^			"display": "Custom color values"$/;"	s	object:4.names
-display	asztal.json	/^			"display": "Debug mode"$/;"	s	object:0.names
-display	asztal.json	/^			"display": "Evaluation sorting method"$/;"	s	object:2.names
-display	asztal.json	/^			"display": "Pretty user display"$/;"	s	object:6.names
-display	asztal.json	/^			"display": "Subject sorting method"$/;"	s	object:1.names
-display	asztal.json	/^			"display": "Timetable default action"$/;"	s	object:5.names
-display	asztal.json	/^			"display": ["average","average reversed","time","length"],$/;"	a	object:1.values
-display	asztal.json	/^			"display": ["average","average reversed","time","length"],$/;"	a	object:2.values
-display	asztal.json	/^			"display": ["lesson","day"],$/;"	a	object:5.values
-display	asztal.json	/^			"display": ["none","weight","grade","full"],$/;"	a	object:3.values
-display	asztal.json	/^			"display": ["on","off"],$/;"	a	object:0.values
-display	asztal.json	/^			"display": ["yes","no"],$/;"	a	object:4.values
-display	asztal.json	/^			"display": ["yes","no"],$/;"	a	object:6.values
-display stuff	notes.docs.md	/^## display stuff$/;"	s	chapter:Teahaz Client
-displayValues	asztal.json	/^                    "displayValues": ["classic","scrolling"],$/;"	a	object:8.values
 do_after	client.py	/^def do_after(ms,fun,control='true',args={}) -> None:$/;"	f	typeref:typename:None
 do_in	client.py	/^def do_in(param, action) -> None:$/;"	f	typeref:typename:None
 documentation	docs.md	/^# documentation$/;"	c
@@ -506,95 +217,11 @@ encode_binary	client.py	/^def encode_binary(a):$/;"	f
 error	settings.json	/^            "error": "203",$/;"	s	object:THEMES.draculite
 event__window_size_changed	pytermgui.py	/^def event__window_size_changed(caller,new,old):$/;"	f
 export	pytermgui.py	/^    def export(self,filename):$/;"	m	class:Container
-extension	test.json	/^        "extension": "md",$/;"	s	object:11
-extension	test.json	/^        "extension": "md",$/;"	s	object:4
-extension	test.json	/^        "extension": "md",$/;"	s	object:5
-extension	test.json	/^        "extension": "md",$/;"	s	object:6
-extension	test.json	/^        "extension": "md",$/;"	s	object:7
-extension	test.json	/^        "extension": "py",$/;"	s	object:19
-extension	test.json	/^        "extension": null,$/;"	z	object:0
-extension	test.json	/^        "extension": null,$/;"	z	object:1
-extension	test.json	/^        "extension": null,$/;"	z	object:10
-extension	test.json	/^        "extension": null,$/;"	z	object:12
-extension	test.json	/^        "extension": null,$/;"	z	object:13
-extension	test.json	/^        "extension": null,$/;"	z	object:14
-extension	test.json	/^        "extension": null,$/;"	z	object:15
-extension	test.json	/^        "extension": null,$/;"	z	object:16
-extension	test.json	/^        "extension": null,$/;"	z	object:17
-extension	test.json	/^        "extension": null,$/;"	z	object:18
-extension	test.json	/^        "extension": null,$/;"	z	object:2
-extension	test.json	/^        "extension": null,$/;"	z	object:20
-extension	test.json	/^        "extension": null,$/;"	z	object:21
-extension	test.json	/^        "extension": null,$/;"	z	object:22
-extension	test.json	/^        "extension": null,$/;"	z	object:23
-extension	test.json	/^        "extension": null,$/;"	z	object:24
-extension	test.json	/^        "extension": null,$/;"	z	object:25
-extension	test.json	/^        "extension": null,$/;"	z	object:26
-extension	test.json	/^        "extension": null,$/;"	z	object:27
-extension	test.json	/^        "extension": null,$/;"	z	object:28
-extension	test.json	/^        "extension": null,$/;"	z	object:29
-extension	test.json	/^        "extension": null,$/;"	z	object:3
-extension	test.json	/^        "extension": null,$/;"	z	object:30
-extension	test.json	/^        "extension": null,$/;"	z	object:31
-extension	test.json	/^        "extension": null,$/;"	z	object:32
-extension	test.json	/^        "extension": null,$/;"	z	object:33
-extension	test.json	/^        "extension": null,$/;"	z	object:34
-extension	test.json	/^        "extension": null,$/;"	z	object:35
-extension	test.json	/^        "extension": null,$/;"	z	object:36
-extension	test.json	/^        "extension": null,$/;"	z	object:37
-extension	test.json	/^        "extension": null,$/;"	z	object:38
-extension	test.json	/^        "extension": null,$/;"	z	object:39
-extension	test.json	/^        "extension": null,$/;"	z	object:40
-extension	test.json	/^        "extension": null,$/;"	z	object:8
-extension	test.json	/^        "extension": null,$/;"	z	object:9
 extension basics	devlog.md	/^## extension basics$/;"	s	chapter:2020/12/20
 extension details	devlog.md	/^## extension details$/;"	s	chapter:2020/12/20
-extensions	notes.docs.md	/^## extensions$/;"	s	chapter:Teahaz Client
 fade	settings.json	/^            "fade": "238",$/;"	s	object:THEMES.draculite
 field_highlight	settings.json	/^            "field_highlight": "gradient(72)",$/;"	s	object:THEMES.draculite
-filename	test.json	/^        "filename": "086cb938-3b12-11eb-a00b-60030898377c",$/;"	s	object:19
-filename	test.json	/^        "filename": "2f131a18-328a-11eb-8ed9-b42e99435986",$/;"	s	object:11
-filename	test.json	/^        "filename": "6f16feb2-30c9-11eb-99fc-b42e99435986",$/;"	s	object:5
-filename	test.json	/^        "filename": "7c35e392-30c9-11eb-931a-b42e99435986",$/;"	s	object:6
-filename	test.json	/^        "filename": "8491c704-30c9-11eb-a780-b42e99435986",$/;"	s	object:7
-filename	test.json	/^        "filename": "c5008fa4-30c5-11eb-9ead-b42e99435986",$/;"	s	object:4
-filename	test.json	/^        "filename": null,$/;"	z	object:0
-filename	test.json	/^        "filename": null,$/;"	z	object:1
-filename	test.json	/^        "filename": null,$/;"	z	object:10
-filename	test.json	/^        "filename": null,$/;"	z	object:12
-filename	test.json	/^        "filename": null,$/;"	z	object:13
-filename	test.json	/^        "filename": null,$/;"	z	object:14
-filename	test.json	/^        "filename": null,$/;"	z	object:15
-filename	test.json	/^        "filename": null,$/;"	z	object:16
-filename	test.json	/^        "filename": null,$/;"	z	object:17
-filename	test.json	/^        "filename": null,$/;"	z	object:18
-filename	test.json	/^        "filename": null,$/;"	z	object:2
-filename	test.json	/^        "filename": null,$/;"	z	object:20
-filename	test.json	/^        "filename": null,$/;"	z	object:21
-filename	test.json	/^        "filename": null,$/;"	z	object:22
-filename	test.json	/^        "filename": null,$/;"	z	object:23
-filename	test.json	/^        "filename": null,$/;"	z	object:24
-filename	test.json	/^        "filename": null,$/;"	z	object:25
-filename	test.json	/^        "filename": null,$/;"	z	object:26
-filename	test.json	/^        "filename": null,$/;"	z	object:27
-filename	test.json	/^        "filename": null,$/;"	z	object:28
-filename	test.json	/^        "filename": null,$/;"	z	object:29
-filename	test.json	/^        "filename": null,$/;"	z	object:3
-filename	test.json	/^        "filename": null,$/;"	z	object:30
-filename	test.json	/^        "filename": null,$/;"	z	object:31
-filename	test.json	/^        "filename": null,$/;"	z	object:32
-filename	test.json	/^        "filename": null,$/;"	z	object:33
-filename	test.json	/^        "filename": null,$/;"	z	object:34
-filename	test.json	/^        "filename": null,$/;"	z	object:35
-filename	test.json	/^        "filename": null,$/;"	z	object:36
-filename	test.json	/^        "filename": null,$/;"	z	object:37
-filename	test.json	/^        "filename": null,$/;"	z	object:38
-filename	test.json	/^        "filename": null,$/;"	z	object:39
-filename	test.json	/^        "filename": null,$/;"	z	object:40
-filename	test.json	/^        "filename": null,$/;"	z	object:8
-filename	test.json	/^        "filename": null,$/;"	z	object:9
 fileno	getch.py	/^    def fileno(self):$/;"	m	class:OSReadWrapper
-fileno	getch_multiline.py	/^    def fileno(self):$/;"	m	class:OSReadWrapper
 find	client.py	/^def find(key,offset=0,reverse=False) -> None:$/;"	f	typeref:typename:None
 find	settings.json	/^            "find": "f",$/;"	s	object:VIMBINDS.ESCAPE
 find	settings.json	/^            "find": "f",$/;"	s	object:VIMBINDS.VISUAL
@@ -606,23 +233,15 @@ get_border	pytermgui.py	/^    def get_border(self):$/;"	m	class:Container
 get_caller	client.py	/^    get_caller = lambda: type(obj).__name__+'.'+method if obj else method$/;"	f	function:dbg	file:
 get_caller	client.py	/^def get_caller(depth=1):$/;"	f
 get_chars	getch.py	/^    def get_chars(self):$/;"	m	class:_GetchUnix
-get_chars	getch_multiline.py	/^    def get_chars(self):$/;"	m	class:_GetchUnix
 get_gradient	client.py	/^get_gradient   =  Color.get_gradient$/;"	v
-get_gradient	gradient.py	/^def get_gradient(include,direction='vertical'):$/;"	f
-get_gradient	parser.py	/^get_gradient =  Color.get_gradient$/;"	v
 get_gradient	pytermgui.py	/^    def get_gradient(include,direction='vertical'):$/;"	m	class:Color
 get_index	client.py	/^def get_index(obj) -> int:$/;"	f	typeref:typename:int
-get_index	getch_multiline.py	/^    def get_index(self,xy=None):$/;"	m	class:InputField
 get_indices	client.py	/^def get_indices(param) -> tuple:$/;"	f	typeref:typename:tuple
 get_infield_pos	client.py	/^def get_infield_pos(update_modelabel=True) -> list:$/;"	f	typeref:typename:list
-get_infield_pos	ui.py	/^def get_infield_pos(return_offset=False):$/;"	f
-get_lines	old_functions.py	/^def get_lines():$/;"	f
-get_lines	ui.py	/^def get_lines():$/;"	f
 get_loop	client.py	/^    def get_loop(self):$/;"	m	class:TeahazHelper
 get_loop	client.py	/^    get_loop = threading.Thread(target=th.get_loop,name='get_loop')$/;"	v
 get_object_by_id	pytermgui.py	/^def get_object_by_id(key):$/;"	f
 getch	getch.py	/^getch = _Getch()$/;"	v
-getch	getch_multiline.py	/^getch = _Getch()$/;"	v
 getch_loop	client.py	/^def getch_loop() -> None: $/;"	f	typeref:typename:None
 goto_WORD_next	settings.json	/^            "goto_WORD_next": "W",$/;"	s	object:VIMBINDS.ESCAPE
 goto_WORD_prev	settings.json	/^            "goto_WORD_prev": "B",$/;"	s	object:VIMBINDS.ESCAPE
@@ -651,23 +270,14 @@ goto_text_start	settings.json	/^            "goto_text_start": "gg",$/;"	s	objec
 goto_word_next	settings.json	/^            "goto_word_next": "w",$/;"	s	object:VIMBINDS.ESCAPE
 goto_word_prev	settings.json	/^            "goto_word_prev": "b",$/;"	s	object:VIMBINDS.ESCAPE
 gradient	client.py	/^gradient       =  Color.gradient$/;"	v
-gradient	gradient.py	/^def gradient(text,values,layer='fg'):$/;"	f
-gradient	parser.py	/^gradient     =  Color.gradient$/;"	v
 gradient	pytermgui.py	/^    def gradient(text,color,layer='fg'):$/;"	m	class:Color
 handle_action	client.py	/^def handle_action(action) -> None:$/;"	f	typeref:typename:None
 handle_menu	client.py	/^def handle_menu(key,obj,attributes={},page=0) -> None:$/;"	f	typeref:typename:None
-handle_menu	ui.py	/^def handle_menu(key,obj,attributes={},page=0):$/;"	f
 handle_menu_actions	client.py	/^def handle_menu_actions(action,current_file=None) -> int: $/;"	f	typeref:typename:int
-handle_menu_actions	ui.py	/^def handle_menu_actions(action):$/;"	f
 handle_operation	client.py	/^    def handle_operation(self,method,output,handler=None,*args,**kwargs):$/;"	m	class:TeahazHelper
 handler	client.py	/^            handler = lambda _,self: handle_menu("ESC",self.parent)$/;"	f	member:UIGenerator.create_error_dialog	file:
-handler	client.py	/^        handler = lambda *args,**kwargs: dbg('completed')$/;"	f	member:TeahazHelper.handle_operation	file:
-handler	ui.py	/^        handler = lambda _,self: handle_menu("ESC",self.parent)$/;"	f	function:create_error_dialog	file:
 highlight	client.py	/^highlight      =  Color.highlight$/;"	v
-highlight	parser.py	/^highlight    =  Color.highlight$/;"	v
-highlight	pytermgui.py	/^    def highlight(s,fg=None):$/;"	m	class:Color
-http://butorhaz.hopto.org:13337	usercfg-old.json	/^        "http:\/\/butorhaz.hopto.org:13337": {$/;"	o	object:SERVERS
-http://butorhaz.hopto.org:13337	usercfg.json	/^        "http:\/\/butorhaz.hopto.org:13337": {$/;"	o	object:SERVERS
+highlight	pytermgui.py	/^    def highlight(s,fg="1"):$/;"	m	class:Color
 id	settings.json	/^                "id": "settings-themes_showcolors",$/;"	s	object:THEMES.draculite.ui__button
 id	settings.json	/^            "id": "colorschemes-button_add",$/;"	s	object:THEMES.ui__nobutton
 ignore_input	client.py	/^def ignore_input(*args):$/;"	f
@@ -676,76 +286,15 @@ import_json	client.py	/^def import_json(name) -> None:$/;"	f	typeref:typename:No
 index	client.py	/^        url,index = CURRENT_CHATROOM$/;"	v
 infield	client.py	/^    infield = getch.InputField(pos=get_infield_pos())$/;"	v
 infield	getch.py	/^    infield = InputField(default="Welcome!")$/;"	v
-infield	getch_multiline.py	/^    infield = InputField(default="Welcome!",xlimit=10)$/;"	v
-internal	asztal.json	/^			"internal": "animTime",$/;"	s	object:7.names
-internal	asztal.json	/^			"internal": "animation",$/;"	s	object:8.names
-internal	asztal.json	/^			"internal": "colorMode",$/;"	s	object:3.names
-internal	asztal.json	/^			"internal": "customColors",$/;"	s	object:4.names
-internal	asztal.json	/^			"internal": "debug",$/;"	s	object:0.names
-internal	asztal.json	/^			"internal": "gradeSorter",$/;"	s	object:2.names
-internal	asztal.json	/^			"internal": "prettyUser",$/;"	s	object:6.names
-internal	asztal.json	/^			"internal": "subSorter",$/;"	s	object:1.names
-internal	asztal.json	/^			"internal": "ttdefault",$/;"	s	object:5.names
-internal	asztal.json	/^			"internal": ["None","weight","grade","full"]$/;"	a	object:3.values
-internal	asztal.json	/^			"internal": ["True","False"]$/;"	a	object:0.values
-internal	asztal.json	/^			"internal": ["True","False"]$/;"	a	object:4.values
-internal	asztal.json	/^			"internal": ["True","False"]$/;"	a	object:6.values
-internal	asztal.json	/^			"internal": ["getAvg","getAvgR","time","getLen"]$/;"	a	object:1.values
-internal	asztal.json	/^			"internal": ["getAvg","getAvgR","time","getLen"]$/;"	a	object:2.values
-internal	asztal.json	/^			"internal": ["l","d"]$/;"	a	object:5.values
-internalValues	asztal.json	/^                    "internalValues": ["classic","scrolling"]$/;"	a	object:8.values
 intro	devlog.md	/^## intro$/;"	s	chapter:2020/12/20
 is_connected	client.py	/^    def is_connected(self,url):$/;"	m	class:TeahazHelper
 is_in_last_word	client.py	/^def is_in_last_word(index,string) -> bool:$/;"	f	typeref:typename:bool
 is_set	client.py	/^def is_set(var,scope=None) -> bool:$/;"	f	typeref:typename:bool
 italic	client.py	/^italic         =  Color.italic$/;"	v
-italic	parser.py	/^italic       =  Color.italic$/;"	v
 italic	pytermgui.py	/^    def italic(s):$/;"	m	class:Color
 join	client.py	/^    def join(self,timeout=None):$/;"	m	class:ThreadWithReturnValue
 key	getch.py	/^        key = getch()$/;"	v
-key	getch_multiline.py	/^        key = getch()$/;"	v
 label	settings.json	/^            "label": "245",$/;"	s	object:THEMES.draculite
-lines	test.json	/^        "lines": [$/;"	a	object:0
-lines	test.json	/^        "lines": [$/;"	a	object:1
-lines	test.json	/^        "lines": [$/;"	a	object:10
-lines	test.json	/^        "lines": [$/;"	a	object:11
-lines	test.json	/^        "lines": [$/;"	a	object:12
-lines	test.json	/^        "lines": [$/;"	a	object:13
-lines	test.json	/^        "lines": [$/;"	a	object:14
-lines	test.json	/^        "lines": [$/;"	a	object:15
-lines	test.json	/^        "lines": [$/;"	a	object:16
-lines	test.json	/^        "lines": [$/;"	a	object:17
-lines	test.json	/^        "lines": [$/;"	a	object:18
-lines	test.json	/^        "lines": [$/;"	a	object:19
-lines	test.json	/^        "lines": [$/;"	a	object:2
-lines	test.json	/^        "lines": [$/;"	a	object:20
-lines	test.json	/^        "lines": [$/;"	a	object:21
-lines	test.json	/^        "lines": [$/;"	a	object:22
-lines	test.json	/^        "lines": [$/;"	a	object:23
-lines	test.json	/^        "lines": [$/;"	a	object:24
-lines	test.json	/^        "lines": [$/;"	a	object:25
-lines	test.json	/^        "lines": [$/;"	a	object:26
-lines	test.json	/^        "lines": [$/;"	a	object:27
-lines	test.json	/^        "lines": [$/;"	a	object:28
-lines	test.json	/^        "lines": [$/;"	a	object:29
-lines	test.json	/^        "lines": [$/;"	a	object:3
-lines	test.json	/^        "lines": [$/;"	a	object:30
-lines	test.json	/^        "lines": [$/;"	a	object:31
-lines	test.json	/^        "lines": [$/;"	a	object:32
-lines	test.json	/^        "lines": [$/;"	a	object:33
-lines	test.json	/^        "lines": [$/;"	a	object:34
-lines	test.json	/^        "lines": [$/;"	a	object:35
-lines	test.json	/^        "lines": [$/;"	a	object:36
-lines	test.json	/^        "lines": [$/;"	a	object:37
-lines	test.json	/^        "lines": [$/;"	a	object:38
-lines	test.json	/^        "lines": [$/;"	a	object:39
-lines	test.json	/^        "lines": [$/;"	a	object:4
-lines	test.json	/^        "lines": [$/;"	a	object:40
-lines	test.json	/^        "lines": [$/;"	a	object:5
-lines	test.json	/^        "lines": [$/;"	a	object:6
-lines	test.json	/^        "lines": [$/;"	a	object:7
-lines	test.json	/^        "lines": [$/;"	a	object:8
-lines	test.json	/^        "lines": [$/;"	a	object:9
 load_path	client.py	/^def load_path(path,key=None) -> dict:$/;"	f	typeref:typename:dict
 login_or_register	client.py	/^def login_or_register(contype,url,data) -> None:$/;"	f	typeref:typename:None
 menu_picker	settings.json	/^            "menu_picker": "CTRL_T",$/;"	s	object:VIMBINDS.ESCAPE
@@ -755,50 +304,10 @@ menu_settings	settings.json	/^            "menu_settings": "CTRL_\/",$/;"	s	obje
 menu_settings	settings.json	/^            "menu_settings": "CTRL_\/",$/;"	s	object:VIMBINDS.INSERT
 menu_settings	settings.json	/^            "menu_settings": "CTRL_\/",$/;"	s	object:VIMBINDS.VISUAL
 merge	client.py	/^def merge(one,two) -> dict:$/;"	f	typeref:typename:dict
-message	test.json	/^        "message": "",$/;"	s	object:24
-message	test.json	/^        "message": "",$/;"	s	object:25
-message	test.json	/^        "message": "",$/;"	s	object:26
-message	test.json	/^        "message": "",$/;"	s	object:33
-message	test.json	/^        "message": "\\u001b[A",$/;"	s	object:15
-message	test.json	/^        "message": "`.md` file.",$/;"	s	object:11
-message	test.json	/^        "message": "`.md` file.",$/;"	s	object:4
-message	test.json	/^        "message": "`.md` file.",$/;"	s	object:5
-message	test.json	/^        "message": "`.md` file.",$/;"	s	object:6
-message	test.json	/^        "message": "`.md` file.",$/;"	s	object:7
-message	test.json	/^        "message": "`.py` file.",$/;"	s	object:19
-message	test.json	/^        "message": "df",$/;"	s	object:10
-message	test.json	/^        "message": "dic pic",$/;"	s	object:1
-message	test.json	/^        "message": "ehy now ",$/;"	s	object:36
-message	test.json	/^        "message": "fuck you",$/;"	s	object:0
-message	test.json	/^        "message": "fuck",$/;"	s	object:2
-message	test.json	/^        "message": "fuck",$/;"	s	object:3
-message	test.json	/^        "message": "fudk",$/;"	s	object:9
-message	test.json	/^        "message": "get your game on, go, play!",$/;"	s	object:29
-message	test.json	/^        "message": "heuyhuae njeh hey ",$/;"	s	object:32
-message	test.json	/^        "message": "hey now hey ",$/;"	s	object:39
-message	test.json	/^        "message": "hey now now hey",$/;"	s	object:37
-message	test.json	/^        "message": "hey now whats up",$/;"	s	object:20
-message	test.json	/^        "message": "hey now",$/;"	s	object:27
-message	test.json	/^        "message": "hey now",$/;"	s	object:34
-message	test.json	/^        "message": "hey now",$/;"	s	object:40
-message	test.json	/^        "message": "hey this is long, mind shortening it for me? :)",$/;"	s	object:30
-message	test.json	/^        "message": "hey this isf a key",$/;"	s	object:35
-message	test.json	/^        "message": "hey",$/;"	s	object:13
-message	test.json	/^        "message": "ljljkljljk",$/;"	s	object:16
-message	test.json	/^        "message": "message send",$/;"	s	object:23
-message	test.json	/^        "message": "no",$/;"	s	object:12
-message	test.json	/^        "message": "so other than a bug with esca being registered as a single key i have I and /;"	s	object:31
-message	test.json	/^        "message": "sumeothing",$/;"	s	object:8
-message	test.json	/^        "message": "sup",$/;"	s	object:14
-message	test.json	/^        "message": "this is a test",$/;"	s	object:21
-message	test.json	/^        "message": "this is also a test!",$/;"	s	object:22
-message	test.json	/^        "message": "wassup blue",$/;"	s	object:18
-message	test.json	/^        "message": "wassup boy",$/;"	s	object:38
-message	test.json	/^        "message": "wassup",$/;"	s	object:17
-message	test.json	/^        "message": "youre an allstar",$/;"	s	object:28
 message_send	settings.json	/^            "message_send": "ENTER",$/;"	s	object:VIMBINDS.ESCAPE
 message_send	settings.json	/^            "message_send": "ENTER",$/;"	s	object:VIMBINDS.INSERT
 message_styles	settings.json	/^            "message_styles": {$/;"	o	object:THEMES.draculite
+minimal_or_custom_highlight	client.py	/^def minimal_or_custom_highlight(item):$/;"	f
 mode_escape	settings.json	/^            "mode_escape": "ESC",$/;"	s	object:VIMBINDS.INSERT
 mode_escape	settings.json	/^            "mode_escape": "ESC",$/;"	s	object:VIMBINDS.VISUAL
 mode_indicator	settings.json	/^            "mode_indicator": "72",$/;"	s	object:THEMES.draculite
@@ -808,24 +317,10 @@ mode_insert+1	settings.json	/^            "mode_insert+1": "a",$/;"	s	object:VIM
 mode_visual	settings.json	/^            "mode_visual": "CTRL_L",$/;"	s	object:BASEBINDS.INSERT
 mode_visual	settings.json	/^            "mode_visual": "v",$/;"	s	object:VIMBINDS.ESCAPE
 move	pytermgui.py	/^    def move(self,pos,wipe=False):$/;"	m	class:Container
-names	asztal.json	/^		"names": {$/;"	o	object:0
-names	asztal.json	/^		"names": {$/;"	o	object:1
-names	asztal.json	/^		"names": {$/;"	o	object:2
-names	asztal.json	/^		"names": {$/;"	o	object:3
-names	asztal.json	/^		"names": {$/;"	o	object:4
-names	asztal.json	/^		"names": {$/;"	o	object:5
-names	asztal.json	/^		"names": {$/;"	o	object:6
-names	asztal.json	/^		"names": {$/;"	o	object:7
-names	asztal.json	/^		"names": {$/;"	o	object:8
-navigation & inputs	notes.docs.md	/^### navigation & inputs$/;"	S	section:Teahaz Client""display stuff
-networking functions	notes.docs.md	/^## networking functions$/;"	s	chapter:Teahaz Client
 notification system	devlog.md	/^## notification system$/;"	s	chapter:2020/12/20
-notification system	notes.docs.md	/^## notification system$/;"	s	chapter:Teahaz Client
 old_print_messages	client.py	/^    def old_print_messages(self,extras=[],reprint=False):$/;"	m	class:TeahazHelper
-pad	getch_multiline.py	/^        pad = lambda l: (_pad*' ' if len(l) else '')$/;"	f	function:break_line	file:
 pad	pytermgui.py	/^        pad = lambda l: (_pad*' ' if len(l) else '')$/;"	f	function:break_line	file:
 parse_color	client.py	/^def parse_color(_color,s,level=0) -> types.FunctionType:$/;"	f	typeref:typename:types.FunctionType
-parse_color	parser.py	/^def parse_color(_color,s) -> types.FunctionType:$/;"	f	typeref:typename:types.FunctionType
 parse_inline_codes	client.py	/^def parse_inline_codes(s) -> str:$/;"	f	typeref:typename:str
 pass	settings.json	/^            "pass": "ESC"$/;"	s	object:BASEBINDS.INSERT
 paste	settings.json	/^            "paste": "CTRL_P",$/;"	s	object:BASEBINDS.INSERT
@@ -833,17 +328,12 @@ paste	settings.json	/^            "paste": "CTRL_P",$/;"	s	object:BASEBINDS.VISU
 paste	settings.json	/^            "paste": "p",$/;"	s	object:VIMBINDS.ESCAPE
 perspective	pytermgui.py	/^def perspective(color,index):$/;"	f
 print	getch.py	/^    def print(self,return_line=False,flush=True,highlight=True):$/;"	m	class:InputField
-print	getch_multiline.py	/^    def print(self,flush=True,highlight=True):$/;"	m	class:InputField
-printTo	old_functions.py	/^def printTo(x=0,y=0,s='',clear=False):$/;"	f
-printTo	ui.py	/^def printTo(x=0,y=0,s='',clear=False):$/;"	f
 print_messages	client.py	/^    def print_messages(self,messages=[],extras=[],reprint=False):$/;"	m	class:TeahazHelper
-prompt_delimiters	settings.json	/^            "prompt_delimiters": "<>",$/;"	s	object:THEMES.draculite
+prompt_delimiters	settings.json	/^            "prompt_delimiters": null,$/;"	z	object:THEMES.draculite
+prompt_highlight	settings.json	/^            "prompt_highlight": "minimal",$/;"	s	object:THEMES.draculite
 quit	settings.json	/^            "quit": "q",$/;"	s	object:VIMBINDS.ESCAPE
 r	pytermgui.py	/^    r = requests.get('https:\/\/online.sprinter.hu\/terkep\/data.json')$/;"	v
-rainbow	gradient.py	/^rainbow = ['124','208','226','82','21','57','93']$/;"	v
 read	getch.py	/^    def read(self, chars):$/;"	m	class:OSReadWrapper
-read	getch_multiline.py	/^    def read(self, chars):$/;"	m	class:OSReadWrapper
-real_length	getch_multiline.py	/^def real_length(s):$/;"	f
 real_length	pytermgui.py	/^def real_length(s):$/;"	f
 replace	client.py	/^def replace(key,action) -> None:$/;"	f	typeref:typename:None
 replace	settings.json	/^            "replace": "r",$/;"	s	object:VIMBINDS.ESCAPE
@@ -851,11 +341,8 @@ reprint	settings.json	/^            "reprint": "CTRL_L"$/;"	s	object:VIMBINDS.IN
 reprint	settings.json	/^            "reprint": "CTRL_L",$/;"	s	object:VIMBINDS.ESCAPE
 reprint	settings.json	/^            "reprint": "CTRL_L",$/;"	s	object:VIMBINDS.VISUAL
 return_to_infield	client.py	/^def return_to_infield(*args,**kwargs) -> None:$/;"	f	typeref:typename:None
-return_to_infield	ui.py	/^def return_to_infield(*args,**kwargs):$/;"	f
 reverse_dict_lookup	client.py	/^def reverse_dict_lookup(d,value) -> [dict,None]:$/;"	f	typeref:typename:[dict,None]
 run	client.py	/^    def run(self):$/;"	m	class:ThreadWithReturnValue
-s	parser.py	/^s = "highlight(gradient(141)+:"$/;"	v
-select	getch_multiline.py	/^    def select(self,start=None,end=None):$/;"	m	class:InputField
 select	pytermgui.py	/^    def select(self,index=0):$/;"	m	class:Prompt
 select	pytermgui.py	/^    def select(self,index=None):$/;"	m	class:Container
 select_in	settings.json	/^            "select_in": "i",$/;"	s	object:VIMBINDS.VISUAL
@@ -876,13 +363,11 @@ selection_right	settings.json	/^            "selection_right": "ARROW_RIGHT",$/;
 selection_uppercase	settings.json	/^            "selection_uppercase": "U",$/;"	s	object:VIMBINDS.VISUAL
 send	client.py	/^    def send(self,message,endpoint='message'):$/;"	m	class:TeahazHelper
 send	getch.py	/^    def send(self,key,_do_print=True):$/;"	m	class:InputField
-send	getch_multiline.py	/^    def send(self,key):$/;"	m	class:InputField
 set_attribute_for_id	pytermgui.py	/^def set_attribute_for_id(element_id,key,value):$/;"	f
 set_borders	pytermgui.py	/^    def set_borders(self,border):$/;"	m	class:Container
 set_chatroom	client.py	/^    def set_chatroom(self,url,index):$/;"	m	class:TeahazHelper
 set_corner	pytermgui.py	/^    def set_corner(self,corner,value,offset=0):$/;"	m	class:Container
 set_current_file	client.py	/^def set_current_file(value) -> None:$/;"	f	typeref:typename:None
-set_cursor	getch_multiline.py	/^    def set_cursor(self,value):$/;"	m	class:InputField
 set_cursor_visible	getch.py	/^    def set_cursor_visible(self,value):$/;"	m	class:InputField
 set_debugger	pytermgui.py	/^def set_debugger(fun):$/;"	f
 set_element_id	pytermgui.py	/^def set_element_id(element,element_id):$/;"	f
@@ -893,9 +378,7 @@ set_style	pytermgui.py	/^    def set_style(self,group,key,value):$/;"	m	class:Co
 set_style	pytermgui.py	/^    def set_style(self,key,value):$/;"	m	class:Label
 set_style	pytermgui.py	/^    def set_style(self,key,value):$/;"	m	class:Prompt
 set_style	pytermgui.py	/^def set_style(key,value):$/;"	f
-set_style	ui.py	/^    def set_style(self,key,value):$/;"	m	class:InputDialogField
 set_value	getch.py	/^    def set_value(self,target,cursor=None,highlight=True,force_cursor=False,do_print=True):$/;"	m	class:InputField
-set_value	getch_multiline.py	/^    def set_value(self,target,cursor=None,highlight=True):$/;"	m	class:InputField
 split_by_delimiters	client.py	/^def split_by_delimiters(s,return_indices=False) -> list:$/;"	f	typeref:typename:list
 start_connection	client.py	/^def start_connection(contype,menu=None,**kwargs) -> int:$/;"	f	typeref:typename:int
 strikethrough	client.py	/^strikethrough  =  Color.strikethrough$/;"	v
@@ -903,112 +386,18 @@ strikethrough	pytermgui.py	/^    def strikethrough(s):$/;"	m	class:Color
 submit	client.py	/^    def submit(self):$/;"	m	class:InputDialog
 submit	client.py	/^    def submit(self):$/;"	m	class:InputDialogField
 submit	pytermgui.py	/^    def submit(self):$/;"	m	class:Prompt
-submit	ui.py	/^    def submit(self):$/;"	m	class:InputDialog
-submit	ui.py	/^    def submit(self):$/;"	m	class:InputDialogField
 success	settings.json	/^            "success": "76",$/;"	s	object:THEMES.draculite
 switch_mode	client.py	/^def switch_mode(target) -> None:$/;"	f	typeref:typename:None
-test_ui	ui.py	/^def test_ui(dict_index=0):$/;"	f
 text	settings.json	/^        "text": "kitty -e sh vim {path}"$/;"	s	object:FILETYPE_DEFAULTS
 th	client.py	/^    th = TeahazHelper()$/;"	v
 till	settings.json	/^            "till": "t",$/;"	s	object:VIMBINDS.ESCAPE
 till_reverse	settings.json	/^            "till_reverse": "T",$/;"	s	object:VIMBINDS.ESCAPE
-time	test.json	/^        "time": 1606118769.58797,$/;"	n	object:0
-time	test.json	/^        "time": 1606118778.0764449,$/;"	n	object:1
-time	test.json	/^        "time": 1606118874.5346925,$/;"	n	object:2
-time	test.json	/^        "time": 1606490142.0245728,$/;"	n	object:3
-time	test.json	/^        "time": 1606491153.6772387,$/;"	n	object:4
-time	test.json	/^        "time": 1606492727.5271869,$/;"	n	object:5
-time	test.json	/^        "time": 1606492749.5399766,$/;"	n	object:6
-time	test.json	/^        "time": 1606492763.564011,$/;"	n	object:7
-time	test.json	/^        "time": 1606492819.0164132,$/;"	n	object:8
-time	test.json	/^        "time": 1606685232.492967,$/;"	n	object:9
-time	test.json	/^        "time": 1606685368.3272622,$/;"	n	object:10
-time	test.json	/^        "time": 1606685464.159039,$/;"	n	object:11
-time	test.json	/^        "time": 1606687391.015982,$/;"	n	object:12
-time	test.json	/^        "time": 1607451333.399668,$/;"	n	object:13
-time	test.json	/^        "time": 1607451366.929535,$/;"	n	object:14
-time	test.json	/^        "time": 1607451371.664871,$/;"	n	object:15
-time	test.json	/^        "time": 1607451530.621877,$/;"	n	object:16
-time	test.json	/^        "time": 1607622429.9678888,$/;"	n	object:17
-time	test.json	/^        "time": 1607622669.2946408,$/;"	n	object:18
-time	test.json	/^        "time": 1607623420.1736991,$/;"	n	object:19
-time	test.json	/^        "time": 1608028369.354069,$/;"	n	object:20
-time	test.json	/^        "time": 1608028561.670123,$/;"	n	object:21
-time	test.json	/^        "time": 1608028765.017167,$/;"	n	object:22
-time	test.json	/^        "time": 1608028788.485574,$/;"	n	object:23
-time	test.json	/^        "time": 1608044014.77005,$/;"	n	object:24
-time	test.json	/^        "time": 1608044852.158528,$/;"	n	object:25
-time	test.json	/^        "time": 1608045196.374924,$/;"	n	object:26
-time	test.json	/^        "time": 1608045417.394788,$/;"	n	object:27
-time	test.json	/^        "time": 1608045433.310498,$/;"	n	object:28
-time	test.json	/^        "time": 1608045447.1797602,$/;"	n	object:29
-time	test.json	/^        "time": 1608046323.541613,$/;"	n	object:30
-time	test.json	/^        "time": 1608049140.32379,$/;"	n	object:31
-time	test.json	/^        "time": 1608050097.8037388,$/;"	n	object:32
-time	test.json	/^        "time": 1608050139.854534,$/;"	n	object:33
-time	test.json	/^        "time": 1608104894.5736918,$/;"	n	object:34
-time	test.json	/^        "time": 1608116834.219758,$/;"	n	object:35
-time	test.json	/^        "time": 1608116871.192294,$/;"	n	object:36
-time	test.json	/^        "time": 1608122295.5430589,$/;"	n	object:37
-time	test.json	/^        "time": 1608147400.686964,$/;"	n	object:38
-time	test.json	/^        "time": 1608147688.139924,$/;"	n	object:39
-time	test.json	/^        "time": 1608147711.694988,$/;"	n	object:40
 timed	client.py	/^    timed = lambda: (time.sleep(ms\/1000),$/;"	f	function:do_after	file:
 title	settings.json	/^            "title": "210",$/;"	s	object:THEMES.draculite
 toggle_header	settings.json	/^            "toggle_header": " ",$/;"	s	object:VIMBINDS.ESCAPE
 toggle_option	client.py	/^def toggle_option(options,current) -> any:$/;"	f	typeref:typename:any
-top_left	settings.json	/^                "top_left": "x",$/;"	s	object:THEMES.draculite.corners
-top_right	settings.json	/^                "top_right": "x",$/;"	s	object:THEMES.draculite.corners
-type	asztal.json	/^		"type": "input",$/;"	s	object:7
-type	asztal.json	/^                "type": "normal",$/;"	s	object:0
-type	asztal.json	/^                "type": "normal",$/;"	s	object:1
-type	asztal.json	/^                "type": "normal",$/;"	s	object:2
-type	asztal.json	/^                "type": "normal",$/;"	s	object:3
-type	asztal.json	/^                "type": "normal",$/;"	s	object:4
-type	asztal.json	/^                "type": "normal",$/;"	s	object:5
-type	asztal.json	/^                "type": "normal",$/;"	s	object:6
-type	asztal.json	/^                "type": "normal",$/;"	s	object:8
-type	test.json	/^        "type": "file",$/;"	s	object:11
-type	test.json	/^        "type": "file",$/;"	s	object:19
-type	test.json	/^        "type": "file",$/;"	s	object:4
-type	test.json	/^        "type": "file",$/;"	s	object:5
-type	test.json	/^        "type": "file",$/;"	s	object:6
-type	test.json	/^        "type": "file",$/;"	s	object:7
-type	test.json	/^        "type": "text",$/;"	s	object:0
-type	test.json	/^        "type": "text",$/;"	s	object:1
-type	test.json	/^        "type": "text",$/;"	s	object:10
-type	test.json	/^        "type": "text",$/;"	s	object:12
-type	test.json	/^        "type": "text",$/;"	s	object:13
-type	test.json	/^        "type": "text",$/;"	s	object:14
-type	test.json	/^        "type": "text",$/;"	s	object:15
-type	test.json	/^        "type": "text",$/;"	s	object:16
-type	test.json	/^        "type": "text",$/;"	s	object:17
-type	test.json	/^        "type": "text",$/;"	s	object:18
-type	test.json	/^        "type": "text",$/;"	s	object:2
-type	test.json	/^        "type": "text",$/;"	s	object:20
-type	test.json	/^        "type": "text",$/;"	s	object:21
-type	test.json	/^        "type": "text",$/;"	s	object:22
-type	test.json	/^        "type": "text",$/;"	s	object:23
-type	test.json	/^        "type": "text",$/;"	s	object:24
-type	test.json	/^        "type": "text",$/;"	s	object:25
-type	test.json	/^        "type": "text",$/;"	s	object:26
-type	test.json	/^        "type": "text",$/;"	s	object:27
-type	test.json	/^        "type": "text",$/;"	s	object:28
-type	test.json	/^        "type": "text",$/;"	s	object:29
-type	test.json	/^        "type": "text",$/;"	s	object:3
-type	test.json	/^        "type": "text",$/;"	s	object:30
-type	test.json	/^        "type": "text",$/;"	s	object:31
-type	test.json	/^        "type": "text",$/;"	s	object:32
-type	test.json	/^        "type": "text",$/;"	s	object:33
-type	test.json	/^        "type": "text",$/;"	s	object:34
-type	test.json	/^        "type": "text",$/;"	s	object:35
-type	test.json	/^        "type": "text",$/;"	s	object:36
-type	test.json	/^        "type": "text",$/;"	s	object:37
-type	test.json	/^        "type": "text",$/;"	s	object:38
-type	test.json	/^        "type": "text",$/;"	s	object:39
-type	test.json	/^        "type": "text",$/;"	s	object:40
-type	test.json	/^        "type": "text",$/;"	s	object:8
-type	test.json	/^        "type": "text",$/;"	s	object:9
+top_left	settings.json	/^                "top_left": "\\u250c",$/;"	s	object:THEMES.draculite.corners
+top_right	settings.json	/^                "top_right": "\\u2510",$/;"	s	object:THEMES.draculite.corners
 ui	client.py	/^    ui = UIGenerator()$/;"	v
 ui__button	settings.json	/^            "ui__button": {$/;"	o	object:THEMES.draculite
 ui__file	settings.json	/^    "ui__file": "settings.json",$/;"	s
@@ -1020,6 +409,7 @@ ui__prompt_options__debug	settings.json	/^    "ui__prompt_options__debug": [$/;"
 ui__prompt_options__delimiters	settings.json	/^            "ui__prompt_options__delimiters": [$/;"	a	object:THEMES.draculite
 ui__prompt_options__keep_cursor	settings.json	/^    "ui__prompt_options__keep_cursor": [$/;"	a
 ui__prompt_options__vimmode	settings.json	/^    "ui__prompt_options__vimmode": [$/;"	a
+ui__prompt_options_highlight	settings.json	/^            "ui__prompt_options_highlight": [$/;"	a	object:THEMES.draculite
 ui__title1	settings.json	/^            "ui__title1": "colors",$/;"	s	object:THEMES.draculite
 ui__title1	settings.json	/^            "ui__title1": "modes & misc",$/;"	s	object:VIMBINDS.ESCAPE
 ui__title1	settings.json	/^            "ui__title1": "modes & misc",$/;"	s	object:VIMBINDS.VISUAL
@@ -1034,75 +424,21 @@ ui__title3	settings.json	/^    "ui__title3": "messaging",$/;"	s
 ui__title4	settings.json	/^            "ui__title4": "clipboard",$/;"	s	object:VIMBINDS.ESCAPE
 ui__title4	settings.json	/^    "ui__title4": "bindings",$/;"	s
 underline	client.py	/^underline      =  Color.underline$/;"	v
-underline	parser.py	/^underline    =  Color.underline$/;"	v
 underline	pytermgui.py	/^    def underline(s):$/;"	m	class:Color
 upcoming checklist	README.md	/^## upcoming checklist$/;"	s	chapter:FEATURES
 upcoming checklist	notes.md	/^## upcoming checklist$/;"	s	chapter:FEATURES
 url	client.py	/^        url,chatroom = CURRENT_CHATROOM$/;"	v
 url	client.py	/^        url,index = CURRENT_CHATROOM$/;"	v
-username	test.json	/^        "username": "me",$/;"	s	object:0
-username	test.json	/^        "username": "me",$/;"	s	object:1
-username	test.json	/^        "username": "me",$/;"	s	object:10
-username	test.json	/^        "username": "me",$/;"	s	object:11
-username	test.json	/^        "username": "me",$/;"	s	object:12
-username	test.json	/^        "username": "me",$/;"	s	object:13
-username	test.json	/^        "username": "me",$/;"	s	object:14
-username	test.json	/^        "username": "me",$/;"	s	object:15
-username	test.json	/^        "username": "me",$/;"	s	object:16
-username	test.json	/^        "username": "me",$/;"	s	object:17
-username	test.json	/^        "username": "me",$/;"	s	object:2
-username	test.json	/^        "username": "me",$/;"	s	object:3
-username	test.json	/^        "username": "me",$/;"	s	object:4
-username	test.json	/^        "username": "me",$/;"	s	object:5
-username	test.json	/^        "username": "me",$/;"	s	object:6
-username	test.json	/^        "username": "me",$/;"	s	object:7
-username	test.json	/^        "username": "me",$/;"	s	object:8
-username	test.json	/^        "username": "me",$/;"	s	object:9
-username	test.json	/^        "username": "pink",$/;"	s	object:18
-username	test.json	/^        "username": "pink",$/;"	s	object:19
-username	test.json	/^        "username": "pink",$/;"	s	object:20
-username	test.json	/^        "username": "pink",$/;"	s	object:21
-username	test.json	/^        "username": "pink",$/;"	s	object:22
-username	test.json	/^        "username": "pink",$/;"	s	object:23
-username	test.json	/^        "username": "pink",$/;"	s	object:24
-username	test.json	/^        "username": "pink",$/;"	s	object:25
-username	test.json	/^        "username": "pink",$/;"	s	object:26
-username	test.json	/^        "username": "pink",$/;"	s	object:27
-username	test.json	/^        "username": "pink",$/;"	s	object:28
-username	test.json	/^        "username": "pink",$/;"	s	object:29
-username	test.json	/^        "username": "pink",$/;"	s	object:30
-username	test.json	/^        "username": "pink",$/;"	s	object:31
-username	test.json	/^        "username": "pink",$/;"	s	object:32
-username	test.json	/^        "username": "pink",$/;"	s	object:33
-username	test.json	/^        "username": "pink",$/;"	s	object:34
-username	test.json	/^        "username": "pink",$/;"	s	object:35
-username	test.json	/^        "username": "pink",$/;"	s	object:36
-username	test.json	/^        "username": "pink",$/;"	s	object:37
-username	test.json	/^        "username": "pink",$/;"	s	object:38
-username	test.json	/^        "username": "pink",$/;"	s	object:39
-username	test.json	/^        "username": "pink",$/;"	s	object:40
-username	usercfg-old.json	/^            "username": "alma",$/;"	s	object:SERVERS.http://butorhaz.hopto.org:13337
-username	usercfg.json	/^            "username": "alma",$/;"	s	object:SERVERS.http://butorhaz.hopto.org:13337
 value	client.py	/^        value = f"{url}: {SERVERS[url]['chatrooms'][index]}"$/;"	v
 value	settings.json	/^                "value": "show color guide"$/;"	s	object:THEMES.draculite.ui__button
 value	settings.json	/^            "value": "72",$/;"	s	object:THEMES.draculite
 value	settings.json	/^            "value": "add new"$/;"	s	object:THEMES.ui__nobutton
-values	asztal.json	/^		"values": {$/;"	o	object:0
-values	asztal.json	/^		"values": {$/;"	o	object:1
-values	asztal.json	/^		"values": {$/;"	o	object:2
-values	asztal.json	/^		"values": {$/;"	o	object:3
-values	asztal.json	/^		"values": {$/;"	o	object:4
-values	asztal.json	/^		"values": {$/;"	o	object:5
-values	asztal.json	/^		"values": {$/;"	o	object:6
-values	asztal.json	/^		"values": {$/;"	o	object:7
-values	asztal.json	/^                "values": {$/;"	o	object:8
 video	settings.json	/^        "video": "mpv {path}",$/;"	s	object:FILETYPE_DEFAULTS
 visual	getch.py	/^    def visual(self,start=None,end=None):$/;"	m	class:InputField
 w	client.py	/^        w = Container(height=3)$/;"	v
 wipe	client.py	/^    def wipe(self):$/;"	m	class:UIGenerator
 wipe	client.py	/^    def wipe(self,yoffset=0):$/;"	m	class:ModeLabel
 wipe	getch.py	/^    def wipe(self):$/;"	m	class:InputField
-wipe	getch_multiline.py	/^    def wipe(self):$/;"	m	class:InputField
 wipe	pytermgui.py	/^    def wipe(self,pos=None):$/;"	m	class:Container
 wipe_all_containing	pytermgui.py	/^    def wipe_all_containing(self):$/;"	m	class:Container
 ~~	settings.json	/^                "~~": "strikethrough",$/;"	s	object:THEMES.draculite.message_styles
