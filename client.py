@@ -232,14 +232,11 @@ def switch_mode(target) -> None:
         y += infield.line_offset
 
     if target == "ESCAPE":
-        xstart = x
-        for x in range(xstart,real_length(repr(MODE_LABEL))+2):
-            sys.stdout.write(f'\033[{y};{x}H ')
-        sys.stdout.flush()
+        MODE_LABEL.wipe()
 
     elif not KEEP_PIPE:
         MODE_LABEL.value = bold('-- '+target.upper()+' --')
-        print(f'\033[{y};{x}H'+repr(MODE_LABEL))
+        print(MODE_LABEL)
 
     VALID_KEYS = [v for k,v in BINDS[MODE].items() if not k.startswith('ui__')]
 
@@ -360,20 +357,34 @@ def is_in_last_word(index,string) -> bool:
 # UI FUNCTIONS #
 
 ## get what position infield should be at
-def get_infield_pos(reprint_messages=True) -> list:
+def get_infield_pos(update_modelabel=True) -> list:
     if 'infield' in globals().keys() and len(infield.value):
         offset = (len(infield.value)+1)//WIDTH
 
-        if not infield.line_offset == offset and reprint_messages:
+        if not infield.line_offset == offset and offset:
             infield.wipe()
-            th.print_messages(reprint=True)
+
+            # add padding between infield & messages
+            # for i in range(offset-infield.line_offset):
+                # sys.stdout.write(f'\033[{th.message_y+i};0H\n')
+            sys.stdout.write(f'\033[{th.message_y};0H\n')
+
+            # print top bar
+            if not CONV_HEADER.hidden:
+                print(CONV_HEADER)
+
+            if update_modelabel:
+                MODE_LABEL.wipe(yoffset=1)
+                print(MODE_LABEL)
+
 
         infield.line_offset = offset
 
     else:
         offset = 0
 
-    return [3,HEIGHT-2-offset]
+    x,y = 3,HEIGHT-2-offset
+    return x,y
 
 ## return to normal input
 def return_to_infield(*args,**kwargs) -> None:
@@ -474,20 +485,13 @@ def parse_inline_codes(s) -> str:
         
         continue
     return s
-
-        # while s.count(c) >= 2:
-            # start = s.find(c)+len(c)
-            # dbg(s[start-len(c)-1] == "\\")
-            # if 0 < start and s[start-len(c)-1] == '\\':
-                # dbg('cont')
-                # continue
-# 
-            # end = start+s[start:].find(c)
-            # text = s[start:end]
-# 
-            # s = s[:start-1]+parse_color(func,text)+s[end+1:]
-    # return s
-            
+ 
+# this is run at every single color call which is probably not good
+def minimal_or_custom_highlight(item):
+    if THEME['prompt_highlight'] == 'minimal':
+        return "> "+parse_color('bold()',item)
+    else:
+        return parse_color(THEME['custom_prompt_highlight'],item)
 
         
 
@@ -1039,6 +1043,7 @@ def handle_action(action) -> None:
             clip.copy(infield.value)
             infield.line_offset = 0 
             infield.wipe()
+            get_infield_pos()
             infield.set_value('')
 
         elif action == "select_line":
@@ -1706,6 +1711,7 @@ class TeahazHelper:
             if handler:
                 handler(*args,**kwargs)
 
+        #handler = lambda *args,**kwargs: dbg('completed')
         setattr(self,output,'incomplete')
         self.operation_thread = threading.Thread(target=_do_operation,args=args,kwargs=kwargs)
         self.operation_thread.start()
@@ -1874,7 +1880,6 @@ class TeahazHelper:
 
     def old_print_messages(self,extras=[],reprint=False):
         global MESSAGES
-        dbg(get_caller(),reprint)
 
         if not reprint:
             tmp = SESSION.last_get
@@ -2057,17 +2062,24 @@ class TeahazHelper:
 
         # print mode label
         if MODE != 'ESCAPE':
-            ix,iy = get_infield_pos(reprint_messages=False)
-            ix -= 1
-            iy += 1
-            print(f'\033[{iy};{ix}H'+repr(MODE_LABEL))
+            print(MODE_LABEL)
             
         # print top bar
         if not CONV_HEADER.hidden:
             print(CONV_HEADER)
 
     def print_messages(self,messages=[],extras=[],reprint=False):
-        global MESSAGES,PREV_MESSAGES
+        """
+        TODO: having a list of Containers would majorly improve this:
+                - it would allow *sending* messages to be shown & 
+                  then overwritten by their sent equivolents
+                - it would allow for instant grouping of new messages
+                  without reprinting
+        """
+
+        global MESSAGES,PREV_MESSAGES,PREV_MESSAGE
+
+        extras = []
 
         # get positions
         leftx = infield.pos[0]
@@ -2088,10 +2100,11 @@ class TeahazHelper:
 
         # return if there's nothng to print
         else:
-            dbg('nothing to print')
+            # dbg('nothing to print')
             return 
 
         infield.wipe()
+        MODE_LABEL.wipe()
 
 
         for i,m in enumerate(messagelist):
@@ -2101,7 +2114,7 @@ class TeahazHelper:
             m_time       = m.get('time')
             current_time = int(m_time)
             sendtime     = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(m_time))
-            content = m.get('message')
+            content      = m.get('message')
 
 
             # handle message content
@@ -2126,6 +2139,8 @@ class TeahazHelper:
             chunk_start = True
             if 0 <= i-1:
                 previous = MESSAGES[i-1]
+            # elif PREV_MESSAGE:
+                # previous = PREV_MESSAGE
             else:
                 previous = None
 
@@ -2183,14 +2198,25 @@ class TeahazHelper:
             sys.stdout.write('\n')
             if chunk_end:
                 sys.stdout.write('\n')
+        sys.stdout.write('\n')
+        PREV_MESSAGE = m
+        # dbg(PREV_MESSAGE)
 
-        sys.stdout.flush()
+
+        # print mode label
+        if MODE != 'ESCAPE':
+            print(MODE_LABEL)
+            
+        # print top bar
+        if not CONV_HEADER.hidden:
+            print(CONV_HEADER)
+        
+        # sys.stdout.flush()
             
     def get_loop(self):
         global WIDTH,HEIGHT
 
         while KEEP_GOING:
-            time.sleep(1)
             if not PIPE_OUTPUT:
                 WIDTH,HEIGHT = os.get_terminal_size()
 
@@ -2199,7 +2225,6 @@ class TeahazHelper:
                     SESSION.last_get = time.time()
                     data = BASE_DATA
                     data['time'] = str(get_time)
-                    dbg(data)
                     self.handle_operation(method='get',output='messages_get_return',url=URL+'/api/v0/message',headers=data)
 
                 elif not self.messages_get_return == 'incomplete':
@@ -2212,8 +2237,10 @@ class TeahazHelper:
                     if not messages == PREV_MESSAGES:
                         self.print_messages(messages)
                     else:
-                        dbg('no change')
+                        pass
+                        # dbg('no change')
                     self.messages_get_return = None
+            time.sleep(1)
 
 class UIGenerator:
     """
@@ -2575,6 +2602,27 @@ class UIGenerator:
         print(c)
         return c
 
+class ModeLabel(Label):
+    """
+    Simple Label extension providing a wipe()
+    method and a position system
+    """
+    def __init__(self,**kwargs):
+        super().__init__(**kwargs)
+        x,y = get_infield_pos(update_modelabel=0)
+        self.pos = [x-1,y+1]
+        #x,y = get_infield_pos(update_modelabel=0)
+
+    def __repr__(self):
+        x,y = self.pos
+
+        return f"\033[{y};{x}H"+super().__repr__()
+    
+    def wipe(self,yoffset=0):
+        if self.pos:
+            x,y = self.pos
+            print(f"\033[{y+yoffset};{x}H"+real_length(super().__repr__())*' ')
+
 
 
 
@@ -2626,6 +2674,7 @@ CURRENT_FILE = None
 
 SENDING = []
 MESSAGES = []
+PREV_MESSAGE = None
 PREV_MESSAGES = []
 MESSAGE_TEMPLATE = {
     "time": 0,
@@ -2659,9 +2708,6 @@ if __name__ == "__main__":
     dbg('starting teahaz at size',str(WIDTH),str(HEIGHT))
     pytermgui.set_debugger(dbg)
 
-    #print(parse_inline_codes('*italic* **bold** ***italic_bold*** __underline__ ~~strikethrough~~ *italic again* <rainbow<'))
-    #print(parse_inline_codes('~~strikethrough~~ ~~strikethrough~~'))
-    #sys.exit()
 
     if WIDTH < 37:
         w = Container(height=3)
@@ -2692,8 +2738,10 @@ if __name__ == "__main__":
     pytermgui.set_style('container_label',lambda item: parse_color(THEME['label'],item.lower()))
     pytermgui.set_style('container_value',lambda item: parse_color(THEME['value'],item))
     pytermgui.set_style('container_border',lambda item: parse_color(THEME['border'],item))
+    pytermgui.set_style('container_corner',pytermgui.CONTAINER_BORDER_STYLE)
 
-    pytermgui.set_style('prompt_highlight',lambda item: highlight(item,THEME['value']))
+    
+    pytermgui.set_style('prompt_highlight',lambda item: minimal_or_custom_highlight(item))
     pytermgui.set_style('tabbar_highlight',lambda item: parse_color(THEME['title'],item))
 
     pytermgui.set_style('container_border_chars',lambda: [bold(v) for v in THEME['border_chars']])
@@ -2718,15 +2766,17 @@ if __name__ == "__main__":
         handle_action('menu_server_new')
     
     # set up bottom mode label
-    MODE_LABEL = Label('-- ESCAPE --',justify='left')
+    MODE_LABEL = ModeLabel(value='-- ESCAPE --',justify='left')
     MODE_LABEL.set_style('value',lambda item: color(item,THEME['mode_indicator']))
-    x,y = get_infield_pos()
-    MODE_LABEL.pos = [x,y+5]
 
     # set up top bar to indicate current conv
     CONV_HEADER = Container(width=int(WIDTH*0.75),dynamic_size=False)
+    for i,c in enumerate([v for k,v in THEME['corners'].items()]):
+        if not c == None:
+            CONV_HEADER.set_corner(i,c)
+
+    # wipe all lines fully before repr
     CONV_HEADER._repr_pre = CONV_HEADER.wipe_all_containing
-    #CONV_HEADER.wipe = lambda *args: dbg('wipe your ass')#CONV_HEADER.wipe_all_containing
     CONV_HEADER.center(axes='x')
     CONV_HEADER_LABEL = Label(justify='center')
     CONV_HEADER_LABEL.set_style('value',pytermgui.CONTAINER_VALUE_STYLE)
@@ -2746,7 +2796,6 @@ if __name__ == "__main__":
     switch_mode("ESCAPE")
 
     # start get loop
-    MESSAGES = json.loads(th.get(0))
     get_loop = threading.Thread(target=th.get_loop,name='get_loop')
     get_loop.start()
 

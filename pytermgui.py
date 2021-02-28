@@ -134,7 +134,7 @@ def container_from_dict(dic,padding=4,**kwargs):
     dicts = [dic_c]
     reverse_items = False
     handler = None
-    current_padding = 1
+    current_padding = 2
     prompt_options = None
     datafile = None
     element_id = None
@@ -333,7 +333,7 @@ class Color:
     def strikethrough(s):
         return '\033[9m'+str(s)+'\033[0m'
 
-    def highlight(s,fg=None):
+    def highlight(s,fg="1"):
         if not isinstance(fg,int) and not fg.isdigit():
             return '\033[7m'+fg
 
@@ -472,7 +472,7 @@ class Container:
 
         self.styles = {}
         self.corners = [[],[],[],[]]
-        self.corner_style = lambda c: c
+        self.corner_style = CONTAINER_CORNER_STYLE
 
         # set up border
         if border == None:
@@ -535,7 +535,7 @@ class Container:
         extra_lines = 0
         self.lines = []
         for i,e in enumerate(self.elements):
-            if self._do_dynamic_size:
+            if False and self._do_dynamic_size:
                 self.width = min(max(self.width,e.width+4),WIDTH-4)
             e.width = self.width - 4
 
@@ -953,7 +953,8 @@ class Prompt:
 
             start,end = delimiters[:2]
         else:
-            start,end = '   ','   '
+            # start,end = '   ','   '
+            start,end = '',''
 
         
         # if there is a label do <label> [ ]
@@ -961,15 +962,15 @@ class Prompt:
             label = self.label_style(self.label)
             value = self.value_style(self.value)
 
-            highlight = (self.highlight_style if self._is_selected else lambda item: item)
-
-            middle_pad = (self.width-real_length(label)) - len(start+end) - real_length(value) - self.padding
+            highlight_len = real_length(self.highlight_style(''))
+            highlight = (self.highlight_style if self._is_selected else lambda item: highlight_len*' '+item)
+            middle_pad = (self.width-real_length(label)) - real_length(start+end) - real_length(value) - max(self.padding,2)
             middle_pad = max(2,middle_pad)
 
-            left = self.padding*" " + label + middle_pad*" "
-            right = highlight(f"{start}{value}{end}")
+            left = ' ' + label + middle_pad*" "
+            right = start + value + end + ' '
 
-            line = left + right
+            line = (self.padding-1-highlight_len)*' '+highlight(left + right)+' '
             self.width = max(self.width,real_length(line))
 
         # else print all options
@@ -1123,6 +1124,7 @@ TABBAR_HIGHLIGHT_STYLE = GLOBAL_HIGHLIGHT_STYLE
 # container
 CONTAINER_BORDER_CHARS = lambda: "|-"
 CONTAINER_BORDER_STYLE = lambda item: item
+CONTAINER_CORNER_STYLE = lambda item: item
 CONTAINER_LABEL_STYLE = lambda item: item
 CONTAINER_VALUE_STYLE = lambda item: item
 CONTAINER_CORNER_STYLE = lambda char: char
@@ -1163,26 +1165,31 @@ def perspective(color,index):
 if __name__ == "__main__":
     import requests
 
+    print('\033[2J')
     r = requests.get('https://online.sprinter.hu/terkep/data.json')
     d = r.json()
     d = d[0]
         
     c = container_from_dict(d)[0]
-    c.set_corner(0,'example using sprinter json')
-    c.set_corner(3,'pytermgui')
-    c.set_style(Prompt,'highlight',lambda a: highlight(a,'74'))
-    c.set_style(Container,'corner',lambda a: color(a,'141'))
-    c.set_style(Container,'border',lambda a: color(a,'220'))
-    c.set_style(Prompt,'label',lambda a: color(a,'103'))
-    c.set_style(Prompt,'value',lambda a: color(a,'61'))
-    c.set_style(Prompt,'delimiter',lambda: ['< ',' >'])
-    c.set_borders('|_|-')
+    #c.set_corner(0,'example using sprinter json')
+    #c.set_corner(3,'pytermgui')
+    corners = ["┌","┐","└","┘"]
+    for i,corner in enumerate(corners):
+        c.set_corner(i,corner)
+    c.set_style(Prompt,'highlight',lambda a: Color.highlight(a,'74'))
+    c.set_style(Container,'corner',lambda a: Color.color(a,'220'))
+    c.set_style(Container,'border',lambda a: Color.color(a,'220'))
+    c.set_style(Prompt,'label',lambda a: Color.color(a,'103'))
+    c.set_style(Prompt,'value',lambda a: Color.color(a,'61'))
+    c.set_style(Prompt,'delimiter',lambda: None)
+    c.set_borders('│─')
     c.select(3)
-    #$c.center()
-    c.move([0,HEIGHT+10])
+    c.center()
+    #c.move([0,HEIGHT+10])
     repr(c)
 
     #print(c)
     #with open('sprinter.ptg','w') as f:
     #    f.write(repr(c))
     print(c)
+    print('\033[i')

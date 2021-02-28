@@ -4,11 +4,13 @@
         + [ ] global object gets created, whos value can be set by functions
         + [ ] it launches a thread, then is killed by the caller
 
-    - [ ] add prev_get support, extra messages before they send
-
     - [ ] look into sorting functions under classes:
         + InputHandlers could be one
         + maybe Handlers in general
+
+    - [ ] messages should be Containers
+        + it would make retroactive proper grouping possible
+        + there could be a bunch of cool new designs that way
 
 
 
@@ -19,10 +21,12 @@
 # TODO
 - [ ] improve parse_inline_codes (refer to comment)
 - [ ] restructure this file pls
+- [ ] change infield cursor char depending on mode
 - handle errors:
     * these should get you stuck in an infinite loop
     * [ ] Connection Refused
     * [ ] bad url
+    * [ ] nodename nor service.. no internet
 
 # FEATURES 
 ## upcoming checklist
@@ -165,3 +169,5 @@
     + [x] italic_bold
     + [x] underline
     + [x] strikethrough
+
+- [x] add prev_get support, extra messages before they send

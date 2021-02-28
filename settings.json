@@ -24,18 +24,25 @@
             "field_highlight": "gradient(72)",
             "mode_indicator": "72",
             "ui__title2": "characters",
-            "border_chars": "|-",
+            "border_chars": "\u2502\u2500",
             "ui__prompt_options__delimiters": [
                 "<>",
                 "[]",
-                "{}"
+                "{}",
+                null
             ],
-            "prompt_delimiters": "<>",
+            "prompt_delimiters": null,
+            "ui__prompt_options_highlight": [
+                "minimal",
+                "custom"
+            ],
+            "prompt_highlight": "minimal",
+            "custom_prompt_highlight": "highlight(72)",
             "corners": {
-                "top_left": "x",
-                "top_right": "x",
-                "bottom_left": "X",
-                "bottom_right": "X"
+                "top_left": "\u250c",
+                "top_right": "\u2510",
+                "bottom_left": "\u2514",
+                "bottom_right": "\u2518"
             },
             "message_styles": {
                 "*": "italic",
@@ -43,7 +50,8 @@
                 "***": "italic(bold())",
                 "__": "underline",
                 "~~": "strikethrough",
-                "%%": "gradient(72)"
+                "%%": "gradient(72)",
+                "`": "italic(color(102))"
             },
             "ui__padding": 0,
             "ui__button": {
