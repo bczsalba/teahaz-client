@@ -2034,7 +2034,7 @@ class TeahazHelper:
                     SESSION.last_get = time.time()
                     data = BASE_DATA
                     data['time'] = str(get_time)
-                    self.handle_operation(method='get',output='messages_get_return',url=URL+'/api/v0/message',headers=data)
+                    self.handle_operation(method='get',output='messages_get_return',url=URL+'/api/v0/message/',headers=data)
 
                 elif not self.messages_get_return == 'incomplete':
                     try:
