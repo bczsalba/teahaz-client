@@ -2,9 +2,29 @@
 # fun note: it was posted 18 years ago and still works!
 # originally written by Danny Yoo
 
-import os, sys, codecs, select
+import re
+import os
+import sys
+import codecs
+import select
 from contextlib import contextmanager
 
+
+
+def clean_ansi(s,t="ansi"):
+    if not type(s) in [str,bytes]:
+        raise Exception('Value <'+str(s)+'>\'s type ('+str(type(s))+' is not str or bytes')
+
+    ansi = re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
+    unic = re.compile(r'[^\u0000-\u007F]+')
+    no_ansi = ansi.sub('',s)
+    # no_unic = unic.sub('',no_ansi)
+
+    
+    return no_ansi
+
+def real_length(s):
+    return len(clean_ansi(s))
 
 
 # this needs to be here in order to have arrow keys registered
@@ -44,13 +64,14 @@ class OSReadWrapper(object):
 class InputField:
     """ Example of use at the bottom of the file """
 
-    def __init__(self,pos=None,linecap=0,default="",xlimit=None,ylimit=None,print_at_start=False):
+    def __init__(self,pos=None,linecap=0,default="",prompt='',xlimit=None,ylimit=None,print_at_start=False):
         # set up instance variables
         self.value = default
         self.cursor = len(self.value)
         self.selected = ''
         self.selected_start = 0
         self.selected_end = 0
+        self.prompt = prompt
         self.field_color = '\033[0m'
         self.visual_color = ''
 
@@ -77,7 +98,7 @@ class InputField:
     def send(self,key,_do_print=True):
         # delete char before cursor
         if key == "BACKSPACE":
-            if self.cursor > 0:
+            if self.cursor > 0:#real_length(self.prompt):
                 left = self.value[:self.cursor-1]
                 right = self.value[self.cursor:]
                 self.value = left+right
@@ -85,7 +106,7 @@ class InputField:
 
         # move left
         elif key == "ARROW_LEFT":
-            self.cursor = max(self.cursor-1,0)
+            self.cursor = max(self.cursor-1,real_length(self.prompt))
 
         # move right
         elif key == "ARROW_RIGHT":
@@ -136,14 +157,14 @@ class InputField:
         self.value = target
 
         # set cursor auto
-        if cursor == None or cursor > len(self.value)-1 and not force_cursor:
-            self.cursor = max(len(self.value)-1,0)
+        if cursor == None or cursor > real_length(self.value)-1 and not force_cursor:
+            self.cursor = max(real_length(self.value)-1,0)
 
         # set cursor manual
         elif not cursor == None:
             self.cursor = cursor
 
-        self.width = len(self.value)
+        self.width = real_length(self.value)
 
         if do_print:
             # print self
@@ -153,7 +174,8 @@ class InputField:
     # clear the space occupied by input currently
     def wipe(self):
         x,y = self.pos
-        sys.stdout.write(f'\033[{y};{x}H'+(len(self.value)+2)*' ')
+        length = real_length(self.prompt+self.value)+2
+        sys.stdout.write(f'\033[{y};{x}H'+(length)*' ')
         sys.stdout.flush()
 
 
@@ -176,9 +198,8 @@ class InputField:
         else:
             selected_text = self.visual_color + charUnderCursor
 
-
         # construct line
-        line = self.field_color + left + highlighter + selected_text + '\033[0m' + self.field_color + right + '\033[0m'
+        line = self.field_color + self.prompt + left + highlighter + selected_text + '\033[0m' + self.field_color + right + '\033[0m'
 
         if return_line:
             return line
@@ -186,7 +207,7 @@ class InputField:
         x,y = self.pos
 
         # clear current
-        sys.stdout.write(f'\033[{y};{x}H' + ' '*(len(self.value)+2))
+        self.wipe()
         # write to stdout
         sys.stdout.write(f'\033[{y};{x}H'+line)
 
@@ -201,10 +222,10 @@ class InputField:
             end = start
             start = temp
 
-        if start == None or start < 0:
+        if start == None or start < real_length(self.prompt):
             start = self.cursor
         if end == None or end > len(self.value)-1:
-            end = len(self.value)-1
+            end = real_length(self.value)-1
 
         end += 1
 
@@ -220,11 +241,11 @@ class InputField:
         if callable(self.visual_color):
             selected_text = self.visual_color(selected)
         else:
-            selected_text = self.visual+color + selected
+            selected_text = self.visual_color + selected
 
         
         self.wipe()
-        line = left+highlight+selected_text+self.field_color+right
+        line = self.prompt+left+highlight+selected_text+self.field_color+right
 
         # write to stdout
         x,y = self.pos
@@ -343,9 +364,9 @@ getch = _Getch()
 
 # example code
 if __name__ == "__main__":
-    infield = InputField(default="Welcome!")
+    infield = InputField(default="Welcome!",prompt='> ')
     #infield.print()
-    infield.select(3,3)
+    infield.visual(3,3)
     sys.exit()
 
     while True:

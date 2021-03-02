@@ -13,6 +13,7 @@ import requests
 import pytermgui
 import threading
 import pyperclip as clip
+from fuzzywuzzy import fuzz as fw
 from urllib.parse import urlparse
 from pytermgui import WIDTH,HEIGHT
 from pytermgui import clean_ansi,real_length,break_line
@@ -130,8 +131,7 @@ def edit_json(json_path,key,value) -> None:
     infield.pos = get_infield_pos()
 
 def load_path(path,key=None) -> dict:
-    if isinstance(path,dict):
-        return path
+    if isinstance(path,dict): return path
 
     with open(path,'r') as f:
         out = json.load(f)
@@ -346,8 +346,12 @@ def split_by_delimiters(s,return_indices=False) -> list:
         return wordlist
 
 ### return True if the given `index` is part of the last word in the strong
-def is_in_last_word(index,string) -> bool:
-    wordlist = split_by_delimiters(string)
+def is_in_last_word(index,string,mode='delimiters') -> bool:
+    if mode == 'delimiters':
+        wordlist = split_by_delimiters(string)
+    else:
+        wordlist = string.split(' ')
+
     last_word_index = len(string)-len(wordlist[-1])
     return (last_word_index <= index)
 
@@ -649,10 +653,6 @@ def getch_loop() -> None:
 
         # INSERT mode: inputs
         elif MODE == "INSERT":
-            # ignore unrecognized ctrl keys
-            if key.startswith('CTRL_'):
-                continue
-
             # send key to inputfield to handle
             infield.send(key)
 
@@ -685,7 +685,8 @@ def handle_action(action) -> None:
     elif action == "reprint":
         fun,args,obj = UI_TRACE[-1]
         pytermgui.clr()
-        th.print_messages(reprint=True)
+        if not PIPE_OUTPUT:
+            th.print_messages(reprint=True)
 
         fun(**args)
         return
@@ -705,10 +706,6 @@ def handle_action(action) -> None:
         # dbg(ret)
         # if 'OK' in ret:
         infield.clear_value()
-
-    # TODO
-    elif action == "insert_newline":
-        infield.send('\n')
 
     elif action == "character_delete":
         # convert value to list
@@ -2411,6 +2408,12 @@ class UIGenerator:
         print(c)
         return c
 
+    def create_completer_tester(self):
+        print('\033[2J')
+
+        field = InputField()
+        completer = InputFieldCompleter()
+
 class ModeLabel(Label):
     """
     Simple Label extension providing a wipe()
@@ -2432,6 +2435,135 @@ class ModeLabel(Label):
             x,y = self.pos
             print(f"\033[{y+yoffset};{x}H"+real_length(super().__repr__())*' ')
 
+class InputFieldCompleter(Container):
+    def __init__(self,options,completion_callback=None,field=None,height=5,trigger=None,**kwargs):
+        super().__init__(**kwargs)
+
+        self.options = options
+        self.rows = []
+        self.trigger = trigger
+        if field:
+            self.field = field
+            if field.pos:
+                # self.move(field.pos)
+                self.target_pos = field.pos
+        else:
+            self.field = InputField(prompt='> ')
+        
+        for i in range(height):
+            l = Prompt(label='',justify_options="left")
+            self.add_elements(l)
+            self.rows.append(l)
+        
+        self.field.og_send = self.field.send
+        self.field.og_set_value = self.field.set_value
+        self.field.send = self.field_send
+        self.field.set_value = self.field_set_value
+
+        # self.add_elements(self.field)
+        self.width = 30
+        self.set_borders(['','','',''])
+        self.selected_index = self.height-1
+
+    def do_completion(self,word,start,end):
+        left = self.field.value[:start]
+        right = self.field.value[end:]
+        current = self.field.value[start:end]
+
+        if is_in_last_word(end,self.field.value,'space'):
+            right += ' '
+
+        self.field.value = left+word+right
+        self.field.cursor = end + real_length(word)-real_length(current)
+
+        if self.trigger:
+            self.field.cursor += real_length(self.trigger)
+        self.wipe()
+        self.selected_index = self.height-1
+
+
+    def field_send(self,key,**kwargs):
+        word_start,word_end = get_indices('W')
+        word = self.field.value[word_start:word_end]
+
+        if not real_length(self.field.value):
+            self.field.og_send(key,**kwargs)
+            self.wipe()
+            return
+
+        #dont do anything if trigger isnt present
+        if self.trigger:
+            if not self.trigger in self.field.value[word_start:word_end]:
+                if not (len(word) and word[0] == self.trigger):
+                    self.field.og_send(key,**kwargs)
+                    self.wipe()
+                    return
+
+        if key == "ENTER" or (not word_start == word_end and word.count(self.trigger) >= 2):
+            self.do_completion(word,word_start,word_end)
+            return
+
+        elif key == "TAB":
+            newword = self.selected[0].label
+            self.do_completion(newword,word_start,word_end)
+            return
+
+        elif key in ["ARROW_UP","CTRL_P"]:
+            self.selected_index = max(0,self.selected_index-1)
+            key = ''
+
+        elif key in ["ARROW_DOWN","CTRL_N"]:
+            self.selected_index = min(len(self.selectables),self.selected_index+1)
+            key = ''
+
+        self.select()
+        self.field.og_send(key,**kwargs)
+        self.eval_options(word_start,word_end+len(key))
+
+        print(self)
+
+    def field_set_value(self,target,cursor=None,**kwargs):
+        self.field.send('')
+        self.field.og_set_value(target,cursor,**kwargs)
+        # self.field.print()
+
+    def eval_options(self,start,end):
+        dbg()
+        # get, sort options
+        ratios = []
+        target = self.field.value[start:end]
+        dbg(target)
+        for e in self.options:
+            ratio = fw.ratio(target,e)
+            if ratio > 30:
+                ratios.append([e,ratio])
+
+        ratios.sort(reverse=True,key=lambda e: e[1])
+        output = [e for e,_ in ratios]
+
+        # self.wipe()
+        # self.elements = []
+        for i,row in enumerate(reversed(self.rows)):
+            if len(output) > i:
+                row.label = output[i]
+                if not row in self.elements:
+                    self.add_elements(row)
+            else:
+                # row.label = 'unused'
+                if row in self.elements:
+                    self.elements.remove(row)
+
+        # self.add_elements(self.field)
+        x,y = self.target_pos
+        x -= 3
+        y -= len(self.elements)+2
+
+        if not [x,y] == self.pos:
+            self.move([x,y])
+            
+
+
+
 
 
 
@@ -2446,7 +2578,7 @@ else:
     with open(os.path.join(PATH,'usercfg.json'),'w') as f:
         f.write('{}')
 
-
+import_json('emoji')
 
 LOGFILE = os.path.join(PATH,'log')
 DELIMITERS = "!@#$%^&*()[]{}|\\;':\",.<>/? \t"
@@ -2558,9 +2690,11 @@ if __name__ == "__main__":
  
 
     # set default mode
-    infield = getch.InputField(pos=get_infield_pos())
+    infield = InputDialogField(pos=get_infield_pos())
     infield.line_offset = None
     infield.visual_color = lambda text: parse_color(THEME['field_highlight'],text)
+    completer = InputFieldCompleter(options=EMOJI_KEYS,field=infield,trigger=':')
+
 
     ui = UIGenerator()
     th = TeahazHelper()
@@ -2568,7 +2702,7 @@ if __name__ == "__main__":
     # set up defaults
     if is_set('CURRENT_CHATROOM'):
         url,chatroom = CURRENT_CHATROOM
-        th.set_chatroom(url,chatroom)
+        # th.set_chatroom(url,chatroom)
     else:
         SERVERS = {}
         CURRENT_CHATROOM = None
@@ -2605,8 +2739,8 @@ if __name__ == "__main__":
     switch_mode("ESCAPE")
 
     # start get loop
-    get_loop = threading.Thread(target=th.get_loop,name='get_loop')
-    get_loop.start()
+    # get_loop = threading.Thread(target=th.get_loop,name='get_loop')
+    # get_loop.start()
 
     # main input loop
     getch_loop()
