@@ -23,10 +23,15 @@ def set_style(key,value):
     return key+'_STYLE'
 
 def clean_ansi(s):
+    import re
     if not type(s) in [str,bytes]:
         raise Exception('Value <'+str(s)+'>\'s type ('+str(type(s))+' is not str or bytes')
-    import re
-    return re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]').sub('', s)
+
+    ansi = re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
+    # unic = re.compile(r'[^\u0000-\u007F]+')
+    no_ansi = ansi.sub('',s)
+
+    return no_ansi
 
 def real_length(s):
     return len(clean_ansi(s))
@@ -553,7 +558,7 @@ class Container:
                 for o in self.selectables:
                     if o[0] == e:
                         self.selectables.remove(o)
-                dbg('ERROR:',type(e),'width was too long or otherwise invalid, ignoring!')
+                dbg('ERROR:',type(e),f'width ({e.width}) was too long or otherwise invalid, ignoring!')
                 continue
 
             diff = len(lines)
@@ -588,7 +593,6 @@ class Container:
 
     # internal function to add elements
     def _add_element(self,element):
-
         # set width for element if none is available
         if element.width == None:
             element.width = self.width
@@ -727,12 +731,16 @@ class Container:
         left,top,right,bottom = [self.border_style(a) for a in self.borders]
         self.border = []
         for y in range(py+1,y2):
-            self.border.append([x1,y,left])
-            self.border.append([x2,y,right])
+            if real_length(left):
+                self.border.append([x1,y,left])
+            if real_length(right):
+                self.border.append([x2,y,right])
 
         for x in range(px+1,x2+1):
-            self.border.append([x,y2,bottom])
-            self.border.append([x,y1,top])
+            if real_length(bottom):
+                self.border.append([x,y2,bottom])
+            if real_length(top):
+                self.border.append([x,y1,top])
 
         for c in self.corners:
             if not len(c):
@@ -786,7 +794,7 @@ class Container:
             elif not target_element == self.selectables[i][0]:
                 e._is_selected = False
 
-        self._selection_changed(self,sub_i)
+        self._selection_changed(self,index)
   
     
     # go through object, wipe ever character contained
@@ -804,12 +812,14 @@ class Container:
 
         sys.stdout.flush()
 
+
     def wipe_all_containing(self):
         px,py = self.pos
         for y in range(py+1,py+self.height+3):
             sys.stdout.write(f'\033[{y};0H'+'\033[K')
         sys.stdout.flush()
     
+
     # transform self to new position
     def move(self,pos,wipe=False):
         self.pos = pos
@@ -833,12 +843,14 @@ class Container:
             y = (HEIGHT-self.height-yoffset)//2
         self.move([x,y])
 
+
     def export(self,filename):
         if not filename.endswith('.ptg'):
             filename += '.ptg'
 
         with open(filename,'w') as f:
             f.write(repr(self))
+
 
     # EVENT: window size changed
     # - checked for during __repr__
@@ -871,6 +883,7 @@ class Container:
             # second check
             if real_length(str(e.label))+4 > self.width*(1/2):
                 e.label = str(e.label)[:int(self.width*(1/3))-3]+'...'
+
 
     # EVENT: start of repr
     # - called before any repr logic
