@@ -2027,8 +2027,8 @@ class TeahazHelper:
                 sys.stdout.write('\n')
 
         sys.stdout.write('\n')
-        if not username == BASE_DATA.get('username'):
-            sys.stdout.write((len(completer.rows))*'\n')
+        # if not username == BASE_DATA.get('username'):
+            # sys.stdout.write((len(completer.rows))*'\n')
         # PREV_MESSAGE = m
         # dbg(PREV_MESSAGE)
 

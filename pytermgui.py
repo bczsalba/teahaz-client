@@ -805,7 +805,6 @@ class Container:
         if not self._has_printed or force:
             return
 
-        dbg()
         if pos == None:
             pos = self.pos
 

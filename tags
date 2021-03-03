@@ -154,7 +154,9 @@ __repr__	pytermgui.py	/^    def __repr__(self):$/;"	m	class:Prompt
 _add_element	pytermgui.py	/^    def _add_element(self,element):$/;"	m	class:Container
 _connect	client.py	/^    def _connect(*args,**kwargs):$/;"	f	function:start_connection	file:
 _do_operation	client.py	/^        def _do_operation(*args,**kwargs):$/;"	f	member:TeahazHelper.handle_operation	file:
+_get_caller	client.py	/^    _get_caller = lambda: type(obj).__name__+'.'+method if obj else method$/;"	f	function:dbg	file:
 _get_option_highlight	pytermgui.py	/^    def _get_option_highlight(self,index):$/;"	m	class:Prompt
+_handle_long_element	client.py	/^    def _handle_long_element(self,e):$/;"	m	class:InputFieldCompleter
 _handle_long_element	pytermgui.py	/^    def _handle_long_element(self,e):$/;"	m	class:Container
 _repr_pre	pytermgui.py	/^    def _repr_pre(self):$/;"	m	class:Container
 _selection_changed	pytermgui.py	/^    def _selection_changed(self,index):$/;"	m	class:Container
@@ -228,7 +230,6 @@ extension details	devlog.md	/^## extension details$/;"	s	chapter:2020/12/20
 fade	settings.json	/^            "fade": "238",$/;"	s	object:THEMES.draculite
 field_highlight	settings.json	/^            "field_highlight": "gradient(72)",$/;"	s	object:THEMES.draculite
 field_send	client.py	/^    def field_send(self,key,**kwargs):$/;"	m	class:InputFieldCompleter
-field_set_value	client.py	/^    def field_set_value(self,target,cursor=None,**kwargs):$/;"	m	class:InputFieldCompleter
 fileno	getch.py	/^    def fileno(self):$/;"	m	class:OSReadWrapper
 find	client.py	/^def find(key,offset=0,reverse=False) -> None:$/;"	f	typeref:typename:None
 find	settings.json	/^            "find": "f",$/;"	s	object:VIMBINDS.ESCAPE
@@ -239,7 +240,6 @@ finished	notes.md	/^## finished$/;"	s	chapter:FEATURES
 fw	client.py	/^from fuzzywuzzy import fuzz as fw$/;"	x	nameref:unknown:fuzz
 get	client.py	/^    def get(self,parameter,mode="message"):$/;"	m	class:TeahazHelper
 get_border	pytermgui.py	/^    def get_border(self):$/;"	m	class:Container
-get_caller	client.py	/^    get_caller = lambda: type(obj).__name__+'.'+method if obj else method$/;"	f	function:dbg	file:
 get_caller	client.py	/^def get_caller(depth=1):$/;"	f
 get_chars	getch.py	/^    def get_chars(self):$/;"	m	class:_GetchUnix
 get_gradient	client.py	/^get_gradient   =  Color.get_gradient$/;"	v
@@ -248,6 +248,7 @@ get_index	client.py	/^def get_index(obj) -> int:$/;"	f	typeref:typename:int
 get_indices	client.py	/^def get_indices(param) -> tuple:$/;"	f	typeref:typename:tuple
 get_infield_pos	client.py	/^def get_infield_pos(update_modelabel=True) -> list:$/;"	f	typeref:typename:list
 get_loop	client.py	/^    def get_loop(self):$/;"	m	class:TeahazHelper
+get_loop	client.py	/^    get_loop = threading.Thread(target=th.get_loop,name='get_loop')$/;"	v
 get_object_by_id	pytermgui.py	/^def get_object_by_id(key):$/;"	f
 getch	getch.py	/^getch = _Getch()$/;"	v
 getch_loop	client.py	/^def getch_loop() -> None: $/;"	f	typeref:typename:None
@@ -446,6 +447,6 @@ w	client.py	/^        w = Container(height=3)$/;"	v
 wipe	client.py	/^    def wipe(self):$/;"	m	class:UIGenerator
 wipe	client.py	/^    def wipe(self,yoffset=0):$/;"	m	class:ModeLabel
 wipe	getch.py	/^    def wipe(self):$/;"	m	class:InputField
-wipe	pytermgui.py	/^    def wipe(self,pos=None):$/;"	m	class:Container
+wipe	pytermgui.py	/^    def wipe(self,pos=None,force=False):$/;"	m	class:Container
 wipe_all_containing	pytermgui.py	/^    def wipe_all_containing(self):$/;"	m	class:Container
 ~~	settings.json	/^                "~~": "strikethrough",$/;"	s	object:THEMES.draculite.message_styles
