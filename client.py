@@ -146,6 +146,9 @@ def dbg(*args,do_color=True) -> None:
     if not DO_DEBUG:
         return
 
+    if args == tuple():
+        args = (get_caller(2),)
+
     s = ' '.join([str(a) for a in args])
 
     method    = sys._getframe().f_back.f_code.co_name
@@ -157,10 +160,10 @@ def dbg(*args,do_color=True) -> None:
         filename = parse_color(THEME['title'],filename)
         lineno = parse_color(THEME['value'],lineno)
 
-    get_caller = lambda: type(obj).__name__+'.'+method if obj else method
+    _get_caller = lambda: type(obj).__name__+'.'+method if obj else method
 
     with open(LOGFILE,'a') as f:
-        f.write(f"{bold(filename)}/{get_caller()}:{bold(lineno)} : "+s+'\n')
+        f.write(f"{bold(filename)}/{_get_caller()}:{bold(lineno)} : "+s+'\n')
 
 def get_caller(depth=1):
     frame = sys._getframe()
@@ -1040,6 +1043,7 @@ def handle_action(action) -> None:
             clip.copy(infield.value)
             infield.line_offset = 0 
             infield.wipe()
+            completer.wipe()
             get_infield_pos()
             infield.set_value('')
 
@@ -1910,7 +1914,9 @@ class TeahazHelper:
             # dbg('nothing to print')
             return 
 
+        # clear things from the screen
         infield.wipe()
+        completer.wipe()
         MODE_LABEL.wipe()
 
 
@@ -1930,6 +1936,20 @@ class TeahazHelper:
                     decoded = content
                 else:
                     decoded = decode(content)
+
+                for w in decoded.split(' '):
+                    if w.startswith(':') and w.endswith(':'):
+                        emoji = EMOJI_KEYS.get(w)
+                        if emoji == None:
+                            continue
+
+                        start = decoded.index(w)
+                        end = start+real_length(w)
+
+                        left = decoded[:start]
+                        right = decoded[end:]
+                        decoded = left+emoji+right
+
                 inline = parse_inline_codes(decoded)
                 content = decoded
                 if inline == decoded:
@@ -2007,6 +2027,8 @@ class TeahazHelper:
                 sys.stdout.write('\n')
 
         sys.stdout.write('\n')
+        if not username == BASE_DATA.get('username'):
+            sys.stdout.write((len(completer.rows))*'\n')
         # PREV_MESSAGE = m
         # dbg(PREV_MESSAGE)
 
@@ -2018,6 +2040,8 @@ class TeahazHelper:
         # print top bar
         if not CONV_HEADER.hidden:
             print(CONV_HEADER)
+
+        infield.print()
             
     def get_loop(self):
         global WIDTH,HEIGHT
@@ -2439,59 +2463,81 @@ class InputFieldCompleter(Container):
     def __init__(self,options,completion_callback=None,field=None,height=5,trigger=None,**kwargs):
         super().__init__(**kwargs)
 
-        self.options = options
+        # set up base variables
         self.rows = []
+        self.options = options
         self.trigger = trigger
+        self._has_printed = False
+        self.selected_index = height-1
+        
+        # get or create field, set position
         if field:
             self.field = field
-            if field.pos:
-                # self.move(field.pos)
-                self.target_pos = field.pos
         else:
             self.field = InputField(prompt='> ')
-        
+        self.target_pos = field.pos
+
+        # create rows
         for i in range(height):
-            l = Prompt(label='',justify_options="left")
-            self.add_elements(l)
-            self.rows.append(l)
+            p = Prompt(label='',justify_options="left")
+            self.add_elements(p)
+            self.rows.append(p)
         
+        # store and overwrite field functions
         self.field.og_send = self.field.send
         self.field.og_set_value = self.field.set_value
         self.field.send = self.field_send
-        self.field.set_value = self.field_set_value
 
-        # self.add_elements(self.field)
+        # set style stuff
         self.width = 30
         self.set_borders(['','','',''])
-        self.selected_index = self.height-1
 
+
+    # complete `word` into field.value[start:end]
     def do_completion(self,word,start,end):
+        # set up sides of string
         left = self.field.value[:start]
         right = self.field.value[end:]
         current = self.field.value[start:end]
 
+        # add padding if needed
         if is_in_last_word(end,self.field.value,'space'):
             right += ' '
 
+        # set field variables
+        # this doesn't use the standard .set_value method as it would recurse
         self.field.value = left+word+right
-        self.field.cursor = end + real_length(word)-real_length(current)
+        self.field.cursor = end + real_length(word)-real_length(current)-1
 
+        # adjust cursor by trigger length
         if self.trigger:
             self.field.cursor += real_length(self.trigger)
         self.wipe()
+
+        # update selection
         self.selected_index = self.height-1
 
-
+    
+    # intercept field.send
     def field_send(self,key,**kwargs):
-        word_start,word_end = get_indices('W')
+        word_start,word_end = get_indices('w')
+
+        # make sure it doesnt include the triggerlength
+        word_start -= real_length(self.trigger)
+        word_end   += real_length(self.trigger)
+
+        # get word
         word = self.field.value[word_start:word_end]
 
-        if not real_length(self.field.value):
+        # check for empty field and wipe
+        current_length = real_length(self.field.value)
+        if not real_length(self.field.value) or current_length == 1 and key == "BACKSPACE":
             self.field.og_send(key,**kwargs)
             self.wipe()
             return
 
-        #dont do anything if trigger isnt present
+        # check if trigger is present and is the first char of word
+        # TODO: completer triggers with :closed:^ tags
         if self.trigger:
             if not self.trigger in self.field.value[word_start:word_end]:
                 if not (len(word) and word[0] == self.trigger):
@@ -2499,50 +2545,44 @@ class InputFieldCompleter(Container):
                     self.wipe()
                     return
 
-        if key == "ENTER" or (not word_start == word_end and word.count(self.trigger) >= 2):
-            self.do_completion(word,word_start,word_end)
-            return
-
-        elif key == "TAB":
+        # complete
+        if key == "TAB":
             newword = self.selected[0].label
             self.do_completion(newword,word_start,word_end)
             return
 
+        # go up
         elif key in ["ARROW_UP","CTRL_P"]:
             self.selected_index = max(0,self.selected_index-1)
             key = ''
 
+        # go down
         elif key in ["ARROW_DOWN","CTRL_N"]:
             self.selected_index = min(len(self.selectables),self.selected_index+1)
             key = ''
 
+        # update things
         self.select()
         self.field.og_send(key,**kwargs)
         self.eval_options(word_start,word_end+len(key))
-
         print(self)
+        self._has_printed = True
 
-    def field_set_value(self,target,cursor=None,**kwargs):
-        self.field.send('')
-        self.field.og_set_value(target,cursor,**kwargs)
-        # self.field.print()
 
+    # get viable options
     def eval_options(self,start,end):
-        dbg()
-        # get, sort options
         ratios = []
         target = self.field.value[start:end]
-        dbg(target)
         for e in self.options:
             ratio = fw.ratio(target,e)
             if ratio > 30:
                 ratios.append([e,ratio])
 
+        # sort options
         ratios.sort(reverse=True,key=lambda e: e[1])
         output = [e for e,_ in ratios]
 
-        # self.wipe()
-        # self.elements = []
+        # assign options to labels in rows
         for i,row in enumerate(reversed(self.rows)):
             if len(output) > i:
                 row.label = output[i]
@@ -2553,14 +2593,17 @@ class InputFieldCompleter(Container):
                 if row in self.elements:
                     self.elements.remove(row)
 
-        # self.add_elements(self.field)
+        # update position
         x,y = self.target_pos
         x -= 3
         y -= len(self.elements)+2
-
         if not [x,y] == self.pos:
             self.move([x,y])
             
+    
+    # ignore long elements
+    def _handle_long_element(self,e):
+        return
 
 
 
@@ -2702,7 +2745,7 @@ if __name__ == "__main__":
     # set up defaults
     if is_set('CURRENT_CHATROOM'):
         url,chatroom = CURRENT_CHATROOM
-        # th.set_chatroom(url,chatroom)
+        th.set_chatroom(url,chatroom)
     else:
         SERVERS = {}
         CURRENT_CHATROOM = None
@@ -2735,12 +2778,12 @@ if __name__ == "__main__":
     CONV_HEADER.add_elements(CONV_HEADER_LABEL)
     CONV_HEADER.hidden = False
     
-    # set up startin gmode
+    # set up starting mode
     switch_mode("ESCAPE")
 
     # start get loop
-    # get_loop = threading.Thread(target=th.get_loop,name='get_loop')
-    # get_loop.start()
+    get_loop = threading.Thread(target=th.get_loop,name='get_loop')
+    get_loop.start()
 
     # main input loop
     getch_loop()

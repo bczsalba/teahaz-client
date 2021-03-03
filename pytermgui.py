@@ -489,6 +489,9 @@ class Container:
         self._do_dynamic_size = dynamic_size
         self._do_center_elements = center_elements
         self._is_centered = False
+
+        # optional flag to avoid wiping
+        self._has_printed = True
         
 
     # set style for element type `group`
@@ -798,7 +801,11 @@ class Container:
   
     
     # go through object, wipe ever character contained
-    def wipe(self,pos=None):
+    def wipe(self,pos=None,force=False):
+        if not self._has_printed or force:
+            return
+
+        dbg()
         if pos == None:
             pos = self.pos
 

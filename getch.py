@@ -75,6 +75,8 @@ class InputField:
 
 
     def send(self,key,_do_print=True):
+        from client import dbg
+        dbg(key)
         # delete char before cursor
         if key == "BACKSPACE":
             if self.cursor > 0:

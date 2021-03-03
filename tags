@@ -73,6 +73,7 @@ Important notes	docs.md	/^### Important notes$/;"	S	section:documentation""Varia
 InputDialog	client.py	/^class InputDialog(Container):$/;"	c
 InputDialogField	client.py	/^class InputDialogField(getch.InputField):$/;"	c
 InputField	getch.py	/^class InputField:$/;"	c
+InputFieldCompleter	client.py	/^class InputFieldCompleter(Container):$/;"	c
 KEEP_CURSOR_AFTER_SELECT	settings.json	/^    "KEEP_CURSOR_AFTER_SELECT": true,$/;"	b
 KEEP_GOING	client.py	/^KEEP_GOING = True$/;"	v
 KEEP_PIPE	client.py	/^KEEP_PIPE = False$/;"	v
@@ -134,6 +135,7 @@ __init__	client.py	/^    def __init__(self):$/;"	m	class:TeahazHelper
 __init__	client.py	/^    def __init__(self,**kwargs):$/;"	m	class:InputDialogField
 __init__	client.py	/^    def __init__(self,**kwargs):$/;"	m	class:ModeLabel
 __init__	client.py	/^    def __init__(self,**kwargs):$/;"	m	class:ThreadWithReturnValue
+__init__	client.py	/^    def __init__(self,options,completion_callback=None,field=None,height=5,trigger=None,**kwargs/;"	m	class:InputFieldCompleter
 __init__	client.py	/^    def __init__(self,options=None,label_value='',label_justify="center",label_underpad=0,field_/;"	m	class:InputDialog
 __init__	getch.py	/^    def __init__(self):$/;"	m	class:_Getch
 __init__	getch.py	/^    def __init__(self):$/;"	m	class:_GetchUnix
@@ -183,6 +185,7 @@ clip	client.py	/^import pyperclip as clip$/;"	I	nameref:module:pyperclip
 clr	pytermgui.py	/^def clr():$/;"	f
 color	client.py	/^color          =  Color.color$/;"	v
 color	pytermgui.py	/^    def color(s,col,reset=True):$/;"	m	class:Color
+completer	client.py	/^    completer = InputFieldCompleter(options=EMOJI_KEYS,field=infield,trigger=':')$/;"	v
 container_from_dict	pytermgui.py	/^def container_from_dict(dic,padding=4,**kwargs):$/;"	f
 context	getch.py	/^    def context(self):$/;"	m	class:_GetchUnix
 copy_line	settings.json	/^            "copy_line": "yy",$/;"	s	object:VIMBINDS.ESCAPE
@@ -190,6 +193,7 @@ corners	pytermgui.py	/^    corners = ["┌","┐","└","┘"]$/;"	v
 corners	settings.json	/^            "corners": {$/;"	o	object:THEMES.draculite
 create_address_picker	client.py	/^    def create_address_picker(self,caller_prompt):$/;"	m	class:UIGenerator
 create_colormenu	client.py	/^    def create_colormenu(self,dict_index=0):$/;"	m	class:UIGenerator
+create_completer_tester	client.py	/^    def create_completer_tester(self):$/;"	m	class:UIGenerator
 create_error_dialog	client.py	/^    def create_error_dialog(self,text,button="ignore",handler=None):$/;"	m	class:UIGenerator
 create_menu	client.py	/^    def create_menu(self,source,corners=[None]*4,width=None,index=None,dict_index=0,**container_/;"	m	class:UIGenerator
 create_menu_picker	client.py	/^    def create_menu_picker(self):$/;"	m	class:UIGenerator
@@ -207,6 +211,7 @@ delete_line	settings.json	/^            "delete_line": "dd"$/;"	s	object:VIMBIND
 delete_line_end	settings.json	/^            "delete_line_end": "D",$/;"	s	object:VIMBINDS.ESCAPE
 delete_word_end	settings.json	/^            "delete_word_end": "dw",$/;"	s	object:VIMBINDS.ESCAPE
 do_after	client.py	/^def do_after(ms,fun,control='true',args={}) -> None:$/;"	f	typeref:typename:None
+do_completion	client.py	/^    def do_completion(self,word,start,end):$/;"	m	class:InputFieldCompleter
 do_in	client.py	/^def do_in(param, action) -> None:$/;"	f	typeref:typename:None
 documentation	docs.md	/^# documentation$/;"	c
 draculite	settings.json	/^        "draculite": {$/;"	o	object:THEMES
@@ -215,12 +220,15 @@ empty_dict	client.py	/^    def empty_dict(d) -> dict:$/;"	f	function:add_new_col
 encode	client.py	/^def encode(a):$/;"	f
 encode_binary	client.py	/^def encode_binary(a):$/;"	f
 error	settings.json	/^            "error": "203",$/;"	s	object:THEMES.draculite
+eval_options	client.py	/^    def eval_options(self,start,end):$/;"	m	class:InputFieldCompleter
 event__window_size_changed	pytermgui.py	/^def event__window_size_changed(caller,new,old):$/;"	f
 export	pytermgui.py	/^    def export(self,filename):$/;"	m	class:Container
 extension basics	devlog.md	/^## extension basics$/;"	s	chapter:2020/12/20
 extension details	devlog.md	/^## extension details$/;"	s	chapter:2020/12/20
 fade	settings.json	/^            "fade": "238",$/;"	s	object:THEMES.draculite
 field_highlight	settings.json	/^            "field_highlight": "gradient(72)",$/;"	s	object:THEMES.draculite
+field_send	client.py	/^    def field_send(self,key,**kwargs):$/;"	m	class:InputFieldCompleter
+field_set_value	client.py	/^    def field_set_value(self,target,cursor=None,**kwargs):$/;"	m	class:InputFieldCompleter
 fileno	getch.py	/^    def fileno(self):$/;"	m	class:OSReadWrapper
 find	client.py	/^def find(key,offset=0,reverse=False) -> None:$/;"	f	typeref:typename:None
 find	settings.json	/^            "find": "f",$/;"	s	object:VIMBINDS.ESCAPE
@@ -228,6 +236,7 @@ find	settings.json	/^            "find": "f",$/;"	s	object:VIMBINDS.VISUAL
 find_reverse	settings.json	/^            "find_reverse": "F",$/;"	s	object:VIMBINDS.ESCAPE
 finished	README.md	/^## finished$/;"	s	chapter:FEATURES
 finished	notes.md	/^## finished$/;"	s	chapter:FEATURES
+fw	client.py	/^from fuzzywuzzy import fuzz as fw$/;"	x	nameref:unknown:fuzz
 get	client.py	/^    def get(self,parameter,mode="message"):$/;"	m	class:TeahazHelper
 get_border	pytermgui.py	/^    def get_border(self):$/;"	m	class:Container
 get_caller	client.py	/^    get_caller = lambda: type(obj).__name__+'.'+method if obj else method$/;"	f	function:dbg	file:
@@ -239,7 +248,6 @@ get_index	client.py	/^def get_index(obj) -> int:$/;"	f	typeref:typename:int
 get_indices	client.py	/^def get_indices(param) -> tuple:$/;"	f	typeref:typename:tuple
 get_infield_pos	client.py	/^def get_infield_pos(update_modelabel=True) -> list:$/;"	f	typeref:typename:list
 get_loop	client.py	/^    def get_loop(self):$/;"	m	class:TeahazHelper
-get_loop	client.py	/^    get_loop = threading.Thread(target=th.get_loop,name='get_loop')$/;"	v
 get_object_by_id	pytermgui.py	/^def get_object_by_id(key):$/;"	f
 getch	getch.py	/^getch = _Getch()$/;"	v
 getch_loop	client.py	/^def getch_loop() -> None: $/;"	f	typeref:typename:None
@@ -284,11 +292,11 @@ ignore_input	client.py	/^def ignore_input(*args):$/;"	f
 image	settings.json	/^        "image": "kitty +kitten icat {path} --scale_up",$/;"	s	object:FILETYPE_DEFAULTS
 import_json	client.py	/^def import_json(name) -> None:$/;"	f	typeref:typename:None
 index	client.py	/^        url,index = CURRENT_CHATROOM$/;"	v
-infield	client.py	/^    infield = getch.InputField(pos=get_infield_pos())$/;"	v
+infield	client.py	/^    infield = InputDialogField(pos=get_infield_pos())$/;"	v
 infield	getch.py	/^    infield = InputField(default="Welcome!")$/;"	v
 intro	devlog.md	/^## intro$/;"	s	chapter:2020/12/20
 is_connected	client.py	/^    def is_connected(self,url):$/;"	m	class:TeahazHelper
-is_in_last_word	client.py	/^def is_in_last_word(index,string) -> bool:$/;"	f	typeref:typename:bool
+is_in_last_word	client.py	/^def is_in_last_word(index,string,mode='delimiters') -> bool:$/;"	f	typeref:typename:bool
 is_set	client.py	/^def is_set(var,scope=None) -> bool:$/;"	f	typeref:typename:bool
 italic	client.py	/^italic         =  Color.italic$/;"	v
 italic	pytermgui.py	/^    def italic(s):$/;"	m	class:Color
