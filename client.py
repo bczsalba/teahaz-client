@@ -9,6 +9,7 @@ import types
 import getch
 import base64
 import pickle
+import binascii
 import requests
 import pytermgui
 import threading
@@ -1935,7 +1936,11 @@ class TeahazHelper:
                 if m in extras:
                     decoded = content
                 else:
-                    decoded = decode(content)
+                    try:
+                        decoded = decode(content)
+                    except binascii.Error:
+                        dbg('message index',i,'can not be decoded, ignoring.')
+                        continue
 
                 for w in decoded.split(' '):
                     if w.startswith(':') and w.endswith(':'):
