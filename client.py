@@ -1875,6 +1875,7 @@ class TeahazHelper:
         temp['username'] = BASE_DATA.get('username')
         temp['nickname'] = "sending message"
         temp['message'] = message
+
         self.handle_operation(method='post',output='message_send_return',url=URL+'/api/v0'+endpoint, json=data)
 
         infield.clear_value()
@@ -2497,6 +2498,10 @@ class InputFieldCompleter(Container):
         self.width = 30
         self.set_borders(['','','',''])
 
+        # set callbacks
+        self.completion_callback = completion_callback
+        self.icon_callback = icon_callback
+
 
     # complete `word` into field.value[start:end]
     def do_completion(self,word,start,end):
@@ -2523,6 +2528,11 @@ class InputFieldCompleter(Container):
         self.selected_index = self.height-1
 
     
+    def reset(self,key,**kwargs):
+        self.field.og_send(key,**kwargs)
+        self.wipe()
+        self._has_printed = False
+    
     # intercept field.send
     def field_send(self,key,**kwargs):
         word_start,word_end = get_indices('w')
@@ -2537,8 +2547,7 @@ class InputFieldCompleter(Container):
         # check for empty field and wipe
         current_length = real_length(self.field.value)
         if not real_length(self.field.value) or current_length == 1 and key == "BACKSPACE":
-            self.field.og_send(key,**kwargs)
-            self.wipe()
+            self.reset(key,**kwargs)
             return
 
         # check if trigger is present and is the first char of word
@@ -2546,13 +2555,12 @@ class InputFieldCompleter(Container):
         if self.trigger:
             if not self.trigger in self.field.value[word_start:word_end]:
                 if not (len(word) and word[0] == self.trigger):
-                    self.field.og_send(key,**kwargs)
-                    self.wipe()
+                    self.reset(key,**kwargs)
                     return
 
         # complete
         if key == "TAB":
-            newword = self.selected[0].label
+            newword = self.selected[0].real_label
             self.do_completion(newword,word_start,word_end)
             return
 
@@ -2596,6 +2604,7 @@ class InputFieldCompleter(Container):
                 else:
                     icon = ''
                 row.label = icon+output[i]
+                row.real_label = output[i]
                 if not row in self.elements:
                     self.add_elements(row)
             else:
@@ -2745,7 +2754,7 @@ if __name__ == "__main__":
     infield = InputDialogField(pos=get_infield_pos())
     infield.line_offset = None
     infield.visual_color = lambda text: parse_color(THEME['field_highlight'],text)
-    completer = InputFieldCompleter(options=EMOJI_KEYS,field=infield,trigger=':')
+    completer = InputFieldCompleter(options=EMOJI_KEYS,field=infield,trigger=':',icon_callback=EMOJI_KEYS.get)
 
 
     ui = UIGenerator()
