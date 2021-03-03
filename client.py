@@ -2460,7 +2460,7 @@ class ModeLabel(Label):
             print(f"\033[{y+yoffset};{x}H"+real_length(super().__repr__())*' ')
 
 class InputFieldCompleter(Container):
-    def __init__(self,options,completion_callback=None,field=None,height=5,trigger=None,**kwargs):
+    def __init__(self,options,icon_callback=None,completion_callback=None,field=None,height=5,trigger=None,**kwargs):
         super().__init__(**kwargs)
 
         # set up base variables
@@ -2585,11 +2585,15 @@ class InputFieldCompleter(Container):
         # assign options to labels in rows
         for i,row in enumerate(reversed(self.rows)):
             if len(output) > i:
-                row.label = output[i]
+                value = output[i]
+                if self.icon_callback:
+                    icon = self.icon_callback(value)+' '
+                else:
+                    icon = ''
+                row.label = icon+output[i]
                 if not row in self.elements:
                     self.add_elements(row)
             else:
-                # row.label = 'unused'
                 if row in self.elements:
                     self.elements.remove(row)
 
