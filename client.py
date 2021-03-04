@@ -2651,12 +2651,12 @@ class InputFieldCompleter(Container):
                 # highlight matching characters
                 buff = list(target)
                 value_list = list(value)
-                for i,c in enumerate(value):
+                for j,c in enumerate(value):
                     if c == self.trigger:
                         continue
 
                     if c in buff:
-                        value_list[i] = self.match_highlight_style(c)
+                        value_list[j] = self.match_highlight_style(c)
                         buff.remove(c)
 
                 value = ''.join(value_list)
