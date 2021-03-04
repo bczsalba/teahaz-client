@@ -477,6 +477,7 @@ class Container:
         self.selected_index = 0
 
         self.styles = {}
+        self.centering_axis = "both"
         self.corners = [[],[],[],[]]
         self.corner_style = CONTAINER_CORNER_STYLE
 
@@ -516,7 +517,7 @@ class Container:
     def __repr__(self):
         global WIDTH,HEIGHT
 
-        self._repr_pre()
+        self._repr_pre(self)
 
         nWIDTH,nHEIGHT = os.get_terminal_size()
         if not [WIDTH,HEIGHT] == [nWIDTH,nHEIGHT]:
@@ -836,7 +837,12 @@ class Container:
 
 
     # center container
-    def center(self,axes="both",xoffset=0,yoffset=5):
+    def center(self,axes=None,xoffset=0,yoffset=5):
+        dbg(axes)
+        self.move([0,0])
+        if not axes:
+            axes = self.centering_axis
+
         self._is_centered = True
         if HEIGHT//2 < self.height-yoffset:
             yoffset = 0
@@ -844,6 +850,7 @@ class Container:
             xoffset = 0
         
         x,y = self.pos
+        self.centering_axis = axes
         if axes == "both" or axes == "x":
             x = (WIDTH-self.width-xoffset)//2
         if axes == "both" or axes == "y":
@@ -894,6 +901,7 @@ class Container:
 
     # EVENT: start of repr
     # - called before any repr logic
+    @staticmethod
     def _repr_pre(self):
         return
 

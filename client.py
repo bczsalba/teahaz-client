@@ -2494,14 +2494,13 @@ class ModeLabel(Label):
             print(f"\033[{y+yoffset};{x}H"+real_length(super().__repr__())*' ')
 
 class InputFieldCompleter(Container):
-    def __init__(self,options,icon_callback=None,completion_callback=None,field=None,height=5,trigger=None,threshold=2,**kwargs):
+    def __init__(self,options,icon_callback=None,completion_callback=None,field=None,height=5,trigger=None,**kwargs):
         super().__init__(**kwargs)
 
         # set up base variables
         self.rows = []
         self.options = options
         self.trigger = trigger
-        self.threshold = threshold
         
         # get or create field, set position
         if field:
@@ -2522,9 +2521,10 @@ class InputFieldCompleter(Container):
         self.field.send = self.field_send
 
         # set style stuff
-        self.width = max(len(l) for l in self.options.keys())
         self.set_borders([''*4])
+        self.width = max(len(l)+5 for l in self.options.keys())
         self.match_highlight_style = lambda char: bold(underline(char))
+        self.set_style(Prompt,'highlight',lambda item: bold('> ')+item)
 
 
         # set callbacks
@@ -2577,6 +2577,7 @@ class InputFieldCompleter(Container):
             # th.message_y = old_y
             self._has_printed = False
     
+
     # intercept field.send
     def field_send(self,key,**kwargs):
         if not self._is_enabled():
@@ -2601,7 +2602,6 @@ class InputFieldCompleter(Container):
         # return if any conditions are met
         current_length = real_length(self.field.value)
         if not opener \
-            or real_length(word) < self.threshold \
             or not current_length \
             or current_length == 1 and key == "BACKSPACE":
 
@@ -2864,8 +2864,8 @@ if __name__ == "__main__":
             CONV_HEADER.set_corner(i,c)
 
     # wipe all lines fully before repr
-    CONV_HEADER._repr_pre = CONV_HEADER.wipe_all_containing
     CONV_HEADER.center(axes='x')
+    CONV_HEADER._repr_pre = lambda self: CONV_HEADER.wipe_all_containing
     CONV_HEADER_LABEL = Label(justify='center')
     CONV_HEADER_LABEL.set_style('value',pytermgui.CONTAINER_VALUE_STYLE)
     if CURRENT_CHATROOM:
