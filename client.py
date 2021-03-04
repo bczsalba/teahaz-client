@@ -2494,7 +2494,6 @@ class InputFieldCompleter(Container):
         self.rows = []
         self.options = options
         self.trigger = trigger
-        self.selected_index = height-1
         
         # get or create field, set position
         if field:
@@ -2608,9 +2607,9 @@ class InputFieldCompleter(Container):
             key = ''
 
         # update things
-        self.select()
         self.field.og_send(key,**kwargs)
         self.eval_options(word_start,word_end+len(key))
+        self.select()
 
         if not self._has_padded_messages:
             sys.stdout.write('\n'*(len(self.rows)+2))
@@ -2676,6 +2675,9 @@ class InputFieldCompleter(Container):
         y -= len(self.elements)+2
         if not [x,y] == self.pos:
             self.move([x,y])
+
+        if not self._has_printed:
+            self.selected_index = len(self.elements)-1
             
     
     # ignore long elements

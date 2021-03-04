@@ -81,10 +81,6 @@
     * [ ] test on windows
 
 
-- prerequisites for FM:
-    * [ ] make menus use global binding dicts and have them be tied into handle_action
-    * [ ] add per-menu bindings for menus ( "ui__binds": { "key": "action" } )
-
 - create general picker function that other pickers can call
 
 - pytergmui.Container.get_lines()
