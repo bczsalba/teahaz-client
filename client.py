@@ -1718,6 +1718,7 @@ class ThreadWithReturnValue(threading.Thread):
 class TeahazHelper:
     def __init__(self):
         self.message_y = infield.pos[1]-3
+        self.last_chunk = []
 
     def handle_operation(self,method,output,handler=None,*args,**kwargs):
         def _do_operation(*args,**kwargs):
@@ -1900,7 +1901,7 @@ class TeahazHelper:
         self.handle_operation(method='post',output='message_send_return',url=URL+'/api/v0'+endpoint, json=data)
 
         infield.clear_value()
-        self.print_messages(extras=[temp])
+        self.print_messages()#extras=[temp])
 
     def print_messages(self,messages=[],extras=[],reprint=False):
         """
@@ -1913,7 +1914,7 @@ class TeahazHelper:
 
         global MESSAGES,PREV_MESSAGES,PREV_MESSAGE
 
-        extras = []
+        # extras = []
 
         # get positions
         leftx = infield.pos[0]
@@ -1955,14 +1956,11 @@ class TeahazHelper:
 
             # handle message content
             if content:
-                if m in extras:
-                    decoded = content
-                else:
-                    try:
-                        decoded = decode(content)
-                    except binascii.Error:
-                        # dbg('message index',i,'can not be decoded, ignoring.')
-                        continue
+                try:
+                    decoded = decode(content)
+                except binascii.Error:
+                    # dbg('message index',i,'can not be decoded, ignoring.')
+                    continue
 
                 for w in decoded.split(' '):
                     if w.startswith(':') and w.endswith(':'):
@@ -1992,7 +1990,7 @@ class TeahazHelper:
             # test if the current message is the start of a chunk
             chunk_start = True
             if 0 <= i-1:
-                previous = MESSAGES[i-1]
+                previous = messagelist[i-1]
             # elif PREV_MESSAGE:
                 # previous = PREV_MESSAGE
             else:
@@ -2008,8 +2006,8 @@ class TeahazHelper:
 
             # test if current message is the end of a chunk 
             chunk_end = True
-            if len(MESSAGES) > i+1 and not i == len(messagelist)-1:
-                next_msg = MESSAGES[i+1]
+            if len(messagelist) > i+1 and not i == len(messagelist)-1:
+                next_msg = messagelist[i+1]
             else:
                 next_msg = None
 
@@ -2021,13 +2019,14 @@ class TeahazHelper:
 
 
             # handle coloring
-            if m in extras:
-                for i,l in enumerate(lines):
-                    lines[i] = parse_color(THEME['fade'],l)
+            # if m in extras:
+                # for i,l in enumerate(lines):
+                    # lines[i] = parse_color(THEME['fade'],l)
             
             
             # add extra elements as needed
             if chunk_start:
+                self.last_chunk = []
                 #TODO: this color will eventually be given by the server
                 lines.insert(0,parse_color(THEME['title'],nickname))
 
@@ -2046,8 +2045,7 @@ class TeahazHelper:
                 sys.stdout.write(l+'\n')
                 self.message_y += 1
 
-            if m in extras:
-                self.message_y -= i
+            self.last_chunk.append(m)
 
             sys.stdout.write('\n')
             if chunk_end:
@@ -2560,7 +2558,15 @@ class InputFieldCompleter(Container):
     def reset(self,key,**kwargs):
         self.field.og_send(key,**kwargs)
         self.wipe()
-        self._has_printed = False
+
+        # reprint last message
+        # th.message_y -= len(th.last_chunk)
+        # old_y = th.message_y
+        # th.message_y = HEIGHT - th.message_y % HEIGHT - len(th.last_chunk)
+        if self._has_printed:
+            # th.print_messages(extras=th.last_chunk)
+            # th.message_y = old_y
+            self._has_printed = False
     
     # intercept field.send
     def field_send(self,key,**kwargs):
@@ -2599,6 +2605,7 @@ class InputFieldCompleter(Container):
             selected = self.selectables[self.selected_index][0]
             newword = selected.real_label
             self.do_completion(newword,word_start,word_end)
+            self.reset('',**kwargs)
             return
 
         # go up
@@ -2868,7 +2875,7 @@ if __name__ == "__main__":
     # set up starting mode
     switch_mode("ESCAPE")
 
-    handle_arguments()
+    # handle_arguments()
 
     # start get loop
     get_loop = threading.Thread(target=th.get_loop,name='get_loop')
