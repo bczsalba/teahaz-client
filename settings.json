@@ -72,7 +72,17 @@
         "video": "mpv {path}",
         "text": "kitty -e sh vim {path}"
     },
-    "ui__title4": "bindings",
+    "ui__prompt_options__comp_enabled": [
+        true,
+        false
+    ],
+    "COMPLETER_ENABLED": true,
+    "ui__prompt_options__comp_icons": [
+        true,
+        false
+    ],
+    "COMPLETER_ICONS": true,
+    "ui__title5": "bindings",
     "ESCAPE_KEY": "ESC",
     "ui__prompt_options__vimmode": [
         true,

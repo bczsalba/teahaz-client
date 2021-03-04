@@ -28,10 +28,11 @@ def clean_ansi(s):
         raise Exception('Value <'+str(s)+'>\'s type ('+str(type(s))+' is not str or bytes')
 
     ansi = re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
-    # unic = re.compile(r'[^\u0000-\u007F]+')
+    unic = re.compile(r'[^\u0000-\u007F]')
     no_ansi = ansi.sub('',s)
+    no_unic = unic.sub('**',no_ansi)
 
-    return no_ansi
+    return no_unic
 
 def real_length(s):
     return len(clean_ansi(s))
@@ -692,7 +693,7 @@ class Container:
 
         ## get x
         if side == 'right':
-            startx = px+self.width+2 - real_length(value) - offset
+            startx = px+self.width+3 - real_length(value) - offset
         elif side == 'left':
             startx = px+1 + offset
 

@@ -319,6 +319,28 @@ def get_index(obj) -> int:
 def ignore_input(*args):
     dbg('fixme')
 
+def handle_arguments():
+    if len(sys.argv) > 1:
+        args = sys.argv[1:]
+        if '--invite' in args and len(args) > args.index('--invite')+2:
+            # handle_action('menu_login/register')
+            base = args.index('--invite')
+            url = args[base+1]
+            key = args[base+2]
+
+            d = {
+                "username": input('username: '),
+                "email": input('email: '),
+                "password": input('password: '),
+                "nickname": input('nickname: ')
+            }
+            resp = requests.post(url=url+'/register/',json=d)
+            print(url+'/register/')
+            print('Register:',resp.text)
+            resp = requests.post(url=url+'/api/v0/invite/',json={'username': d.get('username'), 'inviteId': key})
+            print('Invite:',resp.text)
+            sys.exit()
+
 
 
 ## editing
@@ -578,7 +600,7 @@ def login_or_register(contype,url,data) -> None:
         ui.create_error_dialog('Invalid value "'+url+'" for url.','choose other server')
         return 0 
 
-    resp = start_connection('post',contype,url=url+'/'+contype,json=d,timeout=None)
+    resp = start_connection('post',contype,url=url+'/'+contype+'/',json=d,timeout=None)
     if not resp or not resp.status_code in range(200,299):
         dbg('bad response:',resp)
     else:
@@ -593,8 +615,7 @@ def login_or_register(contype,url,data) -> None:
 
         else:
             ui.wipe()
-            ui.create_success_dialog(text)
-    
+            ui.create_success_dialog(text) 
 
 
 
@@ -1779,7 +1800,7 @@ class TeahazHelper:
             if error:
                 # create error box
                 ui.create_error_dialog('Error while switching servers: '+ret,'try again')
-                dbg(data)
+                dbg(ret)
 
                 # restore values
                 BASE_DATA = ogdata
@@ -1940,7 +1961,7 @@ class TeahazHelper:
                     try:
                         decoded = decode(content)
                     except binascii.Error:
-                        dbg('message index',i,'can not be decoded, ignoring.')
+                        # dbg('message index',i,'can not be decoded, ignoring.')
                         continue
 
                 for w in decoded.split(' '):
@@ -2473,7 +2494,6 @@ class InputFieldCompleter(Container):
         self.rows = []
         self.options = options
         self.trigger = trigger
-        self._has_printed = False
         self.selected_index = height-1
         
         # get or create field, set position
@@ -2495,12 +2515,21 @@ class InputFieldCompleter(Container):
         self.field.send = self.field_send
 
         # set style stuff
-        self.width = 30
-        self.set_borders(['','','',''])
+        self.width = max(len(l) for l in self.options.keys())
+        self.set_borders([''*4])
+        self.match_highlight_style = lambda char: bold(underline(char))
+
 
         # set callbacks
         self.completion_callback = completion_callback
         self.icon_callback = icon_callback
+
+
+        # set flags
+        self._has_printed = False
+        self._has_padded_messages = False
+        self._is_enabled = lambda: True
+        self._show_icons = lambda: False
 
 
     # complete `word` into field.value[start:end]
@@ -2535,6 +2564,10 @@ class InputFieldCompleter(Container):
     
     # intercept field.send
     def field_send(self,key,**kwargs):
+        if not self._is_enabled():
+            self.field.og_send(key,**kwargs)
+            return
+
         word_start,word_end = get_indices('w')
 
         # make sure it doesnt include the triggerlength
@@ -2578,8 +2611,13 @@ class InputFieldCompleter(Container):
         self.select()
         self.field.og_send(key,**kwargs)
         self.eval_options(word_start,word_end+len(key))
+
+        if not self._has_padded_messages:
+            sys.stdout.write('\n'*(len(self.rows)+2))
+
         print(self)
         self._has_printed = True
+        self._has_padded_messages = True
 
 
     # get viable options
@@ -2598,18 +2636,39 @@ class InputFieldCompleter(Container):
         # assign options to labels in rows
         for i,row in enumerate(reversed(self.rows)):
             if len(output) > i:
+                # get icon character
                 value = output[i]
-                if self.icon_callback:
+                if self.icon_callback and self._show_icons():
                     icon = self.icon_callback(value)+' '
                 else:
                     icon = ''
-                row.label = icon+output[i]
+
+                
+                # highlight matching characters
+                buff = list(target)
+                value_list = list(value)
+                for i,c in enumerate(value):
+                    if c == self.trigger:
+                        continue
+
+                    if c in buff:
+                        value_list[i] = self.match_highlight_style(c)
+                        buff.remove(c)
+
+                value = ''.join(value_list)
+
                 row.real_label = output[i]
+                row.label = icon+value
+
                 if not row in self.elements:
                     self.add_elements(row)
             else:
+                row.label = ''
                 if row in self.elements:
                     self.elements.remove(row)
+
+        # update width
+        self.width = max(self.width,max([real_length(e.label) for e in self.rows]))
 
         # update position
         x,y = self.target_pos
@@ -2650,7 +2709,7 @@ MAX_MESSAGE_WIDTH = lambda: int(WIDTH*4/10)
 MENUS = [
     "menu_server_picker",
     # "menu_address_picker",
-    # "menu_server_new",
+    "menu_server_new",
     # "menu_serverregister",
     "menu_login/register",
     # "menu_login",
@@ -2754,7 +2813,10 @@ if __name__ == "__main__":
     infield = InputDialogField(pos=get_infield_pos())
     infield.line_offset = None
     infield.visual_color = lambda text: parse_color(THEME['field_highlight'],text)
+
     completer = InputFieldCompleter(options=EMOJI_KEYS,field=infield,trigger=':',icon_callback=EMOJI_KEYS.get)
+    completer._is_enabled = lambda: COMPLETER_ENABLED
+    completer._show_icons = lambda: COMPLETER_ICONS
 
 
     ui = UIGenerator()
@@ -2798,6 +2860,8 @@ if __name__ == "__main__":
     
     # set up starting mode
     switch_mode("ESCAPE")
+
+    handle_arguments()
 
     # start get loop
     get_loop = threading.Thread(target=th.get_loop,name='get_loop')
