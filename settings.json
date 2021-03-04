@@ -66,7 +66,7 @@
         }
     },
     "ui__title3": "messaging",
-    "MESSAGE_SEPARATE_TIME": "60",
+    "MESSAGE_SEPARATE_TIME": "300",
     "FILETYPE_DEFAULTS": {
         "image": "kitty +kitten icat {path} --scale_up",
         "video": "mpv {path}",
@@ -117,6 +117,7 @@
         "ESCAPE": {
             "ui__title1": "modes & misc",
             "toggle_header": " ",
+            "invisible_ping": "@p",
             "menu_server_picker": "TAB",
             "menu_settings": "CTRL_/",
             "menu_picker": "CTRL_T",

@@ -319,27 +319,27 @@ def get_index(obj) -> int:
 def ignore_input(*args):
     dbg('fixme')
 
-def handle_arguments():
-    if len(sys.argv) > 1:
-        args = sys.argv[1:]
-        if '--invite' in args and len(args) > args.index('--invite')+2:
+# def handle_arguments():
+    # if len(sys.argv) > 1:
+        # args = sys.argv[1:]
+        # if '--invite' in args and len(args) > args.index('--invite')+2:
             # handle_action('menu_login/register')
-            base = args.index('--invite')
-            url = args[base+1]
-            key = args[base+2]
-
-            d = {
-                "username": input('username: '),
-                "email": input('email: '),
-                "password": input('password: '),
-                "nickname": input('nickname: ')
-            }
-            resp = requests.post(url=url+'/register/',json=d)
-            print(url+'/register/')
-            print('Register:',resp.text)
-            resp = requests.post(url=url+'/api/v0/invite/',json={'username': d.get('username'), 'inviteId': key})
-            print('Invite:',resp.text)
-            sys.exit()
+            # base = args.index('--invite')
+            # url = args[base+1]
+            # key = args[base+2]
+# 
+            # d = {
+                # "username": input('username: '),
+                # "email": input('email: '),
+                # "password": input('password: '),
+                # "nickname": input('nickname: ')
+            # }
+            # resp = requests.post(url=url+'/register/',json=d)
+            # print(url+'/register/')
+            # print('Register:',resp.text)
+            # resp = requests.post(url=url+'/api/v0/invite/',json={'username': d.get('username'), 'inviteId': key})
+            # print('Invite:',resp.text)
+            # sys.exit()
 
 
 
@@ -723,6 +723,12 @@ def handle_action(action) -> None:
             handle_action('reprint')
         else:
             print(CONV_HEADER)
+
+    elif action == "invisible_ping":
+        data = BASE_DATA.copy()
+        data['message'] = '@ this cannot be decoded @'
+        data['type'] = 'text'
+        dbg('ping_resp:',SESSION.post(url=URL+'/api/v0/message/',json=data).text)
 
     # message binds
     elif action == "message_send":
@@ -1942,6 +1948,8 @@ class TeahazHelper:
         infield.wipe()
         completer.wipe()
         MODE_LABEL.wipe()
+        
+        dbg(len(messagelist))
 
 
         for i,m in enumerate(messagelist):
@@ -1959,7 +1967,7 @@ class TeahazHelper:
                 try:
                     decoded = decode(content)
                 except binascii.Error:
-                    # dbg('message index',i,'can not be decoded, ignoring.')
+                    dbg('message index',i,'can not be decoded, ignoring.')
                     continue
 
                 for w in decoded.split(' '):
@@ -2026,7 +2034,7 @@ class TeahazHelper:
             
             # add extra elements as needed
             if chunk_start:
-                self.last_chunk = []
+                # self.last_chunk = []
                 #TODO: this color will eventually be given by the server
                 lines.insert(0,parse_color(THEME['title'],nickname))
 
@@ -2045,13 +2053,14 @@ class TeahazHelper:
                 sys.stdout.write(l+'\n')
                 self.message_y += 1
 
-            self.last_chunk.append(m)
+            # self.last_chunk.append(m)
 
             sys.stdout.write('\n')
             if chunk_end:
                 sys.stdout.write('\n')
 
-        sys.stdout.write('\n')
+        if len(messagelist):
+            sys.stdout.write('\n')
         # if not username == BASE_DATA.get('username'):
             # sys.stdout.write((len(completer.rows))*'\n')
         # PREV_MESSAGE = m
@@ -2538,8 +2547,8 @@ class InputFieldCompleter(Container):
         current = self.field.value[start:end]
 
         # add padding if needed
-        if is_in_last_word(end,self.field.value,'space'):
-            right += ' '
+        # if is_in_last_word(end,self.field.value,'space'):
+            # right += ' '
 
         # set field variables
         # this doesn't use the standard .set_value method as it would recurse
@@ -2831,7 +2840,6 @@ if __name__ == "__main__":
     completer = InputFieldCompleter(options=EMOJI_KEYS,field=infield,trigger=':',icon_callback=EMOJI_KEYS.get)
     completer._is_enabled = lambda: COMPLETER_ENABLED
     completer._show_icons = lambda: COMPLETER_ICONS
-
 
     ui = UIGenerator()
     th = TeahazHelper()
