@@ -2487,13 +2487,14 @@ class ModeLabel(Label):
             print(f"\033[{y+yoffset};{x}H"+real_length(super().__repr__())*' ')
 
 class InputFieldCompleter(Container):
-    def __init__(self,options,icon_callback=None,completion_callback=None,field=None,height=5,trigger=None,**kwargs):
+    def __init__(self,options,icon_callback=None,completion_callback=None,field=None,height=5,trigger=None,threshold=2,**kwargs):
         super().__init__(**kwargs)
 
         # set up base variables
         self.rows = []
         self.options = options
         self.trigger = trigger
+        self.threshold = threshold
         
         # get or create field, set position
         if field:
@@ -2576,23 +2577,27 @@ class InputFieldCompleter(Container):
         # get word
         word = self.field.value[word_start:word_end]
 
-        # check for empty field and wipe
+        # get if trigger is opening or closing
+        opener = False
+        for c in self.field.value[:self.field.cursor]:
+            if c == self.trigger:
+                opener = not opener
+
+        # return if any conditions are met
         current_length = real_length(self.field.value)
-        if not real_length(self.field.value) or current_length == 1 and key == "BACKSPACE":
+        if not opener \
+            or real_length(word) < self.threshold \
+            or not current_length \
+            or current_length == 1 and key == "BACKSPACE":
+
             self.reset(key,**kwargs)
             return
-
-        # check if trigger is present and is the first char of word
-        # TODO: completer triggers with :closed:^ tags
-        if self.trigger:
-            if not self.trigger in self.field.value[word_start:word_end]:
-                if not (len(word) and word[0] == self.trigger):
-                    self.reset(key,**kwargs)
-                    return
+                
 
         # complete
         if key == "TAB":
-            newword = self.selected[0].real_label
+            selected = self.selectables[self.selected_index][0]
+            newword = selected.real_label
             self.do_completion(newword,word_start,word_end)
             return
 
