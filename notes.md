@@ -72,6 +72,17 @@
         * execute(cmd,*maybe regex to match files*) : execute given command
                              in bash on the file
 
+
+- file selector from messages:
+    * some keybind lists all (recent) messages with files in them
+    * at the bottom it also lists a keybind to open them
+    ```
+    nicholas cookieddough
+    < filename >
+    2021-03-05
+    [`r`]
+    ```
+
 - add title to create_menu objects
 
 - windows compatibility:

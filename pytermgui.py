@@ -517,7 +517,7 @@ class Container:
     def __repr__(self):
         global WIDTH,HEIGHT
 
-        self._repr_pre(self)
+        self._repr_pre()
 
         nWIDTH,nHEIGHT = os.get_terminal_size()
         if not [WIDTH,HEIGHT] == [nWIDTH,nHEIGHT]:
@@ -901,7 +901,6 @@ class Container:
 
     # EVENT: start of repr
     # - called before any repr logic
-    @staticmethod
     def _repr_pre(self):
         return
 

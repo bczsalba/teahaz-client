@@ -2546,10 +2546,6 @@ class InputFieldCompleter(Container):
         right = self.field.value[end:]
         current = self.field.value[start:end]
 
-        # add padding if needed
-        # if is_in_last_word(end,self.field.value,'space'):
-            # right += ' '
-
         # set field variables
         # this doesn't use the standard .set_value method as it would recurse
         self.field.value = left+word+right
@@ -2561,7 +2557,7 @@ class InputFieldCompleter(Container):
         self.wipe()
 
         # update selection
-        self.selected_index = self.height-1
+        # self.selected_index = self.height-1
 
     
     def reset(self,key,**kwargs):
@@ -2865,7 +2861,7 @@ if __name__ == "__main__":
 
     # wipe all lines fully before repr
     CONV_HEADER.center(axes='x')
-    CONV_HEADER._repr_pre = lambda self: CONV_HEADER.wipe_all_containing
+    CONV_HEADER._repr_pre = CONV_HEADER.wipe_all_containing
     CONV_HEADER_LABEL = Label(justify='center')
     CONV_HEADER_LABEL.set_style('value',pytermgui.CONTAINER_VALUE_STYLE)
     if CURRENT_CHATROOM:
