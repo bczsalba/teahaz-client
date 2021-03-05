@@ -9,6 +9,7 @@ import types
 import getch
 import base64
 import pickle
+import binascii
 import requests
 import pytermgui
 import threading
@@ -318,6 +319,28 @@ def get_index(obj) -> int:
 def ignore_input(*args):
     dbg('fixme')
 
+# def handle_arguments():
+    # if len(sys.argv) > 1:
+        # args = sys.argv[1:]
+        # if '--invite' in args and len(args) > args.index('--invite')+2:
+            # handle_action('menu_login/register')
+            # base = args.index('--invite')
+            # url = args[base+1]
+            # key = args[base+2]
+# 
+            # d = {
+                # "username": input('username: '),
+                # "email": input('email: '),
+                # "password": input('password: '),
+                # "nickname": input('nickname: ')
+            # }
+            # resp = requests.post(url=url+'/register/',json=d)
+            # print(url+'/register/')
+            # print('Register:',resp.text)
+            # resp = requests.post(url=url+'/api/v0/invite/',json={'username': d.get('username'), 'inviteId': key})
+            # print('Invite:',resp.text)
+            # sys.exit()
+
 
 
 ## editing
@@ -577,7 +600,7 @@ def login_or_register(contype,url,data) -> None:
         ui.create_error_dialog('Invalid value "'+url+'" for url.','choose other server')
         return 0 
 
-    resp = start_connection('post',contype,url=url+'/'+contype,json=d,timeout=None)
+    resp = start_connection('post',contype,url=url+'/'+contype+'/',json=d,timeout=None)
     if not resp or not resp.status_code in range(200,299):
         dbg('bad response:',resp)
     else:
@@ -592,8 +615,7 @@ def login_or_register(contype,url,data) -> None:
 
         else:
             ui.wipe()
-            ui.create_success_dialog(text)
-    
+            ui.create_success_dialog(text) 
 
 
 
@@ -701,6 +723,12 @@ def handle_action(action) -> None:
             handle_action('reprint')
         else:
             print(CONV_HEADER)
+
+    elif action == "invisible_ping":
+        data = BASE_DATA.copy()
+        data['message'] = '@ this cannot be decoded @'
+        data['type'] = 'text'
+        dbg('ping_resp:',SESSION.post(url=URL+'/api/v0/message/',json=data).text)
 
     # message binds
     elif action == "message_send":
@@ -1696,6 +1724,7 @@ class ThreadWithReturnValue(threading.Thread):
 class TeahazHelper:
     def __init__(self):
         self.message_y = infield.pos[1]-3
+        self.last_chunk = []
 
     def handle_operation(self,method,output,handler=None,*args,**kwargs):
         def _do_operation(*args,**kwargs):
@@ -1778,7 +1807,7 @@ class TeahazHelper:
             if error:
                 # create error box
                 ui.create_error_dialog('Error while switching servers: '+ret,'try again')
-                dbg(data)
+                dbg(ret)
 
                 # restore values
                 BASE_DATA = ogdata
@@ -1874,10 +1903,11 @@ class TeahazHelper:
         temp['username'] = BASE_DATA.get('username')
         temp['nickname'] = "sending message"
         temp['message'] = message
+
         self.handle_operation(method='post',output='message_send_return',url=URL+'/api/v0'+endpoint, json=data)
 
         infield.clear_value()
-        self.print_messages(extras=[temp])
+        self.print_messages()#extras=[temp])
 
     def print_messages(self,messages=[],extras=[],reprint=False):
         """
@@ -1890,7 +1920,7 @@ class TeahazHelper:
 
         global MESSAGES,PREV_MESSAGES,PREV_MESSAGE
 
-        extras = []
+        # extras = []
 
         # get positions
         leftx = infield.pos[0]
@@ -1918,6 +1948,8 @@ class TeahazHelper:
         infield.wipe()
         completer.wipe()
         MODE_LABEL.wipe()
+        
+        dbg(len(messagelist))
 
 
         for i,m in enumerate(messagelist):
@@ -1932,10 +1964,11 @@ class TeahazHelper:
 
             # handle message content
             if content:
-                if m in extras:
-                    decoded = content
-                else:
+                try:
                     decoded = decode(content)
+                except binascii.Error:
+                    dbg('message index',i,'can not be decoded, ignoring.')
+                    continue
 
                 for w in decoded.split(' '):
                     if w.startswith(':') and w.endswith(':'):
@@ -1965,7 +1998,7 @@ class TeahazHelper:
             # test if the current message is the start of a chunk
             chunk_start = True
             if 0 <= i-1:
-                previous = MESSAGES[i-1]
+                previous = messagelist[i-1]
             # elif PREV_MESSAGE:
                 # previous = PREV_MESSAGE
             else:
@@ -1981,8 +2014,8 @@ class TeahazHelper:
 
             # test if current message is the end of a chunk 
             chunk_end = True
-            if len(MESSAGES) > i+1 and not i == len(messagelist)-1:
-                next_msg = MESSAGES[i+1]
+            if len(messagelist) > i+1 and not i == len(messagelist)-1:
+                next_msg = messagelist[i+1]
             else:
                 next_msg = None
 
@@ -1994,13 +2027,14 @@ class TeahazHelper:
 
 
             # handle coloring
-            if m in extras:
-                for i,l in enumerate(lines):
-                    lines[i] = parse_color(THEME['fade'],l)
+            # if m in extras:
+                # for i,l in enumerate(lines):
+                    # lines[i] = parse_color(THEME['fade'],l)
             
             
             # add extra elements as needed
             if chunk_start:
+                # self.last_chunk = []
                 #TODO: this color will eventually be given by the server
                 lines.insert(0,parse_color(THEME['title'],nickname))
 
@@ -2019,16 +2053,16 @@ class TeahazHelper:
                 sys.stdout.write(l+'\n')
                 self.message_y += 1
 
-            if m in extras:
-                self.message_y -= i
+            # self.last_chunk.append(m)
 
             sys.stdout.write('\n')
             if chunk_end:
                 sys.stdout.write('\n')
 
-        sys.stdout.write('\n')
-        if not username == BASE_DATA.get('username'):
-            sys.stdout.write((len(completer.rows))*'\n')
+        if len(messagelist):
+            sys.stdout.write('\n')
+        # if not username == BASE_DATA.get('username'):
+            # sys.stdout.write((len(completer.rows))*'\n')
         # PREV_MESSAGE = m
         # dbg(PREV_MESSAGE)
 
@@ -2460,15 +2494,13 @@ class ModeLabel(Label):
             print(f"\033[{y+yoffset};{x}H"+real_length(super().__repr__())*' ')
 
 class InputFieldCompleter(Container):
-    def __init__(self,options,completion_callback=None,field=None,height=5,trigger=None,**kwargs):
+    def __init__(self,options,icon_callback=None,completion_callback=None,field=None,height=5,trigger=None,**kwargs):
         super().__init__(**kwargs)
 
         # set up base variables
         self.rows = []
         self.options = options
         self.trigger = trigger
-        self._has_printed = False
-        self.selected_index = height-1
         
         # get or create field, set position
         if field:
@@ -2489,8 +2521,22 @@ class InputFieldCompleter(Container):
         self.field.send = self.field_send
 
         # set style stuff
-        self.width = 30
-        self.set_borders(['','','',''])
+        self.set_borders([''*4])
+        self.width = max(len(l)+5 for l in self.options.keys())
+        self.match_highlight_style = lambda char: bold(underline(char))
+        self.set_style(Prompt,'highlight',lambda item: bold('> ')+item)
+
+
+        # set callbacks
+        self.completion_callback = completion_callback
+        self.icon_callback = icon_callback
+
+
+        # set flags
+        self._has_printed = False
+        self._has_padded_messages = False
+        self._is_enabled = lambda: True
+        self._show_icons = lambda: False
 
 
     # complete `word` into field.value[start:end]
@@ -2499,10 +2545,6 @@ class InputFieldCompleter(Container):
         left = self.field.value[:start]
         right = self.field.value[end:]
         current = self.field.value[start:end]
-
-        # add padding if needed
-        if is_in_last_word(end,self.field.value,'space'):
-            right += ' '
 
         # set field variables
         # this doesn't use the standard .set_value method as it would recurse
@@ -2515,11 +2557,29 @@ class InputFieldCompleter(Container):
         self.wipe()
 
         # update selection
-        self.selected_index = self.height-1
+        # self.selected_index = self.height-1
 
     
+    def reset(self,key,**kwargs):
+        self.field.og_send(key,**kwargs)
+        self.wipe()
+
+        # reprint last message
+        # th.message_y -= len(th.last_chunk)
+        # old_y = th.message_y
+        # th.message_y = HEIGHT - th.message_y % HEIGHT - len(th.last_chunk)
+        if self._has_printed:
+            # th.print_messages(extras=th.last_chunk)
+            # th.message_y = old_y
+            self._has_printed = False
+    
+
     # intercept field.send
     def field_send(self,key,**kwargs):
+        if not self._is_enabled():
+            self.field.og_send(key,**kwargs)
+            return
+
         word_start,word_end = get_indices('w')
 
         # make sure it doesnt include the triggerlength
@@ -2529,26 +2589,28 @@ class InputFieldCompleter(Container):
         # get word
         word = self.field.value[word_start:word_end]
 
-        # check for empty field and wipe
-        current_length = real_length(self.field.value)
-        if not real_length(self.field.value) or current_length == 1 and key == "BACKSPACE":
-            self.field.og_send(key,**kwargs)
-            self.wipe()
-            return
+        # get if trigger is opening or closing
+        opener = False
+        for c in self.field.value[:self.field.cursor]:
+            if c == self.trigger:
+                opener = not opener
 
-        # check if trigger is present and is the first char of word
-        # TODO: completer triggers with :closed:^ tags
-        if self.trigger:
-            if not self.trigger in self.field.value[word_start:word_end]:
-                if not (len(word) and word[0] == self.trigger):
-                    self.field.og_send(key,**kwargs)
-                    self.wipe()
-                    return
+        # return if any conditions are met
+        current_length = real_length(self.field.value)
+        if not opener \
+            or not current_length \
+            or current_length == 1 and key == "BACKSPACE":
+
+            self.reset(key,**kwargs)
+            return
+                
 
         # complete
         if key == "TAB":
-            newword = self.selected[0].label
+            selected = self.selectables[self.selected_index][0]
+            newword = selected.real_label
             self.do_completion(newword,word_start,word_end)
+            self.reset('',**kwargs)
             return
 
         # go up
@@ -2562,11 +2624,16 @@ class InputFieldCompleter(Container):
             key = ''
 
         # update things
-        self.select()
         self.field.og_send(key,**kwargs)
         self.eval_options(word_start,word_end+len(key))
+        self.select()
+
+        if not self._has_padded_messages:
+            sys.stdout.write('\n'*(len(self.rows)+2))
+
         print(self)
         self._has_printed = True
+        self._has_padded_messages = True
 
 
     # get viable options
@@ -2585,13 +2652,39 @@ class InputFieldCompleter(Container):
         # assign options to labels in rows
         for i,row in enumerate(reversed(self.rows)):
             if len(output) > i:
-                row.label = output[i]
+                # get icon character
+                value = output[i]
+                if self.icon_callback and self._show_icons():
+                    icon = self.icon_callback(value)+' '
+                else:
+                    icon = ''
+
+                
+                # highlight matching characters
+                buff = list(target)
+                value_list = list(value)
+                for j,c in enumerate(value):
+                    if c == self.trigger:
+                        continue
+
+                    if c in buff:
+                        value_list[j] = self.match_highlight_style(c)
+                        buff.remove(c)
+
+                value = ''.join(value_list)
+
+                row.real_label = output[i]
+                row.label = icon+value
+
                 if not row in self.elements:
                     self.add_elements(row)
             else:
-                # row.label = 'unused'
+                row.label = ''
                 if row in self.elements:
                     self.elements.remove(row)
+
+        # update width
+        self.width = max(self.width,max([real_length(e.label) for e in self.rows]))
 
         # update position
         x,y = self.target_pos
@@ -2599,6 +2692,9 @@ class InputFieldCompleter(Container):
         y -= len(self.elements)+2
         if not [x,y] == self.pos:
             self.move([x,y])
+
+        if not self._has_printed:
+            self.selected_index = len(self.elements)-1
             
     
     # ignore long elements
@@ -2632,7 +2728,7 @@ MAX_MESSAGE_WIDTH = lambda: int(WIDTH*4/10)
 MENUS = [
     "menu_server_picker",
     # "menu_address_picker",
-    # "menu_server_new",
+    "menu_server_new",
     # "menu_serverregister",
     "menu_login/register",
     # "menu_login",
@@ -2736,8 +2832,10 @@ if __name__ == "__main__":
     infield = InputDialogField(pos=get_infield_pos())
     infield.line_offset = None
     infield.visual_color = lambda text: parse_color(THEME['field_highlight'],text)
-    completer = InputFieldCompleter(options=EMOJI_KEYS,field=infield,trigger=':')
 
+    completer = InputFieldCompleter(options=EMOJI_KEYS,field=infield,trigger=':',icon_callback=EMOJI_KEYS.get)
+    completer._is_enabled = lambda: COMPLETER_ENABLED
+    completer._show_icons = lambda: COMPLETER_ICONS
 
     ui = UIGenerator()
     th = TeahazHelper()
@@ -2762,8 +2860,8 @@ if __name__ == "__main__":
             CONV_HEADER.set_corner(i,c)
 
     # wipe all lines fully before repr
-    CONV_HEADER._repr_pre = CONV_HEADER.wipe_all_containing
     CONV_HEADER.center(axes='x')
+    CONV_HEADER._repr_pre = CONV_HEADER.wipe_all_containing
     CONV_HEADER_LABEL = Label(justify='center')
     CONV_HEADER_LABEL.set_style('value',pytermgui.CONTAINER_VALUE_STYLE)
     if CURRENT_CHATROOM:
@@ -2780,6 +2878,8 @@ if __name__ == "__main__":
     
     # set up starting mode
     switch_mode("ESCAPE")
+
+    # handle_arguments()
 
     # start get loop
     get_loop = threading.Thread(target=th.get_loop,name='get_loop')

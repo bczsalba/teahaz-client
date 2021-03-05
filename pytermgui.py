@@ -28,10 +28,11 @@ def clean_ansi(s):
         raise Exception('Value <'+str(s)+'>\'s type ('+str(type(s))+' is not str or bytes')
 
     ansi = re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
-    # unic = re.compile(r'[^\u0000-\u007F]+')
+    unic = re.compile(r'[^\u0000-\u007F]')
     no_ansi = ansi.sub('',s)
+    no_unic = unic.sub('**',no_ansi)
 
-    return no_ansi
+    return no_unic
 
 def real_length(s):
     return len(clean_ansi(s))
@@ -476,6 +477,7 @@ class Container:
         self.selected_index = 0
 
         self.styles = {}
+        self.centering_axis = "both"
         self.corners = [[],[],[],[]]
         self.corner_style = CONTAINER_CORNER_STYLE
 
@@ -692,7 +694,7 @@ class Container:
 
         ## get x
         if side == 'right':
-            startx = px+self.width+2 - real_length(value) - offset
+            startx = px+self.width+3 - real_length(value) - offset
         elif side == 'left':
             startx = px+1 + offset
 
@@ -806,7 +808,6 @@ class Container:
         if not self._has_printed or force:
             return
 
-        dbg()
         if pos == None:
             pos = self.pos
 
@@ -837,7 +838,12 @@ class Container:
 
 
     # center container
-    def center(self,axes="both",xoffset=0,yoffset=5):
+    def center(self,axes=None,xoffset=0,yoffset=5):
+        dbg(axes)
+        self.move([0,0])
+        if not axes:
+            axes = self.centering_axis
+
         self._is_centered = True
         if HEIGHT//2 < self.height-yoffset:
             yoffset = 0
@@ -845,6 +851,7 @@ class Container:
             xoffset = 0
         
         x,y = self.pos
+        self.centering_axis = axes
         if axes == "both" or axes == "x":
             x = (WIDTH-self.width-xoffset)//2
         if axes == "both" or axes == "y":

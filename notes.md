@@ -1,5 +1,3 @@
-* rn : 
-    - fix handle_operation, extra message thingie
     - [ ] add loading screens to server functions
         + [ ] global object gets created, whos value can be set by functions
         + [ ] it launches a thread, then is killed by the caller
@@ -19,6 +17,7 @@
 - [ ] only the first element in multipage containers resizes
 
 # TODO
+- [ ] get_time should be current_day
 - [ ] improve parse_inline_codes (refer to comment)
 - [ ] restructure this file pls
 - [ ] change infield cursor char depending on mode
@@ -37,16 +36,16 @@
     """
 
     - main goals:
-        * this object can get a field in the constructor,
+        * [x] this object can get a field in the constructor,
           or create one for itself
-        * it uses FuzzyWuzzy for autocompletion
-        * intercepts field's keys to look for RETURN, up/down
-        * it gets a list of strings to look for, and it uses
+        * [x] it uses FuzzyWuzzy for autocompletion
+        * [x] intercepts field's keys to look for RETURN, up/down
+        * [x] it gets a list of strings to look for, and it uses
           FW to get the 5 best matches
           NOTE: this list should be refreshable
-        * in the first iteration used by FileManager and emoji
+        * [x] in the first iteration used by FileManager and emoji
           search
-        * matching parts of string are highlighted (with settable
+        * [ ] matching parts of string are highlighted (with settable
           style)
 
 ```
@@ -73,6 +72,17 @@
         * execute(cmd,*maybe regex to match files*) : execute given command
                              in bash on the file
 
+
+- file selector from messages:
+    * some keybind lists all (recent) messages with files in them
+    * at the bottom it also lists a keybind to open them
+    ```
+    nicholas cookieddough
+    < filename >
+    2021-03-05
+    [`r`]
+    ```
+
 - add title to create_menu objects
 
 - windows compatibility:
@@ -81,10 +91,6 @@
     * [x] convert \_GetchWindows \__call__ to use wgetch || decode getch output
     * [ ] test on windows
 
-
-- prerequisites for FM:
-    * [ ] make menus use global binding dicts and have them be tied into handle_action
-    * [ ] add per-menu bindings for menus ( "ui__binds": { "key": "action" } )
 
 - create general picker function that other pickers can call
 
