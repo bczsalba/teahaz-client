@@ -2098,12 +2098,11 @@ class TeahazHelper:
                         dbg('can\'t convert messages: '+str(e))
                         continue
 
+                    self.messages_get_return = None
                     if not messages == PREV_MESSAGES:
                         self.print_messages(messages)
                     else:
                         pass
-                        # dbg('no change')
-                    self.messages_get_return = None
             time.sleep(1)
 
 class UIGenerator:
@@ -2555,9 +2554,6 @@ class InputFieldCompleter(Container):
         if self.trigger:
             self.field.cursor += real_length(self.trigger)
         self.wipe()
-
-        # update selection
-        # self.selected_index = self.height-1
 
     
     def reset(self,key,**kwargs):
