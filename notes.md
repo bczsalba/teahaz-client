@@ -10,6 +10,8 @@
         + it would make retroactive proper grouping possible
         + there could be a bunch of cool new designs that way
 
+    - [ ] messages would work better with positional printing
+
 
 
 # BUGS

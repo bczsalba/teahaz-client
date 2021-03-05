@@ -1397,7 +1397,7 @@ def handle_menu_actions(action,current_file=None) -> int:
     elif menu == "picker":
         ui.create_menu_picker()
         return
-    
+ 
     else:
         return 1
 
@@ -1949,8 +1949,6 @@ class TeahazHelper:
         completer.wipe()
         MODE_LABEL.wipe()
         
-        dbg(len(messagelist))
-
 
         for i,m in enumerate(messagelist):
             # set up values
@@ -2025,12 +2023,7 @@ class TeahazHelper:
                     if next_time-current_time < int(MESSAGE_SEPARATE_TIME):
                         chunk_end = False
 
-
-            # handle coloring
-            # if m in extras:
-                # for i,l in enumerate(lines):
-                    # lines[i] = parse_color(THEME['fade'],l)
-            
+ 
             
             # add extra elements as needed
             if chunk_start:
@@ -2053,7 +2046,6 @@ class TeahazHelper:
                 sys.stdout.write(l+'\n')
                 self.message_y += 1
 
-            # self.last_chunk.append(m)
 
             sys.stdout.write('\n')
             if chunk_end:
@@ -2061,10 +2053,6 @@ class TeahazHelper:
 
         if len(messagelist):
             sys.stdout.write('\n')
-        # if not username == BASE_DATA.get('username'):
-            # sys.stdout.write((len(completer.rows))*'\n')
-        # PREV_MESSAGE = m
-        # dbg(PREV_MESSAGE)
 
 
         # print mode label
@@ -2098,12 +2086,11 @@ class TeahazHelper:
                         dbg('can\'t convert messages: '+str(e))
                         continue
 
+                    self.messages_get_return = None
                     if not messages == PREV_MESSAGES:
                         self.print_messages(messages)
                     else:
                         pass
-                        # dbg('no change')
-                    self.messages_get_return = None
             time.sleep(1)
 
 class UIGenerator:
@@ -2496,6 +2483,7 @@ class ModeLabel(Label):
 class InputFieldCompleter(Container):
     def __init__(self,options,icon_callback=None,completion_callback=None,field=None,height=5,trigger=None,**kwargs):
         super().__init__(**kwargs)
+        self._is_selectable = False
 
         # set up base variables
         self.rows = []
@@ -2506,8 +2494,8 @@ class InputFieldCompleter(Container):
         if field:
             self.field = field
         else:
-            self.field = InputField(prompt='> ')
-        self.target_pos = field.pos
+            self.field = InputDialogField()
+        self.target_pos = self.field.pos
 
         # create rows
         for i in range(height):
@@ -2522,7 +2510,13 @@ class InputFieldCompleter(Container):
 
         # set style stuff
         self.set_borders([''*4])
-        self.width = max(len(l)+5 for l in self.options.keys())
+
+        if callable(self.options):
+            options = self.options()
+        else:
+            options = self.options
+
+        # self.width = max(len(l)+5 for l in options.keys())
         self.match_highlight_style = lambda char: bold(underline(char))
         self.set_style(Prompt,'highlight',lambda item: bold('> ')+item)
 
@@ -2555,9 +2549,6 @@ class InputFieldCompleter(Container):
         if self.trigger:
             self.field.cursor += real_length(self.trigger)
         self.wipe()
-
-        # update selection
-        # self.selected_index = self.height-1
 
     
     def reset(self,key,**kwargs):
@@ -2604,24 +2595,25 @@ class InputFieldCompleter(Container):
             self.reset(key,**kwargs)
             return
                 
+        if not self.handle_bindings(key) == "handled":
+            # complete
+            if key == "TAB":
+                selected = self.selectables[self.selected_index][0]
+                newword = selected.real_label
+                self.do_completion(newword,word_start,word_end)
+                self.reset('',**kwargs)
+                return
 
-        # complete
-        if key == "TAB":
-            selected = self.selectables[self.selected_index][0]
-            newword = selected.real_label
-            self.do_completion(newword,word_start,word_end)
-            self.reset('',**kwargs)
-            return
+            # go up
+            elif key in ["ARROW_UP","CTRL_P"]:
+                self.selected_index = max(0,self.selected_index-1)
+                key = ''
 
-        # go up
-        elif key in ["ARROW_UP","CTRL_P"]:
-            self.selected_index = max(0,self.selected_index-1)
-            key = ''
+            # go down
+            elif key in ["ARROW_DOWN","CTRL_N"]:
+                self.selected_index = min(len(self.selectables),self.selected_index+1)
+                key = ''
 
-        # go down
-        elif key in ["ARROW_DOWN","CTRL_N"]:
-            self.selected_index = min(len(self.selectables),self.selected_index+1)
-            key = ''
 
         # update things
         self.field.og_send(key,**kwargs)
@@ -2640,7 +2632,12 @@ class InputFieldCompleter(Container):
     def eval_options(self,start,end):
         ratios = []
         target = self.field.value[start:end]
-        for e in self.options:
+        if callable(self.options):
+            options = self.options()
+        else:
+            options = self.options
+
+        for e in options:
             ratio = fw.ratio(target,e)
             if ratio > 30:
                 ratios.append([e,ratio])
@@ -2696,10 +2693,44 @@ class InputFieldCompleter(Container):
         if not self._has_printed:
             self.selected_index = len(self.elements)-1
             
+    def handle_bindings(self,key):
+        return
     
     # ignore long elements
     def _handle_long_element(self,e):
         return
+
+class FileManager(Container):
+    """
+    Container derivative that would show and let users interact
+    with files.
+
+    - main methods (other than Container's):
+        * cd : change directory
+        * search(term) : search for `term` in files
+        * open(opt: index) : open selected file with the global 
+                             filetype handlers
+        * execute(cmd,*maybe regex to match files*) : execute given command
+                             in bash on the file
+    """
+    def __init__(self,path=None,completer=None,filetype_highlight=True,**kwargs):
+        super().__init__(**kwargs)
+        if path:
+            if os.path.exists(path):
+                self.path = path
+
+        if not hasattr(self,'path'):
+            self.path = PATH
+
+        if completer:
+            self.completer = completer
+        else:
+            self.completer = InputFieldCompleter(height=8,options=lambda: os.listdir(self.path))
+
+        self.height = 13
+        self.width = 40
+        self.add_elements([self.completer])
+
 
 
 
