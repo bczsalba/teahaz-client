@@ -412,7 +412,7 @@ class Color:
 
         # add colored text
         out = ''
-        for char,col in zip(text,colors):
+        for char,col in zip(clean_ansi(text),colors):
             if layer == 'bg':
                 out += '\033[7m'
             out += Color.color(char,col,reset=False)

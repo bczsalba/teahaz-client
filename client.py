@@ -1949,8 +1949,6 @@ class TeahazHelper:
         completer.wipe()
         MODE_LABEL.wipe()
         
-        dbg(len(messagelist))
-
 
         for i,m in enumerate(messagelist):
             # set up values
@@ -2025,12 +2023,7 @@ class TeahazHelper:
                     if next_time-current_time < int(MESSAGE_SEPARATE_TIME):
                         chunk_end = False
 
-
-            # handle coloring
-            # if m in extras:
-                # for i,l in enumerate(lines):
-                    # lines[i] = parse_color(THEME['fade'],l)
-            
+ 
             
             # add extra elements as needed
             if chunk_start:
@@ -2053,7 +2046,6 @@ class TeahazHelper:
                 sys.stdout.write(l+'\n')
                 self.message_y += 1
 
-            # self.last_chunk.append(m)
 
             sys.stdout.write('\n')
             if chunk_end:
@@ -2061,10 +2053,6 @@ class TeahazHelper:
 
         if len(messagelist):
             sys.stdout.write('\n')
-        # if not username == BASE_DATA.get('username'):
-            # sys.stdout.write((len(completer.rows))*'\n')
-        # PREV_MESSAGE = m
-        # dbg(PREV_MESSAGE)
 
 
         # print mode label
