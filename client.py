@@ -2592,7 +2592,7 @@ class InputFieldCompleter(Container):
         # get if trigger is opening or closing
         opener = False
         for c in self.field.value[:self.field.cursor]:
-            if c == self.trigger:
+            if c == self.trigger or c in DELIMITERS and not c == ' ':
                 opener = not opener
 
         # return if any conditions are met
