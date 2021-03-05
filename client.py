@@ -2700,6 +2700,38 @@ class InputFieldCompleter(Container):
     def _handle_long_element(self,e):
         return
 
+class FileManager(Container):
+    """
+    Container derivative that would show and let users interact
+    with files.
+
+    - main methods (other than Container's):
+        * cd : change directory
+        * search(term) : search for `term` in files
+        * open(opt: index) : open selected file with the global 
+                             filetype handlers
+        * execute(cmd,*maybe regex to match files*) : execute given command
+                             in bash on the file
+    """
+    def __init__(self,path=None,completer=None,filetype_highlight=True,**kwargs):
+        super().__init__(**kwargs)
+        if path:
+            if os.path.exists(path):
+                self.path = path
+
+        if not hasattr(self,'path'):
+            self.path = PATH
+
+        if completer:
+            self.completer = completer
+        else:
+            self.completer = InputFieldCompleter(height=8,options=lambda: os.listdir(self.path))
+
+        self.height = 13
+        self.width = 40
+        self.add_elements([self.completer])
+
+
 
 
 
