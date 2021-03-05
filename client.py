@@ -1397,7 +1397,7 @@ def handle_menu_actions(action,current_file=None) -> int:
     elif menu == "picker":
         ui.create_menu_picker()
         return
-    
+ 
     else:
         return 1
 
@@ -2483,6 +2483,7 @@ class ModeLabel(Label):
 class InputFieldCompleter(Container):
     def __init__(self,options,icon_callback=None,completion_callback=None,field=None,height=5,trigger=None,**kwargs):
         super().__init__(**kwargs)
+        self._is_selectable = False
 
         # set up base variables
         self.rows = []
@@ -2493,8 +2494,8 @@ class InputFieldCompleter(Container):
         if field:
             self.field = field
         else:
-            self.field = InputField(prompt='> ')
-        self.target_pos = field.pos
+            self.field = InputDialogField()
+        self.target_pos = self.field.pos
 
         # create rows
         for i in range(height):
@@ -2509,7 +2510,13 @@ class InputFieldCompleter(Container):
 
         # set style stuff
         self.set_borders([''*4])
-        self.width = max(len(l)+5 for l in self.options.keys())
+
+        if callable(self.options):
+            options = self.options()
+        else:
+            options = self.options
+
+        # self.width = max(len(l)+5 for l in options.keys())
         self.match_highlight_style = lambda char: bold(underline(char))
         self.set_style(Prompt,'highlight',lambda item: bold('> ')+item)
 
@@ -2576,7 +2583,7 @@ class InputFieldCompleter(Container):
         # get if trigger is opening or closing
         opener = False
         for c in self.field.value[:self.field.cursor]:
-            if c == self.trigger or c in DELIMITERS and not c == ' ':
+            if c == self.trigger:
                 opener = not opener
 
         # return if any conditions are met
@@ -2588,24 +2595,25 @@ class InputFieldCompleter(Container):
             self.reset(key,**kwargs)
             return
                 
+        if not self.handle_bindings(key) == "handled":
+            # complete
+            if key == "TAB":
+                selected = self.selectables[self.selected_index][0]
+                newword = selected.real_label
+                self.do_completion(newword,word_start,word_end)
+                self.reset('',**kwargs)
+                return
 
-        # complete
-        if key == "TAB":
-            selected = self.selectables[self.selected_index][0]
-            newword = selected.real_label
-            self.do_completion(newword,word_start,word_end)
-            self.reset('',**kwargs)
-            return
+            # go up
+            elif key in ["ARROW_UP","CTRL_P"]:
+                self.selected_index = max(0,self.selected_index-1)
+                key = ''
 
-        # go up
-        elif key in ["ARROW_UP","CTRL_P"]:
-            self.selected_index = max(0,self.selected_index-1)
-            key = ''
+            # go down
+            elif key in ["ARROW_DOWN","CTRL_N"]:
+                self.selected_index = min(len(self.selectables),self.selected_index+1)
+                key = ''
 
-        # go down
-        elif key in ["ARROW_DOWN","CTRL_N"]:
-            self.selected_index = min(len(self.selectables),self.selected_index+1)
-            key = ''
 
         # update things
         self.field.og_send(key,**kwargs)
@@ -2624,7 +2632,12 @@ class InputFieldCompleter(Container):
     def eval_options(self,start,end):
         ratios = []
         target = self.field.value[start:end]
-        for e in self.options:
+        if callable(self.options):
+            options = self.options()
+        else:
+            options = self.options
+
+        for e in options:
             ratio = fw.ratio(target,e)
             if ratio > 30:
                 ratios.append([e,ratio])
@@ -2680,6 +2693,8 @@ class InputFieldCompleter(Container):
         if not self._has_printed:
             self.selected_index = len(self.elements)-1
             
+    def handle_bindings(self,key):
+        return
     
     # ignore long elements
     def _handle_long_element(self,e):
