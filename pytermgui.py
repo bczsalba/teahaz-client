@@ -5,6 +5,7 @@ class Regex:
     ansi = re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
     unic = re.compile(r'[^\u0000-\u007F]')
     emoji = re.compile(r':[a-z_]+:')
+    dunder = re.compile(r'__[a-z_]+__')
 
 # HELPERS #
 def clr():

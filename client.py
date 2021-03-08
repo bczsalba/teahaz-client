@@ -158,7 +158,8 @@ def handle_config() -> None:
     
     else:
         for key,value in vars(CONFIG).items():
-            globals()[key] = value
+            if not Regex.dunder.search(key):
+                globals()[key] = value
 
 ## miscellaneous
 ### send args to logfile
