@@ -18,7 +18,7 @@ from fuzzywuzzy import fuzz as fw
 from urllib.parse import urlparse
 from pytermgui import WIDTH,HEIGHT
 from pytermgui import clean_ansi,real_length,break_line
-from pytermgui import Color
+from pytermgui import Color,Regex
 italic         =  Color.italic
 bold           =  Color.bold
 underline      =  Color.underline
@@ -477,6 +477,17 @@ def parse_color(_color,s,level=0) -> types.FunctionType:
         output.append(out)
 
     return ''.join(output)
+
+def parse_emoji(text) -> str:
+    found = Regex.emoji.findall(text)
+
+    for s in found:
+        new = EMOJI_KEYS.get(s)
+        if new:
+            text = text.replace(s,new)
+
+    return text
+    
 
 def parse_inline_codes(s) -> str:
     # TODO: add support for multiple codes/str
@@ -1968,21 +1979,9 @@ class TeahazHelper:
                     dbg('message index',i,'can not be decoded, ignoring.')
                     continue
 
-                for w in decoded.split(' '):
-                    if w.startswith(':') and w.endswith(':'):
-                        emoji = EMOJI_KEYS.get(w)
-                        if emoji == None:
-                            continue
-
-                        start = decoded.index(w)
-                        end = start+real_length(w)
-
-                        left = decoded[:start]
-                        right = decoded[end:]
-                        decoded = left+emoji+right
-
-                inline = parse_inline_codes(decoded)
-                content = decoded
+                emojid = parse_emoji(decoded)
+                inline = parse_inline_codes(emojid)
+                content = emojid
                 if inline == decoded:
                     do_subdivision = True
                 else:
@@ -2864,7 +2863,7 @@ if __name__ == "__main__":
     infield.line_offset = None
     infield.visual_color = lambda text: parse_color(THEME['field_highlight'],text)
 
-    completer = InputFieldCompleter(options=EMOJI_KEYS,field=infield,trigger=':',icon_callback=EMOJI_KEYS.get)
+    completer = InputFieldCompleter(options=EMOJI_KEYS,field=infield,trigger=':',icon_callback=parse_emoji)
     completer._is_enabled = lambda: COMPLETER_ENABLED
     completer._show_icons = lambda: COMPLETER_ICONS
 
@@ -2917,11 +2916,4 @@ if __name__ == "__main__":
     get_loop.start()
 
     # main input loop
-    getch_loop()
-
-
-    #while True:
-    #    time.sleep(0.5)
-    #    th.print_messages()
-
-        
+    getch_loop()        

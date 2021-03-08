@@ -1,6 +1,10 @@
-import sys,os,time
+import sys,os,time,re
 
 
+class Regex:
+    ansi = re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
+    unic = re.compile(r'[^\u0000-\u007F]')
+    emoji = re.compile(r':[a-z_]+:')
 
 # HELPERS #
 def clr():
@@ -23,14 +27,11 @@ def set_style(key,value):
     return key+'_STYLE'
 
 def clean_ansi(s):
-    import re
     if not type(s) in [str,bytes]:
         raise Exception('Value <'+str(s)+'>\'s type ('+str(type(s))+' is not str or bytes')
 
-    ansi = re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
-    unic = re.compile(r'[^\u0000-\u007F]')
-    no_ansi = ansi.sub('',s)
-    no_unic = unic.sub('**',no_ansi)
+    no_ansi = Regex.ansi.sub('',s)
+    no_unic = Regex.unic.sub('**',no_ansi)
 
     return no_unic
 
