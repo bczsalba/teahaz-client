@@ -11,6 +11,7 @@ import base64
 import pickle
 import binascii
 import requests
+import importlib
 import pytermgui
 import threading
 import pyperclip as clip
@@ -67,6 +68,17 @@ def import_json(name) -> None:
     if name == "settings":
         current_colorscheme = d['SELECTED_THEME']
         globals()['THEME'] = d['THEMES'][current_colorscheme]
+
+def import_path(path):
+    module_name = os.path.basename(path).replace('-', '_')
+    spec = importlib.util.spec_from_loader(
+        module_name,
+        importlib.machinery.SourceFileLoader(module_name, path)
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    sys.modules[module_name] = module
+    return module
 
 ## edit setting in json (needed because lambda cannot do assignments)
 def edit_json(json_path,key,value) -> None:
@@ -140,6 +152,13 @@ def load_path(path,key=None) -> dict:
             out = out[key]
     return out
 
+def handle_config() -> None:
+    if not is_set("CONFIG"):
+        return
+    
+    else:
+        for key,value in vars(CONFIG).items():
+            globals()[key] = value
 
 ## miscellaneous
 ### send args to logfile
@@ -744,9 +763,11 @@ def handle_action(action) -> None:
     # message binds
     elif action == "message_send":
         msg = infield.value
+
+        if is_set('hook__message_send'):
+            msg = hook__message_send(msg)
+
         th.send(msg,'message')
-        # dbg(ret)
-        # if 'OK' in ret:
         infield.clear_value()
 
     elif action == "character_delete":
@@ -2738,6 +2759,13 @@ class FileManager(Container):
 
 # GLOBALS #
 PATH = os.path.abspath(os.path.dirname(__file__))
+HOME = os.path.expanduser('~')
+
+LOGFILE = os.path.join(PATH,'log')
+# TODO: support windows
+CONFIG_DIR = os.path.join(HOME,'.config/teahaz')
+CONFIG_FILE = os.path.join(CONFIG_DIR,'thconf.py')
+
 if os.path.exists(os.path.join(PATH,'settings.json')):
     import_json("settings")
 
@@ -2747,9 +2775,9 @@ else:
     with open(os.path.join(PATH,'usercfg.json'),'w') as f:
         f.write('{}')
 
+
 import_json('emoji')
 
-LOGFILE = os.path.join(PATH,'log')
 DELIMITERS = "!@#$%^&*()[]{}|\\;':\",.<>/? \t"
 MAX_MESSAGE_WIDTH = lambda: int(WIDTH*4/10)
 
@@ -2817,6 +2845,16 @@ if __name__ == "__main__":
         open(LOGFILE,'w').close()
     dbg('starting teahaz at size',str(WIDTH),str(HEIGHT))
     pytermgui.set_debugger(dbg)
+
+    if os.path.exists(CONFIG_FILE):
+        CONFIG = import_path(CONFIG_FILE)
+    else:
+        if not os.path.exists(CONFIG_DIR):
+            try:
+                dbg(f'couldn\'t create config directory "{CONFIG_FILE}": {e}')
+            except Exception as e:
+                os.makedirs(CONFIG_DIR)
+    handle_config()
 
 
     if WIDTH < 37:
@@ -2908,8 +2946,6 @@ if __name__ == "__main__":
     
     # set up starting mode
     switch_mode("ESCAPE")
-
-    # handle_arguments()
 
     # start get loop
     get_loop = threading.Thread(target=th.get_loop,name='get_loop')
