@@ -2581,17 +2581,23 @@ class InputFieldCompleter(Container):
     
     def reset(self,key,**kwargs):
         self.field.og_send(key,**kwargs)
-        self.wipe()
 
-        # reprint last message
-        # th.message_y -= len(th.last_chunk)
-        # old_y = th.message_y
-        # th.message_y = HEIGHT - th.message_y % HEIGHT - len(th.last_chunk)
         if self._has_printed:
-            # th.print_messages(extras=th.last_chunk)
-            # th.message_y = old_y
+            self.wipe()
             self._has_printed = False
-    
+            th.print_messages(reprint=True) 
+
+    def wipe(self,*args,**kwargs):
+        x = self.pos[0] + 1
+        y = self.pos[1] + 2
+        buff = ''
+        for i,row in enumerate(self.rows):
+            if row.label:
+                buff += f'\033[{y+i};{x}H'+'\033[K'
+
+        print(buff)
+
+
 
     # intercept field.send
     def field_send(self,key,**kwargs):
@@ -2648,12 +2654,8 @@ class InputFieldCompleter(Container):
         self.eval_options(word_start,word_end+len(key))
         self.select()
 
-        if not self._has_padded_messages:
-            sys.stdout.write('\n'*(len(self.rows)+2))
-
         print(self)
         self._has_printed = True
-        self._has_padded_messages = True
 
 
     # get viable options
