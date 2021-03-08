@@ -66,6 +66,11 @@
         }
     },
     "ui__title3": "messaging",
+    "ui__prompt_options__fade_sending": [
+        true,
+        false
+    ],
+    "FADE_SENDING": true,
     "MESSAGE_SEPARATE_TIME": "300",
     "FILETYPE_DEFAULTS": {
         "image": "kitty +kitten icat {path} --scale_up",

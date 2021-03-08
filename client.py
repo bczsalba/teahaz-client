@@ -414,11 +414,6 @@ def get_infield_pos(update_modelabel=True) -> list:
         if not infield.line_offset == offset and offset:
             infield.wipe()
 
-            # add padding between infield & messages
-            # for i in range(offset-infield.line_offset):
-                # sys.stdout.write(f'\033[{th.message_y+i};0H\n')
-            sys.stdout.write(f'\033[{th.message_y};0H\n')
-
             # print top bar
             if not CONV_HEADER.hidden:
                 print(CONV_HEADER)
@@ -764,6 +759,8 @@ def handle_action(action) -> None:
     # message binds
     elif action == "message_send":
         msg = infield.value
+        if msg == '':
+            return
 
         if is_set('hook__message_send'):
             msg = hook__message_send(msg)
@@ -1757,8 +1754,16 @@ class ThreadWithReturnValue(threading.Thread):
 class TeahazHelper:
     def __init__(self):
         self.prev_get = None
+        self.extras = []
 
-    def handle_operation(self,method,output,handler=None,*args,**kwargs):
+    def remove_sent_message(self,clientid):
+        for m in self.extras:
+            if m.get('clientid') == clientid:
+                dbg('removed')
+                self.extras.remove(m)
+        
+
+    def handle_operation(self,method,output,callback=None,callback_args={},*args,**kwargs):
         def _do_operation(*args,**kwargs):
             if method == "post":
                 fun = SESSION.post
@@ -1770,10 +1775,9 @@ class TeahazHelper:
             except Exception as e:
                 dbg(e)
 
-            if handler:
-                handler(*args,**kwargs)
+            if callback:
+                callback(**callback_args)
 
-        #handler = lambda *args,**kwargs: dbg('completed')
         setattr(self,output,'incomplete')
         self.operation_thread = threading.Thread(target=_do_operation,args=args,kwargs=kwargs)
         self.operation_thread.start()
@@ -1931,25 +1935,30 @@ class TeahazHelper:
         endpoint = f'/{endpoint}/'
 
         temp = MESSAGE_TEMPLATE.copy()
-        temp['time'] = time.time()
-        temp['username'] = BASE_DATA.get('username')
-        temp['nickname'] = "sending message"
-        temp['message'] = message
 
-        self.handle_operation(method='post',output='message_send_return',url=URL+'/api/v0'+endpoint, json=data)
+        clientid = time.time()+random.randint(0,9999)
+
+        temp['time'] = time.time()
+        temp['clientid'] = clientid
+        temp['username'] = BASE_DATA.get('username')
+        temp['nickname'] = temp['username']
+        temp['message'] = message
+        
+        # TODO: extras should be printed until they deliver
+        self.handle_operation(
+                method        = 'post',
+                output        = 'message_send_return',
+                url           = URL+'/api/v0'+endpoint,
+                # callback      = self.remove_sent_message,
+                # callback_args = {'clientid': clientid},
+                json     = data
+        )
 
         infield.clear_value()
-        self.print_messages()#extras=[temp])
+        self.print_messages(extras=[temp])
+
 
     def print_messages(self,messages=[],extras=[],reprint=False):
-        """
-        TODO: having a list of Containers would majorly improve this:
-                - it would allow *sending* messages to be shown & 
-                  then overwritten by their sent equivolents
-                - it would allow for instant grouping of new messages
-                  without reprinting
-        """
-
         # get positions
         leftx = infield.pos[0]
 
@@ -1959,12 +1968,12 @@ class TeahazHelper:
 
         # add given messages to global and print all
         elif len(messages):
-            messagelist = messages.copy()
-            dbg(len(MESSAGES))
+            messagelist = messages.copy()+self.extras.copy()
 
         # only print extra messages
         elif len(extras):
-           messagelist = extras.copy()
+            messagelist = MESSAGES.copy()+self.extras.copy()+extras.copy()
+            # self.extras += extras
 
         # return if there's nothing to print
         else:
@@ -1994,10 +2003,13 @@ class TeahazHelper:
 
             # handle message content
             if content:
-                try:
-                    decoded = decode(content)
-                except binascii.Error:
-                    continue
+                if m in extras or m in self.extras:
+                    decoded = content
+                else:
+                    try:
+                        decoded = decode(content)
+                    except:
+                        continue
 
                 emojid = parse_emoji(decoded)
                 inline = parse_inline_codes(emojid)
@@ -2009,9 +2021,14 @@ class TeahazHelper:
                     do_subdivision = False
 
                 lines = pytermgui.break_line(content,MAX_MESSAGE_WIDTH(),do_subdivision=do_subdivision)
+                if FADE_SENDING:
+                    if m in extras:
+                        for j,l in enumerate(lines):
+                            lines[j] = parse_color(THEME['fade'],l)
             else:
                 content = '< '+m.get('filename')+' >'
 
+            
 
             # test if the current message is the start of a chunk
             chunk_start = True
@@ -2085,7 +2102,6 @@ class TeahazHelper:
         if completer._has_printed:
             print(completer)
 
-            
     def get_loop(self):
         global WIDTH,HEIGHT,MESSAGES
 
@@ -2110,14 +2126,11 @@ class TeahazHelper:
                         dbg('can\'t convert messages: '+str(e))
                         continue
 
-
                     self.prev_get = self.messages_get_return
                     self.messages_get_return = None
                     if not messages == []:
                         MESSAGES += messages
                         self.print_messages(MESSAGES)
-                    else:
-                        pass
 
             time.sleep(1)
 
