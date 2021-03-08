@@ -1936,7 +1936,7 @@ class TeahazHelper:
 
         temp = MESSAGE_TEMPLATE.copy()
 
-        clientid = time.time()+random.randint(0,9999)
+        clientid = time.time()#+random.randint(0,9999)
 
         temp['time'] = time.time()
         temp['clientid'] = clientid
