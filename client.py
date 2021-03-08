@@ -2128,6 +2128,9 @@ class TeahazHelper:
                         dbg('can\'t convert messages: '+str(e))
                         continue
 
+                    if is_set('hook__message_get'):
+                        hook__message_get(messages)
+
                     self.prev_get = self.messages_get_return
                     self.messages_get_return = None
                     if not messages == []:
