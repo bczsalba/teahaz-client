@@ -1756,8 +1756,7 @@ class ThreadWithReturnValue(threading.Thread):
 
 class TeahazHelper:
     def __init__(self):
-        self.message_y = infield.pos[1]-3
-        self.last_chunk = []
+        self.prev_get = None
 
     def handle_operation(self,method,output,handler=None,*args,**kwargs):
         def _do_operation(*args,**kwargs):
@@ -1951,38 +1950,38 @@ class TeahazHelper:
                   without reprinting
         """
 
-        global MESSAGES,PREV_MESSAGES,PREV_MESSAGE
-
-        # extras = []
-
         # get positions
         leftx = infield.pos[0]
 
+        # print same messages
         if reprint:
-            self.message_y = infield.pos[1]-3
-            messagelist = MESSAGES
+            messagelist = MESSAGES.copy()
 
         # add given messages to global and print all
         elif len(messages):
-            PREV_MESSAGES = MESSAGES
-            MESSAGES += messages
-            messagelist = messages
+            messagelist = messages.copy()
+            dbg(len(MESSAGES))
 
         # only print extra messages
         elif len(extras):
-           messagelist = extras 
+           messagelist = extras.copy()
 
-        # return if there's nothng to print
+        # return if there's nothing to print
         else:
-            # dbg('nothing to print')
             return 
 
-        # clear things from the screen
-        infield.wipe()
-        completer.wipe()
-        MODE_LABEL.wipe()
-        
+        # messages are printed in reverse order
+        messagelist.reverse()
 
+        # get starting y coord
+        starty = infield.pos[1]-2
+        if completer._has_printed:
+            starty -= len(completer.rows)
+        y = starty
+
+
+        buff = ''
+        printed = []
         for i,m in enumerate(messagelist):
             # set up values
             username     = m.get('username')
@@ -1998,7 +1997,6 @@ class TeahazHelper:
                 try:
                     decoded = decode(content)
                 except binascii.Error:
-                    dbg('message index',i,'can not be decoded, ignoring.')
                     continue
 
                 emojid = parse_emoji(decoded)
@@ -2009,6 +2007,7 @@ class TeahazHelper:
                 else:
                     content = inline
                     do_subdivision = False
+
                 lines = pytermgui.break_line(content,MAX_MESSAGE_WIDTH(),do_subdivision=do_subdivision)
             else:
                 content = '< '+m.get('filename')+' >'
@@ -2016,25 +2015,23 @@ class TeahazHelper:
 
             # test if the current message is the start of a chunk
             chunk_start = True
-            if 0 <= i-1:
-                previous = messagelist[i-1]
-            # elif PREV_MESSAGE:
-                # previous = PREV_MESSAGE
+            if len(messagelist) > i+1 and not i == len(messagelist)-1:
+                prev_msg = messagelist[i+1]
             else:
-                previous = None
+                prev_msg = None
 
-            if previous:
-                prev_time = int(previous.get('time'))
+            if prev_msg:
+                prev_time = int(prev_msg.get('time'))
 
-                if previous.get('username') == username:
+                if prev_msg.get('username') == username:
                     if current_time-prev_time < int(MESSAGE_SEPARATE_TIME):
                         chunk_start = False         
 
 
             # test if current message is the end of a chunk 
             chunk_end = True
-            if len(messagelist) > i+1 and not i == len(messagelist)-1:
-                next_msg = messagelist[i+1]
+            if 0 <= i-1:
+                next_msg = messagelist[i-1]
             else:
                 next_msg = None
 
@@ -2043,37 +2040,37 @@ class TeahazHelper:
                 if next_msg.get('username') == username:
                     if next_time-current_time < int(MESSAGE_SEPARATE_TIME):
                         chunk_end = False
-
  
             
             # add extra elements as needed
             if chunk_start:
-                # self.last_chunk = []
-                #TODO: this color will eventually be given by the server
+                # TODO: this color will eventually be given by the server
                 lines.insert(0,parse_color(THEME['title'],nickname))
 
             if chunk_end:
                 lines.append(parse_color(THEME['fade'],sendtime))
+                lines.append('')
 
             
             # print lines:
-            for i,l in enumerate(lines):
-                # set cursor location
-                if username == BASE_DATA.get('username'):
-                    sys.stdout.write(f'\033[{self.message_y};{WIDTH-real_length(l)}H')
-                else:
-                    sys.stdout.write(f'\033[{self.message_y};{leftx}H')
+            for i,l in enumerate(reversed(lines)):
+                if y > 0:
+                    # set cursor location
+                    if username == BASE_DATA.get('username'):
+                        buff += f'\033[{y};{WIDTH-real_length(l)}H'
+                    else:
+                        buff += f'\033[{y};{leftx}H'
+                    buff += l
+                    printed.append(y)
 
-                sys.stdout.write(l+'\n')
-                self.message_y += 1
+                    y -= 1
+            y -= 1
 
 
-            sys.stdout.write('\n')
-            if chunk_end:
-                sys.stdout.write('\n')
-
-        if len(messagelist):
-            sys.stdout.write('\n')
+        # clear affected rows
+        for cleany in range(0,starty+(len(completer.rows) if completer._has_printed else 0)):
+            print(f'\033[{cleany};H'+'\033[K')
+        sys.stdout.write(buff)
 
 
         # print mode label
@@ -2084,10 +2081,13 @@ class TeahazHelper:
         if not CONV_HEADER.hidden:
             print(CONV_HEADER)
 
-        infield.print()
+        # print completer
+        if completer._has_printed:
+            print(completer)
+
             
     def get_loop(self):
-        global WIDTH,HEIGHT
+        global WIDTH,HEIGHT,MESSAGES
 
         while KEEP_GOING:
             if not PIPE_OUTPUT:
@@ -2101,17 +2101,24 @@ class TeahazHelper:
                     self.handle_operation(method='get',output='messages_get_return',url=URL+'/api/v0/message/',headers=data)
 
                 elif not self.messages_get_return == 'incomplete':
+                    if self.messages_get_return == self.prev_get:
+                        continue
+
                     try:
                         messages = json.loads(self.messages_get_return.text)
                     except ValueError as e:
                         dbg('can\'t convert messages: '+str(e))
                         continue
 
+
+                    self.prev_get = self.messages_get_return
                     self.messages_get_return = None
-                    if not messages == PREV_MESSAGES:
-                        self.print_messages(messages)
+                    if not messages == []:
+                        MESSAGES += messages
+                        self.print_messages(MESSAGES)
                     else:
                         pass
+
             time.sleep(1)
 
 class UIGenerator:
