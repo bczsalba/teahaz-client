@@ -1099,10 +1099,12 @@ def handle_action(action) -> None:
     elif action.endswith('_line'):
         if action == "delete_line":
             clip.copy(infield.value)
+
             infield.line_offset = 0 
             infield.wipe()
-            completer.wipe()
             get_infield_pos()
+            completer.reset('')
+
             infield.set_value('')
 
         elif action == "select_line":
