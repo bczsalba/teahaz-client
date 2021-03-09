@@ -832,6 +832,11 @@ def handle_action(action) -> None:
             infield.selected_start = VISUAL_START
             infield.selected_end = VISUAL_END
 
+        elif action == "message_select":
+            th.selected_message = 0
+            th.print_messages(reprint=True)
+            infield.wipe()
+
         infield.print()
 
         # switch to mode
@@ -997,9 +1002,6 @@ def handle_action(action) -> None:
         elif action == "message_select_submit":
             # TODO
             selected = MESSAGES[th.selected_message]
-
-        elif th.selected_message == None:
-            th.selected_message = 0
 
         elif action == 'message_select_next':
             th.selected_message -= 1
