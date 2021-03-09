@@ -1102,6 +1102,10 @@ class Label:
         self._is_selectable = False
         self._is_selected = False
 
+    def set_value(self,value):
+        self.value = value
+        self.width = real_length(self.value)+3
+        
     def __repr__(self):
         lines = break_line(self.value_style(self.value),_len=self.width-self.padding)
 
