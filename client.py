@@ -1009,6 +1009,8 @@ def handle_action(action) -> None:
 
         if th.selected_message:
             th.offset = th.selected_message - 3
+            th.selected_message = max(0,th.selected_message)
+            th.selected_message = min(len(MESSAGES),th.selected_message)
 
         th.print_messages(reprint=True)
 
