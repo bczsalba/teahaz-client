@@ -2174,6 +2174,10 @@ class TeahazHelper:
             if not PIPE_OUTPUT:
                 WIDTH,HEIGHT = os.get_terminal_size()
 
+                # TODO: this system does not support
+                #       multiple messages being sent
+                #       at the same time.
+
                 if not is_set('messages_get_return',self.__dict__):
                     get_time = SESSION.last_get
                     SESSION.last_get = time.time()
@@ -2193,6 +2197,7 @@ class TeahazHelper:
 
                     self.prev_get = self.messages_get_return
                     self.messages_get_return = None
+
                     if not messages == []:
                         if is_set('hook__message_get'):
                             same_user = messages[-1].get('username') == BASE_DATA.get('username')
