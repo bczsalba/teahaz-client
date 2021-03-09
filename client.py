@@ -2128,12 +2128,13 @@ class TeahazHelper:
                         dbg('can\'t convert messages: '+str(e))
                         continue
 
-                    if is_set('hook__message_get'):
-                        hook__message_get(messages)
-
                     self.prev_get = self.messages_get_return
                     self.messages_get_return = None
                     if not messages == []:
+                        if is_set('hook__message_get'):
+                            same_user = messages[-1].get('username') == BASE_DATA.get('username')
+                            threading.Thread(target=hook__message_get,args=(messages,same_user)).start()
+
                         MESSAGES += messages
                         self.print_messages(MESSAGES)
 
