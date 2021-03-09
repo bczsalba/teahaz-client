@@ -988,6 +988,29 @@ def handle_action(action) -> None:
         if insert:
             switch_mode('INSERT')
 
+    elif action.startswith('message_select'):
+        if action == "message_select_reset":
+            th.selected_message = None
+            th.offset = 0
+            switch_mode("ESCAPE")
+
+        elif action == "message_select_submit":
+            # TODO
+            selected = MESSAGES[th.selected_message]
+
+        elif th.selected_message == None:
+            th.selected_message = 0
+
+        elif action == 'message_select_next':
+            th.selected_message -= 1
+
+        elif action == 'message_select_previous':
+            th.selected_message += 1
+
+        if th.selected_message:
+            th.offset = th.selected_message - 3
+
+        th.print_messages(reprint=True)
 
     # visual mode
     elif action.startswith('selection_') and not 'replace' in action:
@@ -1776,13 +1799,13 @@ class ThreadWithReturnValue(threading.Thread):
 
 class TeahazHelper:
     def __init__(self):
-        self.prev_get = None
+        self.prev_get         = None
 
-        self.offset   = 0
+        self.offset           = 0
+        self.selected_message = None
         
         # TODO
-        self.extras   = []
-        
+        self.extras           = []
 
     def remove_sent_message(self,clientid):
         for m in self.extras:
@@ -1984,7 +2007,7 @@ class TeahazHelper:
         infield.clear_value()
         self.print_messages(extras=[temp])
 
-    def print_messages(self,messages=[],extras=[],reprint=False,dont_ignore=False,do_print=True):
+    def print_messages(self,messages=[],extras=[],select=None,reprint=False,dont_ignore=False,do_print=True):
         # get positions
         leftx = infield.pos[0]
 
@@ -2041,7 +2064,7 @@ class TeahazHelper:
                 else:
                     try:
                         decoded = decode(content)
-                    except:
+                    except Exception as e:
                         continue
 
                 emojid = parse_emoji(decoded)
@@ -2058,6 +2081,10 @@ class TeahazHelper:
                     if m in extras:
                         for j,l in enumerate(lines):
                             lines[j] = parse_color(THEME['fade'],l)
+                if i == self.selected_message:
+                    for j,l in enumerate(lines):
+                        lines[j] = parse_color(THEME['custom_prompt_highlight'],l)
+
             else:
                 content = '< '+m.get('filename')+' >'
 
