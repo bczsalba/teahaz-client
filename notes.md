@@ -1,4 +1,3 @@
-    - [x] teahazrc file in $HOME/.config/teahaz/thconf.py
     - [ ] add loading screens to server functions
         + [ ] global object gets created, whos value can be set by functions
         + [ ] it launches a thread, then is killed by the caller
@@ -7,17 +6,16 @@
         + InputHandlers could be one
         + maybe Handlers in general
 
-    - [x] messages would work better with positional printing
 
 
 
 # BUGS
 - [ ] add_new button in themes
 - [ ] only the first element in multipage containers resizes
+- [ ] get_loop doesn't support multiple sending messages, double messages are caused
 
 # TODO
-- [ ] improve parse_inline_codes (refer to comment)
-- [ ] restructure this file pls
+- [ ] improve parse_inline_codes (refer to comment) !! USE REGEX !!
 - [ ] change infield cursor char depending on mode
 - handle errors:
     * these should get you stuck in an infinite loop
@@ -198,3 +196,6 @@
     | > your input          |
     -------------------------
 ```
+- [x] messages would work better with positional printing
+
+- [x] teahazrc file in $HOME/.config/teahaz/thconf.py
