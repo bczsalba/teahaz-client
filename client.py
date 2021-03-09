@@ -259,7 +259,7 @@ def switch_mode(target) -> None:
         MODE_LABEL.wipe()
 
     elif not KEEP_PIPE:
-        MODE_LABEL.value = bold('-- '+target.upper()+' --')
+        MODE_LABEL.set_value(bold('-- '+target.upper()+' --'))
         print(MODE_LABEL)
 
     VALID_KEYS = [v for k,v in BINDS[MODE].items() if not k.startswith('ui__')]
@@ -1836,7 +1836,7 @@ class TeahazHelper:
         chatrooms = SERVERS[url]['chatrooms']
         if is_set('CONV_HEADER'):
             ogvalue = CONV_HEADER_LABEL.value
-            CONV_HEADER_LABEL.value = f'{url}: {chatrooms[index]}'
+            CONV_HEADER_LABEL.set_value(f'{url}: {chatrooms[index]}')
 
         # set BASE_DATA
         BASE_DATA['username'] = SERVERS[url]['username']
@@ -1876,7 +1876,7 @@ class TeahazHelper:
                 BASE_DATA = ogdata
                 URL = ogurl
                 if is_set('ogvalue',locals()):
-                    CONV_HEADER_LABEL.value = ogvalue
+                    CONV_HEADER_LABEL.set_value(ogvalue)
 
                 # return non-0
                 return ret
@@ -2989,10 +2989,6 @@ if __name__ == "__main__":
             CONV_HEADER.set_corner(i,c)
 
     # wipe all lines fully before repr
-    CONV_HEADER.center(axes='x')
-    CONV_HEADER._repr_pre = CONV_HEADER.wipe_all_containing
-    CONV_HEADER_LABEL = Label(justify='center')
-    CONV_HEADER_LABEL.set_style('value',pytermgui.CONTAINER_VALUE_STYLE)
     if CURRENT_CHATROOM:
         url,index = CURRENT_CHATROOM
         value = f"{url}: {SERVERS[url]['chatrooms'][index]}"
@@ -3001,7 +2997,10 @@ if __name__ == "__main__":
         SESSION = requests.session()
 
     # set header values
-    CONV_HEADER_LABEL.value = value
+    CONV_HEADER.center(axes='x')
+    CONV_HEADER._repr_pre = CONV_HEADER.wipe_all_containing
+    CONV_HEADER_LABEL = Label(value=value,justify='center')
+    CONV_HEADER_LABEL.set_style('value',pytermgui.CONTAINER_VALUE_STYLE)
     CONV_HEADER.add_elements(CONV_HEADER_LABEL)
     CONV_HEADER.hidden = False
     
