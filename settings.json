@@ -144,6 +144,8 @@
             "goto_cursor_right": "l",
             "goto_line_down": "j",
             "goto_line_up": "k",
+            "goto_scroll_down": "J",
+            "goto_scroll_up": "K",
             "goto_text_start": "gg",
             "goto_text_end": "G",
             "goto_word_next": "w",

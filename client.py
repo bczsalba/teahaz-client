@@ -480,7 +480,7 @@ def parse_color(_color,s,level=0) -> types.FunctionType:
         
         # get value to be added
         # dbg(outer.__name__+'('+str(inner)+')',do_color=0)
-        #dbg('inner_stripped',inner_stripped,do_color=0)
+        # dbg('inner_stripped',inner_stripped,do_color=0)
         try:
             # dbg(f'{outer.__name__}({s},{inner})',do_color=0)
             out = outer(s,inner)
@@ -886,6 +886,14 @@ def handle_action(action) -> None:
         elif "line_down" in action:
             if len(infield.value) >= WIDTH+infield.cursor:
                 cursor += WIDTH
+
+        elif "scroll_up" in action:
+            th.offset += 1
+            th.print_messages(reprint=True)
+
+        elif "scroll_down" in action:
+            th.offset -= 1
+            th.print_messages(reprint=True)
 
         # horizontal movement
         elif action == "cursor_left":
@@ -1756,7 +1764,10 @@ class ThreadWithReturnValue(threading.Thread):
 class TeahazHelper:
     def __init__(self):
         self.prev_get = None
+        self.offset = 0
+        #TODO
         self.extras = []
+        
 
     def remove_sent_message(self,clientid):
         for m in self.extras:
@@ -1764,7 +1775,6 @@ class TeahazHelper:
                 dbg('removed')
                 self.extras.remove(m)
         
-
     def handle_operation(self,method,output,callback=None,callback_args={},*args,**kwargs):
         def _do_operation(*args,**kwargs):
             if method == "post":
@@ -1959,7 +1969,6 @@ class TeahazHelper:
         infield.clear_value()
         self.print_messages(extras=[temp])
 
-
     def print_messages(self,messages=[],extras=[],reprint=False):
         # get positions
         leftx = infield.pos[0]
@@ -1990,10 +1999,15 @@ class TeahazHelper:
             starty -= len(completer.rows)
         y = starty
 
+        self.offset = max(self.offset,0)
+        y += self.offset
+
 
         buff = ''
-        printed = []
         for i,m in enumerate(messagelist):
+            if y < 0:
+                continue
+
             # set up values
             username     = m.get('username')
             nickname     = m.get('nickname')
@@ -2073,22 +2087,22 @@ class TeahazHelper:
             
             # print lines:
             for i,l in enumerate(reversed(lines)):
-                if y > 0:
+                if 0 < y <= starty:
                     # set cursor location
                     if username == BASE_DATA.get('username'):
                         buff += f'\033[{y};{WIDTH-real_length(l)}H'
                     else:
                         buff += f'\033[{y};{leftx}H'
                     buff += l
-                    printed.append(y)
 
                     y -= 1
             y -= 1
 
 
         # clear affected rows
-        for cleany in range(0,starty+(len(completer.rows) if completer._has_printed else 0)):
-            print(f'\033[{cleany};H'+'\033[K')
+        endpoint = (HEIGHT if self.offset else starty+(len(completer.rows) if completer._has_printed else 0))
+        for cleany in range(0,endpoint+1):
+            buff = f'\033[{cleany};H'+'\033[K' + buff
         sys.stdout.write(buff)
 
 
@@ -2097,7 +2111,7 @@ class TeahazHelper:
             print(MODE_LABEL)
             
         # print top bar
-        if not CONV_HEADER.hidden:
+        if not CONV_HEADER.hidden and not self.offset:
             print(CONV_HEADER)
 
         # print completer

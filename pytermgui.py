@@ -772,7 +772,6 @@ class Container:
     def select(self,index=None):
         if index == None:
             index = self.selected_index
-        dbg(index)
 
         # error if invalid index
         if len(self.selectables) == 0:
@@ -841,7 +840,6 @@ class Container:
 
     # center container
     def center(self,axes=None,xoffset=0,yoffset=5):
-        dbg(axes)
         self.move([0,0])
         if not axes:
             axes = self.centering_axis

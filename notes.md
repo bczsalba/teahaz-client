@@ -7,11 +7,7 @@
         + InputHandlers could be one
         + maybe Handlers in general
 
-    - [ ] messages should be Containers
-        + it would make retroactive proper grouping possible
-        + there could be a bunch of cool new designs that way
-
-    - [ ] messages would work better with positional printing
+    - [x] messages would work better with positional printing
 
 
 
@@ -20,7 +16,6 @@
 - [ ] only the first element in multipage containers resizes
 
 # TODO
-- [ ] get_time should be current_day
 - [ ] improve parse_inline_codes (refer to comment)
 - [ ] restructure this file pls
 - [ ] change infield cursor char depending on mode
@@ -32,33 +27,6 @@
 
 # FEATURES 
 ## upcoming checklist
-- InputFieldCompleter(Container)
-
-    """
-    Container derivative for autocomplete function
-    """
-
-    - main goals:
-        * [x] this object can get a field in the constructor,
-          or create one for itself
-        * [x] it uses FuzzyWuzzy for autocompletion
-        * [x] intercepts field's keys to look for RETURN, up/down
-        * [x] it gets a list of strings to look for, and it uses
-          FW to get the 5 best matches
-          NOTE: this list should be refreshable
-        * [x] in the first iteration used by FileManager and emoji
-          search
-        * [ ] matching parts of string are highlighted (with settable
-          style)
-
-```
-    _________________________
-    | your input matters    |
-    | your input's cool     |
-    | your input sucks      |
-    | > your input          |
-    -------------------------
-```
 
 - FileManager(Container)
 
@@ -202,3 +170,31 @@
     + [x] strikethrough
 
 - [x] add prev_get support, extra messages before they send
+
+- InputFieldCompleter(Container)
+
+    """
+    Container derivative for autocomplete function
+    """
+
+    - main goals:
+        * [x] this object can get a field in the constructor,
+          or create one for itself
+        * [x] it uses FuzzyWuzzy for autocompletion
+        * [x] intercepts field's keys to look for RETURN, up/down
+        * [x] it gets a list of strings to look for, and it uses
+          FW to get the 5 best matches
+          NOTE: this list should be refreshable
+        * [x] in the first iteration used by FileManager and emoji
+          search
+        * [x] matching parts of string are highlighted (with settable
+          style)
+
+```
+    _________________________
+    | your input matters    |
+    | your input's cool     |
+    | your input sucks      |
+    | > your input          |
+    -------------------------
+```
