@@ -800,6 +800,11 @@ def handle_action(action) -> None:
         infield.pos = get_infield_pos()
         infield.print()
 
+    elif action == "scroll_reset":
+        th.offset = 0
+        th.print_messages(reprint=True)
+        switch_mode('ESCAPE')
+
 
 
 
@@ -893,6 +898,14 @@ def handle_action(action) -> None:
 
         elif "scroll_down" in action:
             th.offset -= 1
+            th.print_messages(reprint=True)
+
+        elif "conv_start" in action:
+            th.offset = len(MESSAGES)-25
+            th.print_messages(reprint=True)
+
+        elif "conv_end" in action:
+            th.offset = 0
             th.print_messages(reprint=True)
 
         # horizontal movement
@@ -1764,9 +1777,11 @@ class ThreadWithReturnValue(threading.Thread):
 class TeahazHelper:
     def __init__(self):
         self.prev_get = None
-        self.offset = 0
-        #TODO
-        self.extras = []
+
+        self.offset   = 0
+        
+        # TODO
+        self.extras   = []
         
 
     def remove_sent_message(self,clientid):
@@ -1969,7 +1984,7 @@ class TeahazHelper:
         infield.clear_value()
         self.print_messages(extras=[temp])
 
-    def print_messages(self,messages=[],extras=[],reprint=False):
+    def print_messages(self,messages=[],extras=[],reprint=False,dont_ignore=False,do_print=True):
         # get positions
         leftx = infield.pos[0]
 
@@ -1999,13 +2014,15 @@ class TeahazHelper:
             starty -= len(completer.rows)
         y = starty
 
+        # normalize offset
         self.offset = max(self.offset,0)
         y += self.offset
 
 
         buff = ''
         for i,m in enumerate(messagelist):
-            if y < 0:
+            # TODO: messages not matching offset should be ignored too
+            if not dont_ignore and y < 0:
                 continue
 
             # set up values
@@ -2044,7 +2061,6 @@ class TeahazHelper:
             else:
                 content = '< '+m.get('filename')+' >'
 
-            
 
             # test if the current message is the start of a chunk
             chunk_start = True
@@ -2087,7 +2103,7 @@ class TeahazHelper:
             
             # print lines:
             for i,l in enumerate(reversed(lines)):
-                if 0 < y <= starty:
+                if dont_ignore or 0 < y <= starty:
                     # set cursor location
                     if username == BASE_DATA.get('username'):
                         buff += f'\033[{y};{WIDTH-real_length(l)}H'
@@ -2098,6 +2114,8 @@ class TeahazHelper:
                     y -= 1
             y -= 1
 
+        if not do_print:
+            return
 
         # clear affected rows
         endpoint = (HEIGHT if self.offset else starty+(len(completer.rows) if completer._has_printed else 0))

@@ -121,7 +121,7 @@
     "VIMBINDS": {
         "ESCAPE": {
             "ui__title1": "modes & misc",
-            "toggle_header": " ",
+            "toggle_header": "",
             "invisible_ping": "@p",
             "menu_server_picker": "TAB",
             "menu_settings": "CTRL_/",
@@ -129,6 +129,7 @@
             "mode_visual": "v",
             "mode_insert": "i",
             "mode_insert+1": "a",
+            "mode_scroll": " ",
             "select_line": "V",
             "quit": "q",
             "reprint": "CTRL_L",
@@ -146,8 +147,8 @@
             "goto_line_up": "k",
             "goto_scroll_down": "J",
             "goto_scroll_up": "K",
-            "goto_text_start": "gg",
-            "goto_text_end": "G",
+            "goto_conv_start": "gg",
+            "goto_conv_end": "G",
             "goto_word_next": "w",
             "goto_WORD_next": "W",
             "goto_word_prev": "b",
@@ -203,6 +204,14 @@
             "selection_cut": "d",
             "selection_change": "c",
             "selection_copy": "y"
+        },
+        "SCROLL": {
+            "mode_insert": "i",
+            "scroll_reset": "ESC",
+            "goto_scroll_down": "j",
+            "goto_scroll_up": "k",
+            "goto_conv_start": "gg",
+            "goto_conv_end": "G"
         }
     }
 }
