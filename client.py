@@ -2175,7 +2175,7 @@ class TeahazHelper:
         global WIDTH,HEIGHT,MESSAGES
 
         while KEEP_GOING:
-            if not PIPE_OUTPUT:
+            if not PIPE_OUTPUT and not self.offset:
                 WIDTH,HEIGHT = os.get_terminal_size()
 
                 # TODO: this system does not support
