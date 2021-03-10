@@ -26,7 +26,7 @@
 # FEATURES 
 ## upcoming checklist
 
-- FileManager(Container)
+FileManager(Container)
 
     """
     Container derivative that would show and let users interact
