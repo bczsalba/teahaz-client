@@ -1,21 +1,9 @@
-    - [ ] add loading screens to server functions
-        + [ ] global object gets created, whos value can be set by functions
-        + [ ] it launches a thread, then is killed by the caller
-
-    - [ ] look into sorting functions under classes:
-        + InputHandlers could be one
-        + maybe Handlers in general
-
-
-
-
 # BUGS
 - [ ] add_new button in themes
 - [ ] only the first element in multipage containers resizes
 - [ ] get_loop doesn't support multiple sending messages, double messages are caused
 
 # TODO
-- [ ] improve parse_inline_codes (refer to comment) !! USE REGEX !!
 - [ ] change infield cursor char depending on mode
 - handle errors:
     * these should get you stuck in an infinite loop
@@ -25,8 +13,20 @@
 
 # FEATURES 
 ## upcoming checklist
+- [ ] strip messages
+    + [ ] send
+    + [ ] recieve
+    
+- [ ] add loading screens to server functions
+    + [ ] global object gets created, whos value can be set by functions
+    + [ ] it launches a thread, then is killed by the caller
 
-FileManager(Container)
+- [ ] look into sorting functions under classes:
+    + InputHandlers could be one
+    + maybe Handlers in general
+
+
+- FileManager(Container)
 
     """
     Container derivative that would show and let users interact
@@ -52,39 +52,16 @@ FileManager(Container)
     [`r`]
     ```
 
-- add title to create_menu objects
-
 - windows compatibility:
     * [x] move os specific imports to their proper place
     * [ ] add more keys to keybinds for windows (specifically CTRL_*)
     * [x] convert \_GetchWindows \__call__ to use wgetch || decode getch output
     * [ ] test on windows
 
-
-- create general picker function that other pickers can call
-
-- pytergmui.Container.get_lines()
-
-    """
-    would be needed for container support in messaging, 
-    as printing further than end of terminal isnt supported 
-    in the current state.
-    """
-
-    * [ ] keep track and return lines printed
-    * [ ] also add borders to those lines, and return them
-
-
-- messaging lol
-    * [ ] message
-        + [x] get
-        + [x] send
-        + [x] display
-            - [x] invent fancy formula to get pos of messages by index
-        + [ ] select
-
 - new binds
     * [ ] `s` 
+
+- multi level inline codes
 
 - general ui
     * [ ] add pathbar to bottom in settings (maybe other menus too)
@@ -199,3 +176,14 @@ FileManager(Container)
 - [x] messages would work better with positional printing
 
 - [x] teahazrc file in $HOME/.config/teahaz/thconf.py
+
+- [x] improve parse_inline_codes (refer to comment) !! USE REGEX !!
+
+- [x] messaging lol
+    * [ ] message
+        + [x] get
+        + [x] send
+        + [x] display
+            - [x] invent fancy formula to get pos of messages by index
+        + [x] select
+
