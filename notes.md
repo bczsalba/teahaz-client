@@ -1,18 +1,16 @@
 # BUGS
-- [ ] add_new button in themes
-- [ ] only the first element in multipage containers resizes
 - [ ] get_loop doesn't support multiple sending messages, double messages are caused
+- [ ] add_new button in themes is hidden & doesn't work
+- [ ] only the first element in multipage containers resizes
 
-# TODO
-- [ ] change infield cursor char depending on mode
+# FEATURES 
+## upcoming checklist
 - handle errors:
-    * these should get you stuck in an infinite loop
+    * these should get you stuck in an infinite loop of retry
     * [ ] Connection Refused
     * [ ] bad url
     * [ ] nodename nor service.. no internet
 
-# FEATURES 
-## upcoming checklist
 - [ ] add loading screens to server functions
     + [ ] global object gets created, whos value can be set by functions
     + [ ] it launches a thread, then is killed by the caller
@@ -51,6 +49,9 @@
     * [ ] add pathbar to bottom in settings (maybe other menus too)
  
 - FUTURE: gtk plugin
+
+## maybe
+- [ ] change infield cursor char depending on mode
 
 ## finished
 - pytermgui `get_object_by_id(id)`

@@ -74,6 +74,7 @@ class InputField:
         self.prompt = prompt
         self.field_color = '\033[0m'
         self.visual_color = ''
+        self.empty_cursor_char = ' '
 
         # TODO
         self.linecap = linecap
@@ -187,7 +188,7 @@ class InputField:
 
         # get char under cursor to highlight
         if self.cursor > len(self.value)-1:
-            charUnderCursor = ' '
+            charUnderCursor = self.empty_cursor_char
         else:
             charUnderCursor = self.value[self.cursor]
 
