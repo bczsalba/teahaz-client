@@ -13,10 +13,6 @@
 
 # FEATURES 
 ## upcoming checklist
-- [ ] strip messages
-    + [ ] send
-    + [ ] recieve
-    
 - [ ] add loading screens to server functions
     + [ ] global object gets created, whos value can be set by functions
     + [ ] it launches a thread, then is killed by the caller
@@ -24,7 +20,6 @@
 - [ ] look into sorting functions under classes:
     + InputHandlers could be one
     + maybe Handlers in general
-
 
 - FileManager(Container)
 
@@ -40,17 +35,6 @@
                              filetype handlers
         * execute(cmd,*maybe regex to match files*) : execute given command
                              in bash on the file
-
-
-- file selector from messages:
-    * some keybind lists all (recent) messages with files in them
-    * at the bottom it also lists a keybind to open them
-    ```
-    nicholas cookieddough
-    < filename >
-    2021-03-05
-    [`r`]
-    ```
 
 - windows compatibility:
     * [x] move os specific imports to their proper place
@@ -187,3 +171,6 @@
             - [x] invent fancy formula to get pos of messages by index
         + [x] select
 
+- [x] strip messages
+    + [x] send
+    + [x] receive

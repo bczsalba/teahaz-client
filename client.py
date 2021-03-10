@@ -757,7 +757,7 @@ def handle_action(action) -> None:
 
     # message binds
     elif action == "message_send":
-        msg = infield.value
+        msg = infield.value.strip()
         if msg == '':
             return
 
@@ -2070,6 +2070,7 @@ class TeahazHelper:
                     except Exception as e:
                         continue
 
+                decoded = decoded.strip()
                 emojid = parse_emoji(decoded)
                 if PARSE_MARKDOWN:
                     inline = parse_inline_codes(emojid)
