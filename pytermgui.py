@@ -2,9 +2,9 @@ import sys,os,time,re
 
 
 class Regex:
-    ansi = re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
-    unic = re.compile(r'[^\u0000-\u007F]')
-    emoji = re.compile(r':[a-z_]+:')
+    ansi   = re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
+    unic   = re.compile(r'[^\u0000-\u007F]')
+    emoji  = re.compile(r':[a-z_]+:')
     dunder = re.compile(r'__[a-z_]+__')
 
 # HELPERS #
@@ -40,6 +40,10 @@ def real_length(s):
     return len(clean_ansi(s))
 
 def break_line(_inline,_len,_pad=0,_separator=' ',do_subdivision=True):
+    # TODO: add checks for ansi modifiers, so that if a line has a style
+    #       it continues regardless of how many linebreaks happen, until
+    #       it's escaped.
+
     if _len == None:
         return [_inline]
 

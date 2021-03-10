@@ -2,6 +2,7 @@
 
 # IMPORTS
 import os
+import re
 import sys
 import json
 import time
@@ -82,7 +83,6 @@ def import_path(path):
 
 ## edit setting in json (needed because lambda cannot do assignments)
 def edit_json(json_path,key,value) -> None:
-    dbg(key)
     # get value if needed
     okey = key
     ovalue = value
@@ -505,41 +505,35 @@ def parse_emoji(text) -> str:
     
 
 def parse_inline_codes(s) -> str:
-    # TODO: add support for multiple codes/str
     for i,(c,func) in enumerate(reversed(THEME['message_styles'].items())):
-        indices = []
-        doubles = []
-        offset = 0
-        current = s
-        while 1:
-            new = current.find(c)
-            # # dbg(new)
-
-            if new == -1:
-                # # dbg('c','end',new,indices)
-                break
-            new += real_length(c)
-
-            doubles.append(offset+new)
-            if len(doubles) == 2:
-                doubles[1] -= real_length(c)
-                indices.append(doubles)
-                doubles = []
-
-            offset += new
-            current = current[offset:]
-            # dbg(current)
-
-        if not len(indices):
+        # optimize when possible
+        if not c in s:
             continue
 
-        for start,end in indices:
+        # *** -> \*\*\*
+        escaped = ''
+        for char in c:
+            if char == "*":
+                escaped += '\\'
+            escaped += char
+
+        # set up pattern and get strings matching
+        pattern = escaped+'[a-zA-Z0-9 _=;:!?\.,\-\+{}\(\)\[\]]+'+escaped
+        matches = re.findall(pattern,s)
+
+        # apply styling to matches
+        for m in matches:
+            start = s.index(m) + real_length(c)
+            end   = start + real_length(m) - 2*real_length(c)
             text = s[start:end]
-            # dbg(func,text,start,end)
-            s = s[:start-real_length(c)]+parse_color(func,text)+s[end+real_length(c):]
-            # dbg(s)
-        
-        continue
+            s = s.replace(m,parse_color(func,text),1)
+
+        # check for escaped chars
+        pattern = '\\\\'+escaped
+        matches = re.findall(pattern,s)
+        for m in matches:
+            s = s.replace(m,c,1)
+
     return s
  
 # this is run at every single color call which is probably not good
@@ -2936,8 +2930,7 @@ BASE_DATA = {
 if __name__ == "__main__":
     ## clear screen
     print('\033[2J')
-
-
+    
     if DO_DEBUG:
         open(LOGFILE,'w').close()
     dbg('starting teahaz at size',str(WIDTH),str(HEIGHT))

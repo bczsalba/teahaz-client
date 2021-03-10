@@ -46,6 +46,8 @@
             },
             "message_styles": {
                 "*": "italic",
+                "_": "italic",
+                "%": "italic",
                 "**": "bold",
                 "***": "italic(bold())",
                 "__": "underline",
