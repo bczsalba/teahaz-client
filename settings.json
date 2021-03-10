@@ -73,6 +73,11 @@
         false
     ],
     "FADE_SENDING": true,
+    "ui__prompt_options__parse_markdown": [
+        true,
+        false
+    ],
+    "PARSE_MARKDOWN": true,
     "MESSAGE_SEPARATE_TIME": "300",
     "FILETYPE_DEFAULTS": {
         "image": "kitty +kitten icat {path} --scale_up",
@@ -131,6 +136,7 @@
             "mode_insert+1": "a",
             "mode_scroll": " ",
             "mode_message_select": "\\",
+            "toggle_md_parser": "-",
             "select_line": "V",
             "quit": "q",
             "reprint": "CTRL_L",

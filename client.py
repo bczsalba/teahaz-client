@@ -744,6 +744,11 @@ def handle_action(action) -> None:
         else:
             print(CONV_HEADER)
 
+    elif action == "toggle_md_parser":
+        dbg('toggling!')
+        edit_json('settings.json','PARSE_MARKDOWN',not PARSE_MARKDOWN)
+        th.print_messages(reprint=True)
+
     elif action == "invisible_ping":
         data = BASE_DATA.copy()
         data['message'] = '@ this cannot be decoded @'
@@ -2066,12 +2071,15 @@ class TeahazHelper:
                         continue
 
                 emojid = parse_emoji(decoded)
-                inline = parse_inline_codes(emojid)
-                content = emojid
-                if inline == decoded:
+                if PARSE_MARKDOWN:
+                    inline = parse_inline_codes(emojid)
+                    content = inline
+                else:
+                    content = emojid
+
+                if content == decoded:
                     do_subdivision = True
                 else:
-                    content = inline
                     do_subdivision = False
 
                 lines = pytermgui.break_line(content,MAX_MESSAGE_WIDTH(),do_subdivision=do_subdivision)
@@ -2079,6 +2087,7 @@ class TeahazHelper:
                     if m in extras:
                         for j,l in enumerate(lines):
                             lines[j] = parse_color(THEME['fade'],l)
+
                 if i == self.selected_message:
                     for j,l in enumerate(lines):
                         lines[j] = parse_color(THEME['custom_prompt_highlight'],l)
