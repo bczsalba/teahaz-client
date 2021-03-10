@@ -518,7 +518,7 @@ def parse_inline_codes(s) -> str:
             escaped += char
 
         # set up pattern and get strings matching
-        pattern = escaped+'[a-zA-Z0-9 _=;:!?\.,\-\+{}\(\)\[\]]+'+escaped
+        pattern = escaped+'[a-zA-Z0-9 _=;:!?\'\"\*#%@\.,\-\+{}\(\)\[\]]+'+escaped
         matches = re.findall(pattern,s)
 
         # apply styling to matches
