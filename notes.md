@@ -1,10 +1,18 @@
 # BUGS
-- [ ] get_loop doesn't support multiple sending messages, double messages are caused
+- [ ] get_loop doesn't support multiple sending messages, double messages are caused ( @upcoming/1 )
 - [ ] add_new button in themes is hidden & doesn't work
 - [ ] only the first element in multipage containers resizes
 
 # FEATURES 
 ## upcoming checklist
+- rewrite entirety of messaging
+    * the current system is a bloated mess, with multiple confused functions for the same roles
+    * [ ] put everything under TeahazHelper
+    * [ ] get function for list of messages
+    * [ ] get function for file binaries
+    * [ ] post function for messages & files
+    * [ ] callback for send_message to add the new message to MESSAGES
+
 - handle errors:
     * these should get you stuck in an infinite loop of retry
     * [ ] Connection Refused
@@ -14,10 +22,6 @@
 - [ ] add loading screens to server functions
     + [ ] global object gets created, whos value can be set by functions
     + [ ] it launches a thread, then is killed by the caller
-
-- [ ] look into sorting functions under classes:
-    + InputHandlers could be one
-    + maybe Handlers in general
 
 - FileManager(Container)
 
