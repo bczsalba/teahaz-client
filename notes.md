@@ -1,10 +1,15 @@
 # BUGS
-- [ ] get_loop doesn't support multiple sending messages, double messages are caused ( @upcoming/1 )
 - [ ] add_new button in themes is hidden & doesn't work
 - [ ] only the first element in multipage containers resizes
 
 # FEATURES 
 ## upcoming checklist
+- [ ] add loading screens to server functions
+    + [ ] global object gets created, whos value can be set by functions
+    + [ ] it launches a thread, then is killed by the caller
+
+- [ ] fix up completer
+
 - rewrite entirety of messaging
     * the current system is a bloated mess, with multiple confused functions for the same roles
     * [ ] put everything under TeahazHelper
@@ -18,10 +23,6 @@
     * [ ] Connection Refused
     * [ ] bad url
     * [ ] nodename nor service.. no internet
-
-- [ ] add loading screens to server functions
-    + [ ] global object gets created, whos value can be set by functions
-    + [ ] it launches a thread, then is killed by the caller
 
 - FileManager(Container)
 
