@@ -1908,10 +1908,6 @@ class TeahazHelper:
 
         # set chatroom
         self.set_chatroom(address,len(SERVERS[address])-1)
-        if not th.is_connected(address):
-            return 'not connected'
-        else:
-            handle_menu('ESC',UI_TRACE[-1][2])
 
         return address,SERVERS[address].index(new)
 
