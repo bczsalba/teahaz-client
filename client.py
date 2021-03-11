@@ -152,6 +152,7 @@ def load_path(path,key=None) -> dict:
             out = out[key]
     return out
 
+## handle config file
 def handle_config() -> None:
     if not is_set("CONFIG"):
         return
@@ -160,6 +161,26 @@ def handle_config() -> None:
         for key,value in vars(CONFIG).items():
             if not Regex.dunder.search(key):
                 globals()[key] = value
+
+## handle sys.argv
+def handle_args() -> None:
+    args = sys.argv[1:]
+    if not len(args):
+        return
+
+    # teahaz --invite <url> <chatroom> <invite>
+    if args[0] == '--invite':
+        if not len(args) >= 4:
+            print('Not enough arguments given!')
+            sys.exit()
+            return
+
+        url, chatroom, invite = args[1:]
+        globals()['INVITE'] = invite
+        th.add_new_server(url,chatroom)
+        handle_action('menu_login/register')
+
+
 
 ## miscellaneous
 ### send args to logfile
@@ -338,28 +359,6 @@ def get_index(obj) -> int:
 
 def ignore_input(*args):
     dbg('fixme')
-
-# def handle_arguments():
-    # if len(sys.argv) > 1:
-        # args = sys.argv[1:]
-        # if '--invite' in args and len(args) > args.index('--invite')+2:
-            # handle_action('menu_login/register')
-            # base = args.index('--invite')
-            # url = args[base+1]
-            # key = args[base+2]
-# 
-            # d = {
-                # "username": input('username: '),
-                # "email": input('email: '),
-                # "password": input('password: '),
-                # "nickname": input('nickname: ')
-            # }
-            # resp = requests.post(url=url+'/register/',json=d)
-            # print(url+'/register/')
-            # print('Register:',resp.text)
-            # resp = requests.post(url=url+'/api/v0/invite/',json={'username': d.get('username'), 'inviteId': key})
-            # print('Invite:',resp.text)
-            # sys.exit()
 
 
 
@@ -589,6 +588,7 @@ def start_connection(contype,menu=None,**kwargs) -> int:
     t = ThreadWithReturnValue(target=_connect,args=(contype,),kwargs=kwargs)
     t.start()
     ret_val = t.join()
+    dbg('returned',ret_val)
 
     if isinstance(ret_val,list):
         ui.create_error_dialog(ret_val[0],'try again')
@@ -601,41 +601,48 @@ def start_connection(contype,menu=None,**kwargs) -> int:
     else:
         return ret_val
         
-def login_or_register(contype,url,data) -> None:
-    dbg('logging in to',url)
+def login_or_register(contype,url,chatid,data) -> None:
     if contype == "login":
         d = {
                 'username': data.get('username'),
                 'password': data.get('password')
-                }
+        }
     elif contype == "register":
         d = { 
                 'username': data.get('username'),
                 'password': data.get('password'),
                 'email': data.get('email'),
-                'nickname': data.get('nickname')
-                }
+                'nickname': data.get('nickname'),
+                'chatroomId': CHAT_ID,
+                'inviteId': INVITE
+        }
+
+    if contype == 'register':
+        contype = 'api/v0/invite'
 
     if url == "":
         ui.create_error_dialog('Invalid value "'+url+'" for url.','choose other server')
         return 0 
 
-    resp = start_connection('post',contype,url=url+'/'+contype+'/',json=d,timeout=None)
+    endpoint = url+'/'+contype+'/'+chatid
+
+    resp = start_connection('post',contype,url=endpoint,json=d,timeout=None)
+    chatname = json.loads(resp.text)['name']
+
     if not resp or not resp.status_code in range(200,299):
         dbg('bad response:',resp)
     else:
         text = "Successfully " + ("logged in" if contype == "login" else "registered")
         BASE_DATA['username'] = d.get('username')
-        edit_json('usercfg.json',['SERVERS',url,'username'],d.get('username'))
-         
-        if contype == "register":
-            dbg('logging in to new user')
-            login_or_register("login",URL,data)
-            return
 
-        else:
-            ui.wipe()
-            ui.create_success_dialog(text) 
+        _,chatindex = CURRENT_CHATROOM
+        edit_json('usercfg.json',['SERVERS',url,chatindex,'username'],d.get('username'))
+        edit_json('usercfg.json',['SERVERS',url,chatindex,'chatroom_name'],chatname)
+        import_json('usercfg')
+        th.set_chatroom(url,CURRENT_CHATROOM[1])
+         
+        ui.wipe()
+        ui.create_success_dialog(text) 
 
 
 
@@ -1405,13 +1412,15 @@ def handle_menu_actions(action,current_file=None) -> int:
 
     elif menu in ["login","register"]:
         address,chatindex = CURRENT_CHATROOM
-        chatid = SERVERS[address]['chatrooms'][chatindex]
+        chatroom = SERVERS[address][chatindex]
+        chatid = chatroom['chatroom_id']
 
         name = chatid+' @ '+address
         corners[3] = menu
         pytermgui.set_attribute_for_id(menu+'-button_submit','address',address)
+        pytermgui.set_attribute_for_id(menu+'-button_submit','chatid',chatid)
         pytermgui.set_attribute_for_id(menu+'-button_submit','handler',
-                lambda prev,self: login_or_register(menu,self.address,self.parent.dict_path))
+                lambda prev,self: login_or_register(menu,self.address,self.chatid,self.parent.dict_path))
 
         if current_file == None:
             if menu == 'login':
@@ -1843,7 +1852,7 @@ class TeahazHelper:
             return False
 
     def set_chatroom(self,url,index):
-        dbg('called')
+        dbg('called to',url)
         global BASE_DATA,CONV_HEADER,URL
             
         # return if certain values are passed
@@ -1859,92 +1868,59 @@ class TeahazHelper:
         globals()['CURRENT_CHATROOM'] = url,index
 
         # update header
-        chatrooms = SERVERS[url]['chatrooms']
+        chatroom = SERVERS[url][index]
         if is_set('CONV_HEADER'):
             ogvalue = CONV_HEADER_LABEL.value
-            CONV_HEADER_LABEL.set_value(f'{url}: {chatrooms[index]}')
+            CONV_HEADER_LABEL.set_value(f'{url}: {chatroom["chatroom_name"]}')
+
+        globals()['CHAT_ID'] = chatroom["chatroom_id"]
 
         # set BASE_DATA
-        BASE_DATA['username'] = SERVERS[url]['username']
-        BASE_DATA['chatroom'] = chatrooms[index]
+        BASE_DATA['username'] = chatroom['username']
+        BASE_DATA['chatroom'] = chatroom['chatroom_id']
         
         # update json
         edit_json('usercfg.json','CURRENT_CHATROOM',[url,index])
 
-        # get login or register 
-        if not th.is_connected(url):
-            handle_action('menu_login/register')
-            return "login"
+        dbg('chatroom set to',url,'/',chatroom['chatroom_name'])
 
-        # set new globals
-        else:
-            # test if server works
-            error = False
-            ret = th.get(0,'message')
-
-            # try to convert ret into json
-            try:
-                m = json.loads(ret)
-
-                # type needs to be list
-                if not isinstance(m,list):
-                    error = True
-
-            except ValueError:
-                error = True
-
-            if error:
-                # create error box
-                ui.create_error_dialog('Error while switching servers: '+ret,'try again')
-                dbg(ret)
-
-                # restore values
-                BASE_DATA = ogdata
-                URL = ogurl
-                if is_set('ogvalue',locals()):
-                    CONV_HEADER_LABEL.set_value(ogvalue)
-
-                # return non-0
-                return ret
-
-
-        dbg('chatroom set to',url,'/',chatrooms[index])
-
-    def add_new_server(self,values):
-        d = {}
-        for key,value in values.items():
-            if not key.startswith('ui__'):
-                d[key] = value
-
-        address = values.get('address')
+    def add_new_server(self,address,chatroom):
         globals()['URL'] = address
 
-        chatroom = values.get('chatroom')
-        if SERVERS.get(address):
-            SERVERS[address]['chatrooms'].append(chatroom)
-        else:
-            SERVERS[address] = {}
-            SERVERS[address]['username'] = None
-            SERVERS[address]['chatrooms'] = [chatroom]
+        new = {
+                'chatroom_id': chatroom,
+                'chatroom_name': None,
+                'username': None
+        }
 
+        # add new data to servers
+        if not is_set('SERVERS'):
+            globals()['SERVERS'] = {}
+
+        if SERVERS.get(address):
+            SERVERS[address].append(new)
+        else:
+            SERVERS[address] = [new]
+
+        # update json file
         edit_json('usercfg.json','SERVERS',SERVERS)
         import_json('usercfg')
 
-        self.set_chatroom(address,len(SERVERS[address]['chatrooms'])-1)
+        # set chatroom
+        self.set_chatroom(address,len(SERVERS[address])-1)
         if not th.is_connected(address):
-            handle_action('menu_login/register')
             return 'not connected'
         else:
             handle_menu('ESC',UI_TRACE[-1][2])
 
-
-        return address,SERVERS[address]['chatrooms'].index(chatroom)
+        return address,SERVERS[address].index(new)
 
     def get(self,parameter,mode="message"):
         data = BASE_DATA
         
         # set endpoint
-        endpoint = "/"+mode+"/"
+        endpoint = "/"+mode+"/"+CHAT_ID
+        dbg(URL+'/api/v0'+endpoint)
 
         # set parameter based on mode
         if mode == "message":
@@ -1985,12 +1961,11 @@ class TeahazHelper:
         else:
             return "Client Error: Invalid message type '"+str(endpoint)+"'"
         
-        endpoint = f'/{endpoint}/'
-
+        endpoint = f'{endpoint}/{CHAT_ID}'
         temp = MESSAGE_TEMPLATE.copy()
 
         clientid = time.time()#+random.randint(0,9999)
-
+        
         temp['time'] = time.time()
         temp['clientid'] = clientid
         temp['username'] = BASE_DATA.get('username')
@@ -2001,7 +1976,7 @@ class TeahazHelper:
         self.handle_operation(
                 method        = 'post',
                 output        = 'message_send_return',
-                url           = URL+'/api/v0'+endpoint,
+                url           = URL+'/api/v0/'+endpoint,
                 # callback      = self.remove_sent_message,
                 # callback_args = {'clientid': clientid},
                 json     = data
@@ -2175,19 +2150,21 @@ class TeahazHelper:
         global WIDTH,HEIGHT,MESSAGES
 
         while KEEP_GOING:
-            if not PIPE_OUTPUT and not self.offset:
-                WIDTH,HEIGHT = os.get_terminal_size()
-
+            if not PIPE_OUTPUT and not self.offset \
+                and URL and CHAT_ID and len(SESSION.cookies):
                 # TODO: this system does not support
                 #       multiple messages being sent
                 #       at the same time.
+
+
+                WIDTH,HEIGHT = os.get_terminal_size()
 
                 if not is_set('messages_get_return',self.__dict__):
                     get_time = SESSION.last_get
                     SESSION.last_get = time.time()
                     data = BASE_DATA
                     data['time'] = str(get_time)
-                    self.handle_operation(method='get',output='messages_get_return',url=URL+'/api/v0/message/',headers=data)
+                    self.handle_operation(method='get',output='messages_get_return',url=URL+'/api/v0/message/'+CHAT_ID,headers=data)
 
                 elif not self.messages_get_return == 'incomplete':
                     if self.messages_get_return == self.prev_get:
@@ -2209,8 +2186,10 @@ class TeahazHelper:
 
                         MESSAGES += messages
                         self.print_messages(MESSAGES)
+            # else:
+                # dbg(URL,CHAT_ID)
 
-            time.sleep(1)
+            time.sleep(0.5)
 
 class UIGenerator:
     """
@@ -2396,8 +2375,8 @@ class UIGenerator:
             url_col = color(url,THEME['value'])
 
             # go through chatrooms
-            for chatroom in data['chatrooms']:
-                chat_col = color(chatroom,THEME['title'])
+            for chatroom in data:
+                chat_col = color(chatroom['chatroom_name'],THEME['title'])
 
                 # create, add prompt
                 p = Prompt(options=[chat_col+'@'+url_col],justify_options='center')
@@ -2406,7 +2385,7 @@ class UIGenerator:
 
                 p.handler = lambda prev,self: {
                         handle_menu('ESC',prev)
-                        if not th.set_chatroom(self.url,SERVERS[self.url]['chatrooms'].index(self.chatroom)) else None}
+                        if not th.set_chatroom(self.url,SERVERS[self.url].index(self.chatroom)) else None}
 
                 d.add_elements(p)
 
@@ -2875,9 +2854,8 @@ if os.path.exists(os.path.join(PATH,'usercfg.json')):
 else:
     with open(os.path.join(PATH,'usercfg.json'),'w') as f:
         f.write('{}')
-
-
 import_json('emoji')
+
 
 DELIMITERS = "!@#$%^&*()[]{}|\\;':\",.<>/? \t"
 MAX_MESSAGE_WIDTH = lambda: int(WIDTH*4/10)
@@ -2887,10 +2865,10 @@ MAX_MESSAGE_WIDTH = lambda: int(WIDTH*4/10)
 MENUS = [
     "menu_server_picker",
     # "menu_address_picker",
-    "menu_server_new",
+    # "menu_server_new",
     # "menu_serverregister",
-    "menu_login/register",
-    # "menu_login",
+    # "menu_login/register",
+    "menu_login",
     # "menu_settings",
     # "menu_picker"
 ]
@@ -2937,14 +2915,82 @@ BASE_DATA = {
 
 
 # TEMP MAIN
-if __name__ == "__main__":
-    ## clear screen
-    print('\033[2J')
-    
+if __name__ == "__main__": 
     if DO_DEBUG:
         open(LOGFILE,'w').close()
+
     dbg('starting teahaz at size',str(WIDTH),str(HEIGHT))
+
     pytermgui.set_debugger(dbg)
+
+    ## clear screen
+    print('\033[2J')
+
+    if WIDTH < 37:
+        w = Container(height=3)
+        w.add_elements(Label(value=bold(color('Window width too low!','38;5;196')),justify='center'))
+        w.add_elements(
+                Label(value=
+                    italic(
+                        color('A minimum of 37 columns are required for teahaz.','38;5;244')),
+                    justify='left')
+                )
+
+        print(w)
+        for _ in range(HEIGHT-w.height):
+            print()
+        sys.exit(1)
+
+
+    ## set pytermgui styles
+    pytermgui.set_style('container_title',lambda item: parse_color(THEME['title'],item).replace('_',' '))
+    pytermgui.set_style('container_error',lambda item: parse_color(THEME['error'],item.upper())),
+    pytermgui.set_style('container_success',lambda item: parse_color(THEME['success'],item.upper()))
+    pytermgui.set_style('container_label',lambda item: parse_color(THEME['label'],item.lower()))
+    pytermgui.set_style('container_value',lambda item: parse_color(THEME['value'],item))
+    pytermgui.set_style('container_border',lambda item: parse_color(THEME['border'],item))
+    pytermgui.set_style('container_corner',pytermgui.CONTAINER_BORDER_STYLE)
+
+    pytermgui.set_style('prompt_highlight',lambda item: minimal_or_custom_highlight(item))
+    pytermgui.set_style('tabbar_highlight',lambda item: parse_color(THEME['title'],item))
+
+    pytermgui.set_style('container_border_chars',lambda: [bold(v) for v in THEME['border_chars']])
+    pytermgui.set_style('prompt_delimiter_style',lambda: THEME['prompt_delimiters'])
+
+
+    # set up bottom mode label
+    MODE_LABEL = ModeLabel(value='-- ESCAPE --',justify='left')
+    MODE_LABEL.set_style('value',lambda item: color(item,THEME['mode_indicator']))
+
+    # set up top bar to indicate current conv
+    CONV_HEADER = Container(width=int(WIDTH*0.75),dynamic_size=False)
+    CONV_HEADER.center(axes='x')
+    CONV_HEADER._repr_pre = CONV_HEADER.wipe_all_containing
+    CONV_HEADER_LABEL = Label(justify='center')
+    CONV_HEADER_LABEL.set_style('value',pytermgui.CONTAINER_VALUE_STYLE)
+    CONV_HEADER.add_elements(CONV_HEADER_LABEL)
+    CONV_HEADER.hidden = False
+
+    # set corners for header
+    for i,c in enumerate([v for k,v in THEME['corners'].items()]):
+        if not c == None:
+            CONV_HEADER.set_corner(i,c)
+
+
+    # set up inputfield & container
+    infield = InputDialogField(pos=get_infield_pos())
+    infield.line_offset = None
+    infield.visual_color = lambda text: parse_color(THEME['field_highlight'],text)
+    switch_mode("ESCAPE")
+
+    completer = InputFieldCompleter(options=EMOJI_KEYS,field=infield,trigger=':',icon_callback=parse_emoji)
+    completer._is_enabled = lambda: COMPLETER_ENABLED
+    completer._show_icons = lambda: COMPLETER_ICONS
+
+
+    ui = UIGenerator()
+    th = TeahazHelper()
+
 
     if os.path.exists(CONFIG_FILE):
         CONFIG = import_path(CONFIG_FILE)
@@ -2954,18 +3000,6 @@ if __name__ == "__main__":
                 dbg(f'couldn\'t create config directory "{CONFIG_FILE}": {e}')
             except Exception as e:
                 os.makedirs(CONFIG_DIR)
-    handle_config()
-
-
-    if WIDTH < 37:
-        w = Container(height=3)
-        w.add_elements(Label(value=bold(color('Window width too low!','38;5;196')),justify='center'))
-        w.add_elements(Label(value=italic(color('A minimum of 37 columns are required for teahaz.','38;5;244')),justify='left'))
-        print(w)
-        for _ in range(HEIGHT-w.height):
-            print()
-        sys.exit(1)
-
 
     # load session.obj
     SESSIONLOCATION = os.path.join(PATH,'session.obj')
@@ -2978,73 +3012,17 @@ if __name__ == "__main__":
         SESSION = requests.session()
         SESSION.last_get = 0
 
+    handle_config()
+    handle_args()
 
-    ## set pytermgui styles
-    pytermgui.set_style('container_title',lambda item: parse_color(THEME['title'],item).replace('_',' '))
-    pytermgui.set_style('container_error',lambda item: parse_color(THEME['error'],item.upper())),
-    pytermgui.set_style('container_success',lambda item: parse_color(THEME['success'],item.upper()))
-    pytermgui.set_style('container_label',lambda item: parse_color(THEME['label'],item.lower()))
-    pytermgui.set_style('container_value',lambda item: parse_color(THEME['value'],item))
-    pytermgui.set_style('container_border',lambda item: parse_color(THEME['border'],item))
-    pytermgui.set_style('container_corner',pytermgui.CONTAINER_BORDER_STYLE)
-
-    
-    pytermgui.set_style('prompt_highlight',lambda item: minimal_or_custom_highlight(item))
-    pytermgui.set_style('tabbar_highlight',lambda item: parse_color(THEME['title'],item))
-
-    pytermgui.set_style('container_border_chars',lambda: [bold(v) for v in THEME['border_chars']])
-    pytermgui.set_style('prompt_delimiter_style',lambda: THEME['prompt_delimiters'])
- 
-
-    # set default mode
-    infield = InputDialogField(pos=get_infield_pos())
-    infield.line_offset = None
-    infield.visual_color = lambda text: parse_color(THEME['field_highlight'],text)
-
-    completer = InputFieldCompleter(options=EMOJI_KEYS,field=infield,trigger=':',icon_callback=parse_emoji)
-    completer._is_enabled = lambda: COMPLETER_ENABLED
-    completer._show_icons = lambda: COMPLETER_ICONS
-
-    ui = UIGenerator()
-    th = TeahazHelper()
-
-    # set up defaults
     if is_set('CURRENT_CHATROOM'):
-        url,chatroom = CURRENT_CHATROOM
-        th.set_chatroom(url,chatroom)
-    else:
-        SERVERS = {}
-        CURRENT_CHATROOM = None
-        handle_action('menu_server_new')
-    
-    # set up bottom mode label
-    MODE_LABEL = ModeLabel(value='-- ESCAPE --',justify='left')
-    MODE_LABEL.set_style('value',lambda item: color(item,THEME['mode_indicator']))
-
-    # set up top bar to indicate current conv
-    CONV_HEADER = Container(width=int(WIDTH*0.75),dynamic_size=False)
-    for i,c in enumerate([v for k,v in THEME['corners'].items()]):
-        if not c == None:
-            CONV_HEADER.set_corner(i,c)
-
-    # wipe all lines fully before repr
-    if CURRENT_CHATROOM:
         url,index = CURRENT_CHATROOM
-        value = f"{url}: {SERVERS[url]['chatrooms'][index]}"
+        th.set_chatroom(url,index)
     else:
-        value = ''
-        SESSION = requests.session()
+        CURRENT_CHATROOM = None
+        CHAT_ID = None
+        SERVERS = {}
 
-    # set header values
-    CONV_HEADER.center(axes='x')
-    CONV_HEADER._repr_pre = CONV_HEADER.wipe_all_containing
-    CONV_HEADER_LABEL = Label(value=value,justify='center')
-    CONV_HEADER_LABEL.set_style('value',pytermgui.CONTAINER_VALUE_STYLE)
-    CONV_HEADER.add_elements(CONV_HEADER_LABEL)
-    CONV_HEADER.hidden = False
-    
-    # set up starting mode
-    switch_mode("ESCAPE")
 
     # start get loop
     get_loop = threading.Thread(target=th.get_loop,name='get_loop')
