@@ -1969,7 +1969,7 @@ class TeahazHelper:
         temp['nickname'] = temp['username']
         temp['message'] = message
         
-        message_update_lambda = lambda resp: self.add_resp_to_messages(json.loads(resp.text))
+        message_update_lambda = lambda resp: self.add_to_messages(json.loads(resp.text))
         self.handle_operation(
                 method        = 'post',
                 output        = 'message_send_return',
@@ -2148,9 +2148,10 @@ class TeahazHelper:
         if completer._has_printed:
             print(completer)
 
-    def add_resp_to_messages(self,messages):
-        globals()['MESSAGES'] += messages
-        th.print_messages(MESSAGES)
+    def add_to_messages(self,messages):
+        if not any([m in messages for m in MESSAGES]):
+            globals()['MESSAGES'] += messages
+            th.print_messages(MESSAGES)
 
     def get_loop(self):
         global WIDTH,HEIGHT,MESSAGES
@@ -2163,13 +2164,24 @@ class TeahazHelper:
 
                 if not is_set('messages_get_return',self.__dict__):
                     get_time = SESSION.last_get
+                    dbg(get_time,time.time())
                     SESSION.last_get = time.time()
                     data = BASE_DATA
                     data['time'] = str(get_time)
                     self.handle_operation(method='get',output='messages_get_return',url=URL+'/api/v0/message/'+CHAT_ID,headers=data,
-                            callback= lambda resp: self.add_resp_to_messages(json.loads(resp.text)))
+                            callback= lambda resp: self.add_to_messages(json.loads(resp.text)))
+                else:
+                    try:
+                        messages = json.loads(self.messages_get_return.text)
+                    except ValueError as e:
+                        dbg('Couln\'t jsonize messages:',str(e))
 
-            time.sleep(2)
+                    if not messages == []:
+                        self.add_to_messages(messages)
+                    
+                    del self.messages_get_return
+
+            time.sleep(1)
 
 class UIGenerator:
     """
