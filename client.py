@@ -2024,6 +2024,9 @@ class TeahazHelper:
 
         buff = ''
         for i,m in enumerate(messagelist):
+            if not isinstance(m,dict):
+                dbg('message is not a dict!',type(m),m)
+
             # TODO: messages not matching offset should be ignored too
             if not dont_ignore and y < 0:
                 continue
@@ -2149,6 +2152,10 @@ class TeahazHelper:
             print(completer)
 
     def add_to_messages(self,messages):
+        if not isinstance(messages,list):
+            dbg('messages is not a list!',type(messages),messages)
+            return
+
         if not any([m in messages for m in MESSAGES]):
             globals()['MESSAGES'] += messages
             th.print_messages(MESSAGES)
