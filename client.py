@@ -1812,6 +1812,7 @@ class ThreadWithReturnValue(threading.Thread):
 class TeahazHelper:
     def __init__(self):
         self.prev_get         = None
+        self.skip_get         = False
 
         self.offset           = 0
         self.selected_message = None
@@ -2153,27 +2154,43 @@ class TeahazHelper:
             print(completer)
 
     def add_to_messages(self,messages):
+        # avoid error
         if not isinstance(messages,list):
             dbg('messages is not a list!',type(messages),messages)
             return
 
-        elif not len(messages):
+        # remove duplicates
+        for m in messages:
+            if m in MESSAGES:
+                messages.remove(m)
+
+        # return if non left
+        if not len(messages):
             return
 
-        if not any([m in messages for m in MESSAGES]):
+        # check for duplicates (again)
+        if not any([m in MESSAGES for m in messages]):
             globals()['MESSAGES'] += messages
+            self.skip_get = True
+
             th.print_messages(MESSAGES)
             same_user = (messages[-1].get('username') == BASE_DATA.get('username'))
 
             if is_set('hook__message_get'):
                 hook__message_get(messages,same_user)
+        else:
+            dbg('duplicate')
+
 
     def get_loop(self):
         global WIDTH,HEIGHT,MESSAGES
 
         while KEEP_GOING:
-            if not PIPE_OUTPUT and not self.offset \
-                and URL and CHAT_ID and len(SESSION.cookies):
+            if self.skip_get:
+                self.skip_get = False
+
+            elif not PIPE_OUTPUT and not self.offset \
+                and URL and CHAT_ID and len(SESSION.cookies): 
 
                 WIDTH,HEIGHT = os.get_terminal_size()
 
@@ -2184,6 +2201,7 @@ class TeahazHelper:
                     data['time'] = str(get_time)
                     self.handle_operation(method='get',output='messages_get_return',url=URL+'/api/v0/message/'+CHAT_ID,headers=data,
                             callback= lambda resp: self.add_to_messages(json.loads(resp.text)))
+
                 else:
                     try:
                         messages = json.loads(self.messages_get_return.text)
