@@ -2156,9 +2156,27 @@ class TeahazHelper:
             dbg('messages is not a list!',type(messages),messages)
             return
 
-        if not any([m in messages for m in MESSAGES]):
-            globals()['MESSAGES'] += messages
-            th.print_messages(MESSAGES)
+        for m in messages:
+            new = m.get('messageId')
+            if new in MESSAGE_IDS:
+                messages.remove(m)
+                dbg('duplicate removed')
+            else:
+                MESSAGE_IDS.append(new)
+
+        # return if non left
+        if not len(messages):
+            return
+
+        globals()['MESSAGES'] += messages
+        self.skip_get = True
+
+        th.print_messages(MESSAGES)
+        same_user = (messages[-1].get('username') == BASE_DATA.get('username'))
+
+        if is_set('hook__message_get'):
+            hook__message_get(messages,same_user)
+
 
     def get_loop(self):
         global WIDTH,HEIGHT,MESSAGES
@@ -2178,6 +2196,9 @@ class TeahazHelper:
                     self.handle_operation(method='get',output='messages_get_return',url=URL+'/api/v0/message/'+CHAT_ID,headers=data,
                             callback= lambda resp: self.add_to_messages(json.loads(resp.text)))
                 else:
+                    if not isinstance(self.messages_get_return,requests.Response):
+                        dbg('get return is not a Response!',type(self.messages_get_return),self.messages_get_return)
+
                     try:
                         messages = json.loads(self.messages_get_return.text)
                     except ValueError as e:
@@ -2890,6 +2911,7 @@ CURRENT_FILE = None
 
 SENDING = []
 MESSAGES = []
+MESSAGE_IDS = []
 PREV_MESSAGE = None
 PREV_MESSAGES = []
 MESSAGE_TEMPLATE = {
