@@ -2157,9 +2157,16 @@ class TeahazHelper:
             dbg('messages is not a list!',type(messages),messages)
             return
 
+        elif not len(messages):
+            return
+
         if not any([m in messages for m in MESSAGES]):
             globals()['MESSAGES'] += messages
             th.print_messages(MESSAGES)
+            same_user = (messages[-1].get('username') == BASE_DATA.get('username'))
+
+            if is_set('hook__message_get'):
+                hook__message_get(messages,same_user)
 
     def get_loop(self):
         global WIDTH,HEIGHT,MESSAGES
@@ -2183,7 +2190,7 @@ class TeahazHelper:
                     except ValueError as e:
                         dbg('Couln\'t jsonize messages:',str(e))
 
-                    if not messages == []:
+                    if len(messages):
                         self.add_to_messages(messages)
                     
                     del self.messages_get_return
