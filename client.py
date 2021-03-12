@@ -1825,22 +1825,26 @@ class TeahazHelper:
                 dbg('removed')
                 self.extras.remove(m)
         
-    def handle_operation(self,method,output,callback=None,callback_args={},*args,**kwargs):
+    def handle_operation(self,method,output=None,callback=None,*args,**kwargs):
         def _do_operation(*args,**kwargs):
             if method == "post":
                 fun = SESSION.post
             elif method == "get":
                 fun = SESSION.get
  
-            try:
-                setattr(self,output,fun(**kwargs))
-            except Exception as e:
-                dbg(e)
+            resp = fun(**kwargs)
+            if output:
+                try:
+                    setattr(self,output,resp)
+                except Exception as e:
+                    dbg(e)
 
             if callback:
-                callback(**callback_args)
+                callback(resp)
 
-        setattr(self,output,'incomplete')
+        if output:
+            setattr(self,output,'incomplete')
+
         self.operation_thread = threading.Thread(target=_do_operation,args=args,kwargs=kwargs)
         self.operation_thread.start()
 
@@ -1908,10 +1912,6 @@ class TeahazHelper:
 
         # set chatroom
         self.set_chatroom(address,len(SERVERS[address])-1)
-        if not th.is_connected(address):
-            return 'not connected'
-        else:
-            handle_menu('ESC',UI_TRACE[-1][2])
 
         return address,SERVERS[address].index(new)
 
@@ -1964,21 +1964,22 @@ class TeahazHelper:
         endpoint = f'{endpoint}/{CHAT_ID}'
         temp = MESSAGE_TEMPLATE.copy()
 
-        clientid = time.time()#+random.randint(0,9999)
-        
         temp['time'] = time.time()
-        temp['clientid'] = clientid
         temp['username'] = BASE_DATA.get('username')
         temp['nickname'] = temp['username']
         temp['message'] = message
         
-        # TODO: extras should be printed until they deliver
+        message_update_lambda = lambda resp: self.add_resp_to_messages(json.loads(resp.text))
         self.handle_operation(
                 method        = 'post',
                 output        = 'message_send_return',
                 url           = URL+'/api/v0/'+endpoint,
-                # callback      = self.remove_sent_message,
-                # callback_args = {'clientid': clientid},
+                callback      = lambda resp: self.handle_operation(
+                    method='get',
+                    url=URL+'/api/v0/message/'+CHAT_ID,
+                    headers=data,
+                    callback=message_update_lambda
+                ),
                 json     = data
         )
 
@@ -2017,6 +2018,7 @@ class TeahazHelper:
 
         # normalize offset
         self.offset = max(self.offset,0)
+        self.offset = min(len(MESSAGES)-1,self.offset)
         y += self.offset
 
 
@@ -2146,16 +2148,16 @@ class TeahazHelper:
         if completer._has_printed:
             print(completer)
 
+    def add_resp_to_messages(self,messages):
+        globals()['MESSAGES'] += messages
+        th.print_messages(MESSAGES)
+
     def get_loop(self):
         global WIDTH,HEIGHT,MESSAGES
 
         while KEEP_GOING:
             if not PIPE_OUTPUT and not self.offset \
                 and URL and CHAT_ID and len(SESSION.cookies):
-                # TODO: this system does not support
-                #       multiple messages being sent
-                #       at the same time.
-
 
                 WIDTH,HEIGHT = os.get_terminal_size()
 
@@ -2164,32 +2166,10 @@ class TeahazHelper:
                     SESSION.last_get = time.time()
                     data = BASE_DATA
                     data['time'] = str(get_time)
-                    self.handle_operation(method='get',output='messages_get_return',url=URL+'/api/v0/message/'+CHAT_ID,headers=data)
+                    self.handle_operation(method='get',output='messages_get_return',url=URL+'/api/v0/message/'+CHAT_ID,headers=data,
+                            callback= lambda resp: self.add_resp_to_messages(json.loads(resp.text)))
 
-                elif not self.messages_get_return == 'incomplete':
-                    if self.messages_get_return == self.prev_get:
-                        continue
-
-                    try:
-                        messages = json.loads(self.messages_get_return.text)
-                    except ValueError as e:
-                        dbg('can\'t convert messages: '+str(e))
-                        continue
-
-                    self.prev_get = self.messages_get_return
-                    self.messages_get_return = None
-
-                    if not messages == []:
-                        if is_set('hook__message_get'):
-                            same_user = messages[-1].get('username') == BASE_DATA.get('username')
-                            threading.Thread(target=hook__message_get,args=(messages,same_user)).start()
-
-                        MESSAGES += messages
-                        self.print_messages(MESSAGES)
-            # else:
-                # dbg(URL,CHAT_ID)
-
-            time.sleep(0.5)
+            time.sleep(2)
 
 class UIGenerator:
     """
