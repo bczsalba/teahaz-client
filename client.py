@@ -2026,6 +2026,7 @@ class TeahazHelper:
         for i,m in enumerate(messagelist):
             if not isinstance(m,dict):
                 dbg('message is not a dict!',type(m),m)
+                continue
 
             # TODO: messages not matching offset should be ignored too
             if not dont_ignore and y < 0:
@@ -2171,7 +2172,6 @@ class TeahazHelper:
 
                 if not is_set('messages_get_return',self.__dict__):
                     get_time = SESSION.last_get
-                    dbg(get_time,time.time())
                     SESSION.last_get = time.time()
                     data = BASE_DATA
                     data['time'] = str(get_time)
