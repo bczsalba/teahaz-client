@@ -10,14 +10,6 @@
 
 - [ ] fix up completer
 
-- rewrite entirety of messaging
-    * the current system is a bloated mess, with multiple confused functions for the same roles
-    * [ ] put everything under TeahazHelper
-    * [ ] get function for list of messages
-    * [ ] get function for file binaries
-    * [ ] post function for messages & files
-    * [ ] callback for send_message to add the new message to MESSAGES
-
 - handle errors:
     * these should get you stuck in an infinite loop of retry
     * [ ] Connection Refused

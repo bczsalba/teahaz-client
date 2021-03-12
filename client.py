@@ -1812,6 +1812,7 @@ class ThreadWithReturnValue(threading.Thread):
 class TeahazHelper:
     def __init__(self):
         self.prev_get         = None
+        self.skip_get         = False
 
         self.offset           = 0
         self.selected_message = None
@@ -2026,6 +2027,7 @@ class TeahazHelper:
         for i,m in enumerate(messagelist):
             if not isinstance(m,dict):
                 dbg('message is not a dict!',type(m),m)
+                continue
 
             # TODO: messages not matching offset should be ignored too
             if not dont_ignore and y < 0:
@@ -2152,6 +2154,7 @@ class TeahazHelper:
             print(completer)
 
     def add_to_messages(self,messages):
+        # avoid error
         if not isinstance(messages,list):
             dbg('messages is not a list!',type(messages),messages)
             return
@@ -2182,19 +2185,22 @@ class TeahazHelper:
         global WIDTH,HEIGHT,MESSAGES
 
         while KEEP_GOING:
-            if not PIPE_OUTPUT and not self.offset \
-                and URL and CHAT_ID and len(SESSION.cookies):
+            if self.skip_get:
+                self.skip_get = False
+
+            elif not PIPE_OUTPUT and not self.offset \
+                and URL and CHAT_ID and len(SESSION.cookies): 
 
                 WIDTH,HEIGHT = os.get_terminal_size()
 
                 if not is_set('messages_get_return',self.__dict__):
                     get_time = SESSION.last_get
-                    dbg(get_time,time.time())
                     SESSION.last_get = time.time()
                     data = BASE_DATA
                     data['time'] = str(get_time)
                     self.handle_operation(method='get',output='messages_get_return',url=URL+'/api/v0/message/'+CHAT_ID,headers=data,
                             callback= lambda resp: self.add_to_messages(json.loads(resp.text)))
+
                 else:
                     if not isinstance(self.messages_get_return,requests.Response):
                         dbg('get return is not a Response!',type(self.messages_get_return),self.messages_get_return)
@@ -2204,7 +2210,7 @@ class TeahazHelper:
                     except ValueError as e:
                         dbg('Couln\'t jsonize messages:',str(e))
 
-                    if not messages == []:
+                    if len(messages):
                         self.add_to_messages(messages)
                     
                     del self.messages_get_return
