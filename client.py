@@ -912,7 +912,7 @@ def handle_action(action) -> None:
             th.print_messages(reprint=True)
 
         elif "conv_start" in action:
-            th.offset = len(MESSAGES)-25
+            th.offset = len(MESSAGES)-1
             th.print_messages(reprint=True)
 
         elif "conv_end" in action:
