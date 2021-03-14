@@ -1,3 +1,22 @@
+# PLANZ
+- [ ] file manager
+    [ ] a modified InputDialog, containing a field and a completer
+    [ ] has keybind support through completer
+    [ ] does magiks
+
+- [ ] loading screen object
+    - methods:
+        + set_value
+        + set_title
+        + show
+            * interrupts input
+        + destroy
+            * resumes input
+    - goals
+        + different functions can write data to it
+        + callbacks are meant to destroy once loading is done
+        + can be reimplemented easily
+
 # BUGS
 - [ ] add_new button in themes is hidden & doesn't work
 - [ ] only the first element in multipage containers resizes
@@ -9,6 +28,7 @@
     + [ ] it launches a thread, then is killed by the caller
 
 - [ ] fix up completer
+    - [ ] cant handle less than `self.rows` number of options
 
 - handle errors:
     * these should get you stuck in an infinite loop of retry
