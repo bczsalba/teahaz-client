@@ -224,7 +224,7 @@
             "message_select_reset": "ESC",
             "message_select_previous": "k",
             "message_select_next": "j",
-            "message_select_submit": "RETURN"
+            "message_select_submit": "ENTER"
         }
     }
 }

@@ -2717,6 +2717,7 @@ class InputFieldCompleter(Container):
         current_length = real_length(self.field.value)
         if not opener \
             or not current_length \
+            or key == " " or " " in word \
             or current_length == 1 and key == "BACKSPACE":
 
             self.reset(key,**kwargs)
@@ -2724,7 +2725,7 @@ class InputFieldCompleter(Container):
                 
         if not self.handle_bindings(key) == "handled":
             # complete
-            if key == "TAB":
+            if key == "TAB" or key == "ENTER":
                 selected = self.selectables[self.selected_index][0]
                 newword = selected.real_label
                 self.do_completion(newword,word_start,word_end)
@@ -2767,6 +2768,12 @@ class InputFieldCompleter(Container):
         # sort options
         ratios.sort(reverse=True,key=lambda e: e[1])
         output = [e for e,_ in ratios]
+
+        # # potential no-fuzz selection
+        # output = []
+        # for e in options:
+            # if target in e:
+                # output.append(e)
 
         # assign options to labels in rows
         for i,row in enumerate(reversed(self.rows)):
