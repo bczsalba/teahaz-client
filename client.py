@@ -2052,6 +2052,10 @@ class TeahazHelper:
             # set up values
             username     = m.get('username')
             nickname     = m.get('nickname')
+            nickname     = Regex.unic.sub('',nickname)
+            if not real_length(nickname):
+                nickname = "< invalid nickname >"
+
             m_time       = m.get('time')
             current_time = int(m_time)
             sendtime     = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(m_time))
