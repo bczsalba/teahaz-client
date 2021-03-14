@@ -1,4 +1,6 @@
 # PLANZ
+- [ ] fix conv header
+
 - [ ] file manager
     [ ] a modified InputDialog, containing a field and a completer
     [ ] has keybind support through completer
@@ -192,3 +194,5 @@
 - [x] strip messages
     + [x] send
     + [x] receive
+
+- [x] fix multiline

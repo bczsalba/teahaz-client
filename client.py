@@ -419,17 +419,14 @@ def get_infield_pos(update_modelabel=True) -> list:
     if 'infield' in globals().keys() and len(infield.value):
         offset = (len(infield.value)+1)//WIDTH
 
-        if not infield.line_offset == offset and offset:
+        if not infield.line_offset == offset:
             infield.wipe()
 
-            # print top bar
-            if not CONV_HEADER.hidden:
-                print(CONV_HEADER)
-
             if update_modelabel:
-                MODE_LABEL.wipe(yoffset=1)
+                MODE_LABEL.wipe()
                 print(MODE_LABEL)
 
+            th.print_messages(reprint=True,offset=offset)
 
         infield.line_offset = offset
 
@@ -2007,7 +2004,7 @@ class TeahazHelper:
         infield.clear_value()
         self.print_messages(extras=[temp])
 
-    def print_messages(self,messages=[],extras=[],select=None,reprint=False,dont_ignore=False,do_print=True):
+    def print_messages(self,messages=[],extras=[],offset=0,select=None,reprint=False,dont_ignore=False,do_print=True):
         # get positions
         leftx = infield.pos[0]
 
@@ -2153,6 +2150,9 @@ class TeahazHelper:
 
         if not do_print:
             return
+
+        for _ in range(offset):
+            buff += '\n'
 
         # clear affected rows
         endpoint = (HEIGHT if self.offset else starty+(len(completer.rows) if completer._has_printed else 0))
