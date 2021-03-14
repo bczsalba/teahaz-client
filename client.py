@@ -2485,8 +2485,6 @@ class UIGenerator:
         print(d)
 
         return d
-
-
         
     # unified way to create error dialog
     def create_error_dialog(self,text,button="ignore",handler=None):
@@ -2576,12 +2574,6 @@ class UIGenerator:
             add_to_trace([{'dict_index': dict_index},c])
         print(c)
         return c
-
-    def create_completer_tester(self):
-        print('\033[2J')
-
-        field = InputField()
-        completer = InputFieldCompleter()
 
 class ModeLabel(Label):
     """
