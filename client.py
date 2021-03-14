@@ -373,19 +373,17 @@ def split_by_delimiters(s,return_indices=False) -> list:
     # create list separated by non-shitespace
     for i,c in enumerate(s):
         if c in DELIMITERS: 
-            if return_indices:
-                indices.append(i)
-
+            indices.append(i)
             wordlist.append(buff)
             buff = ""
         else:
             buff += c
 
     wordlist.append(buff)
+    if is_set('i',locals()):
+        indices.append(i)
 
     if return_indices:
-        #if is_set('i',locals()):
-        #    indices.append(i)
         return wordlist,indices
     else:
         return wordlist
@@ -978,11 +976,11 @@ def handle_action(action) -> None:
 
             # go to previous 
             elif action.endswith("_prev"):
+                dbg(i,index)
                 if i == 0:
                     return
 
-                word = words[i-1]
-                cursor = indices[i-1]-len(word)
+                cursor = indices[i-1]-len(words[i-1])
 
 
         # switch mode, print
