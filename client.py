@@ -2657,7 +2657,6 @@ class InputFieldCompleter(Container):
         self._is_enabled = lambda: True
         self._show_icons = lambda: False
 
-
     # complete `word` into field.value[start:end]
     def do_completion(self,word,start,end):
         # set up sides of string
@@ -2674,7 +2673,6 @@ class InputFieldCompleter(Container):
         if self.trigger:
             self.field.cursor += real_length(self.trigger)
         self.wipe()
-
     
     def reset(self,key,**kwargs):
         self.field.og_send(key,**kwargs)
@@ -2693,8 +2691,6 @@ class InputFieldCompleter(Container):
                 buff += f'\033[{y+i};{x}H'+'\033[K'
 
         print(buff)
-
-
 
     # intercept field.send
     def field_send(self,key,**kwargs):
@@ -2753,7 +2749,6 @@ class InputFieldCompleter(Container):
 
         print(self)
         self._has_printed = True
-
 
     # get viable options
     def eval_options(self,start,end):
