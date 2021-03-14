@@ -510,9 +510,9 @@ class Container:
             return
 
         if not group in self.styles.keys():
-            self.styles[group] = []
+            self.styles[group] = {}
 
-        self.styles[group].append([key,value])
+        self.styles[group][key] = value
 
         for e in self.elements:
             if type(e) == group:
