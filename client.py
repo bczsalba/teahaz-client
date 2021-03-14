@@ -386,7 +386,7 @@ def split_by_delimiters(s,return_indices=False) -> list:
             indices.append(i)
 
         # for i,w in enumerate(wordlist):
-            # if w == ' ':
+            # if w == '':
                 # wordlist.remove(w)
                 # indices.pop(i)
 
@@ -820,6 +820,17 @@ def handle_action(action) -> None:
         th.print_messages(reprint=True)
         switch_mode('ESCAPE')
 
+    elif action == "completer_complete":
+        word_start,word_end = get_indices('w')
+        completer.eval_options(word_start,word_end)
+        selected = completer.selectables[completer.selected_index][0]
+        newword = selected.real_label
+
+        word_start -= real_length(completer.trigger)
+        word_end   += real_length(completer.trigger)
+
+        completer.do_completion(newword,word_start,word_end)
+        completer.field.print()
 
 
 
@@ -2606,14 +2617,15 @@ class ModeLabel(Label):
             print(f"\033[{y+yoffset};{x}H"+real_length(super().__repr__())*' ')
 
 class InputFieldCompleter(Container):
-    def __init__(self,options,icon_callback=None,completion_callback=None,field=None,height=5,trigger=None,**kwargs):
+    def __init__(self,options,threshold=0,icon_callback=None,completion_callback=None,field=None,height=5,trigger=None,**kwargs):
         super().__init__(**kwargs)
         self._is_selectable = False
 
         # set up base variables
         self.rows = []
-        self.options = options
-        self.trigger = trigger
+        self.options   = options
+        self.trigger   = trigger
+        self.threshold = threshold
         
         # get or create field, set position
         if field:
@@ -2621,6 +2633,7 @@ class InputFieldCompleter(Container):
         else:
             self.field = InputDialogField()
         self.target_pos = self.field.pos
+        self.prev_output = None
 
         # create rows
         for i in range(height):
@@ -2642,6 +2655,7 @@ class InputFieldCompleter(Container):
             options = self.options
 
         # self.width = max(len(l)+5 for l in options.keys())
+        self.wipe = self.wipe_all_containing
         self.match_highlight_style = lambda char: bold(underline(char))
         self.set_style(Prompt,'highlight',lambda item: bold('> ')+item)
 
@@ -2654,6 +2668,8 @@ class InputFieldCompleter(Container):
         # set flags
         self._has_printed = False
         self._has_padded_messages = False
+
+        # callable flags for custom logic
         self._is_enabled = lambda: True
         self._show_icons = lambda: False
 
@@ -2667,7 +2683,9 @@ class InputFieldCompleter(Container):
         # set field variables
         # this doesn't use the standard .set_value method as it would recurse
         self.field.value = left+word+right
-        self.field.cursor = end + real_length(word)-real_length(current)-1
+        cursor = end + real_length(word)-real_length(current)-1
+        self.field.cursor = min(cursor,len(self.field.value)-1)
+
 
         # adjust cursor by trigger length
         if self.trigger:
@@ -2676,6 +2694,10 @@ class InputFieldCompleter(Container):
     
     def reset(self,key,**kwargs):
         self.field.og_send(key,**kwargs)
+        for e in self.rows:
+            e.label = ''
+            # if e in self.elements:
+                # self.elements.remove(e)
 
         if self._has_printed:
             self.wipe()
@@ -2703,6 +2725,7 @@ class InputFieldCompleter(Container):
         # make sure it doesnt include the triggerlength
         word_start -= real_length(self.trigger)
         word_end   += real_length(self.trigger)
+        word_start = max(0,word_start)
 
         # get word
         word = self.field.value[word_start:word_end]
@@ -2715,13 +2738,16 @@ class InputFieldCompleter(Container):
 
         # return if any conditions are met
         current_length = real_length(self.field.value)
+
         if not opener \
             or not current_length \
             or key == " " or " " in word \
+            or opener and key == self.trigger \
+            or not real_length(word) > self.threshold \
             or current_length == 1 and key == "BACKSPACE":
-
-            self.reset(key,**kwargs)
-            return
+            
+                self.reset(key,**kwargs)
+                return
                 
         if not self.handle_bindings(key) == "handled":
             # complete
@@ -2775,9 +2801,13 @@ class InputFieldCompleter(Container):
             # if target in e:
                 # output.append(e)
 
+        output = output[:len(self.rows)]
+
         # assign options to labels in rows
         for i,row in enumerate(reversed(self.rows)):
             if len(output) > i:
+                # prev_length = real_length(row.label)
+
                 # get icon character
                 value = output[i]
                 if self.icon_callback and self._show_icons():
@@ -2804,23 +2834,39 @@ class InputFieldCompleter(Container):
 
                 if not row in self.elements:
                     self.add_elements(row)
+
+                # fun = self.styles[Prompt]['highlight']
+                # style = fun('')
+                # if real_length(style+row.label) < prev_length:
+                    # x,y = self.pos
+                    # x += 4
+                    # y += 2
+
+                    # sys.stdout.write(f'\033[{y+i};{x}H\033[K')
+                    # sys.stdout.write((prev_length)*' ')
+                    # sys.stdout.flush()
             else:
                 row.label = ''
                 if row in self.elements:
                     self.elements.remove(row)
 
+
         # update width
         self.width = max(self.width,max([real_length(e.label) for e in self.rows]))
 
         # update position
-        x,y = self.target_pos
-        x -= 3
-        y -= len(self.elements)+2
+        ox,oy = self.target_pos
+        x = ox-3
+        y = min(oy-len(self.elements)-2,oy)
+        
         if not [x,y] == self.pos:
             self.move([x,y])
 
-        if not self._has_printed:
+        if not self._has_printed or not len(self.prev_output) == len(output):
             self.selected_index = len(self.elements)-1
+
+        self.prev_output = output
+
             
     def handle_bindings(self,key):
         return
@@ -3014,7 +3060,7 @@ if __name__ == "__main__":
     infield.visual_color = lambda text: parse_color(THEME['field_highlight'],text)
     switch_mode("ESCAPE")
 
-    completer = InputFieldCompleter(options=EMOJI_KEYS,field=infield,trigger=':',icon_callback=parse_emoji)
+    completer = InputFieldCompleter(options=EMOJI_KEYS,threshold=1,field=infield,trigger=':',icon_callback=parse_emoji)
     completer._is_enabled = lambda: COMPLETER_ENABLED
     completer._show_icons = lambda: COMPLETER_ICONS
 

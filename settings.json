@@ -176,7 +176,8 @@
             "ui__title4": "clipboard",
             "paste": "p",
             "copy_line": "yy",
-            "delete_line": "dd"
+            "delete_line": "dd",
+            "completer_complete": "dontdoCTRL_N"
         },
         "INSERT": {
             "mode_escape": "ESC",
