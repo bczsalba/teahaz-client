@@ -2159,24 +2159,24 @@ class TeahazHelper:
             dbg('messages is not a list!',type(messages),messages)
             return
 
+        # only add the new ones
+        added = []
         for m in messages:
             new = m.get('messageId')
-            if new in MESSAGE_IDS:
-                messages.remove(m)
-                dbg('duplicate removed')
-            else:
-                MESSAGE_IDS.append(new)
+            if not new in [M['messageId'] for M in MESSAGES]:
+                added.append(m)
 
         # return if non left
-        if not len(messages):
+        if not len(added):
             return
-
-        globals()['MESSAGES'] += messages
-        self.skip_get = True
-
+        
+        # print
+        globals()['MESSAGES'] += added
         th.print_messages(MESSAGES)
-        same_user = (messages[-1].get('username') == BASE_DATA.get('username'))
-
+        self.skip_get = True
+        
+        # call hook
+        same_user = (added[-1].get('username') == BASE_DATA.get('username'))
         if is_set('hook__message_get'):
             hook__message_get(messages,same_user)
 
