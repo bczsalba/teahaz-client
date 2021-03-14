@@ -368,20 +368,31 @@ def split_by_delimiters(s,return_indices=False) -> list:
     # set up variables
     wordlist = []
     indices = []
-    buff = ""
 
-    # create list separated by non-shitespace
-    for i,c in enumerate(s):
-        if c in DELIMITERS: 
+    if len(s):
+        buff = ""
+
+        # create list separated by non-shitespace
+        for i,c in enumerate(s):
+            if c in DELIMITERS: 
+                indices.append(i)
+                wordlist.append(buff)
+                buff = ""
+            else:
+                buff += c
+
+        wordlist.append(buff)
+        if is_set('i',locals()):
             indices.append(i)
-            wordlist.append(buff)
-            buff = ""
-        else:
-            buff += c
 
-    wordlist.append(buff)
-    if is_set('i',locals()):
-        indices.append(i)
+        # for i,w in enumerate(wordlist):
+            # if w == ' ':
+                # wordlist.remove(w)
+                # indices.pop(i)
+
+    else:
+        wordlist.append('')
+        indices.append(0)
 
     if return_indices:
         return wordlist,indices
