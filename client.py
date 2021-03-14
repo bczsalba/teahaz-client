@@ -2990,7 +2990,8 @@ if __name__ == "__main__":
     MODE_LABEL.set_style('value',lambda item: color(item,THEME['mode_indicator']))
 
     # set up top bar to indicate current conv
-    CONV_HEADER = Container(width=int(WIDTH*0.75),dynamic_size=False)
+    # CONV_HEADER = Container(width=int(WIDTH*0.75),dynamic_size=False)
+    CONV_HEADER = Container(width=int(WIDTH*0.4))
     CONV_HEADER.center(axes='x')
     CONV_HEADER._repr_pre = CONV_HEADER.wipe_all_containing
     CONV_HEADER_LABEL = Label(justify='center')
