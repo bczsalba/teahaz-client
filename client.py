@@ -2180,7 +2180,6 @@ class TeahazHelper:
         if is_set('hook__message_get'):
             hook__message_get(messages,same_user)
 
-
     def get_loop(self):
         global WIDTH,HEIGHT,MESSAGES
 
@@ -2201,14 +2200,15 @@ class TeahazHelper:
                     self.handle_operation(method='get',output='messages_get_return',url=URL+'/api/v0/message/'+CHAT_ID,headers=data,
                             callback= lambda resp: self.add_to_messages(json.loads(resp.text)))
 
-                else:
+                elif not self.messages_get_return == 'incomplete':
                     if not isinstance(self.messages_get_return,requests.Response):
                         dbg('get return is not a Response!',type(self.messages_get_return),self.messages_get_return)
+                        continue
 
                     try:
                         messages = json.loads(self.messages_get_return.text)
                     except ValueError as e:
-                        dbg('Couln\'t jsonize messages:',str(e))
+                        dbg('Couldn\'t jsonize messages:',str(e))
 
                     if len(messages):
                         self.add_to_messages(messages)
