@@ -426,8 +426,7 @@ def get_infield_pos(update_modelabel=True) -> list:
                 MODE_LABEL.wipe()
                 print(MODE_LABEL)
 
-            th.print_messages(reprint=True,offset=offset)
-
+            th.print_messages(reprint=True,offset=offset+1)
         infield.line_offset = offset
 
     else:
