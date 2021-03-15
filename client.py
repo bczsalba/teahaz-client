@@ -2617,37 +2617,15 @@ class UIGenerator:
         return c
 
     def create_filepicker(self,dict_index=0):
-        # this is dumb, look at notes.md :)
-        width = max(40,int(WIDTH*(2/3)))
+        set_pipe(handle_menu,{'obj': filemanager})
+        add_to_trace([{},filemanager])
 
-        c = Container(width=width)
-        c._handle_long_element = lambda *args,**kwargs: None
-        up = Prompt(label='..')
-        c.add_elements(up)
-        dicts = [c]
+        filemanager.center()
+        filemanager.select()
+        print(filemanager)
+        return filemanager
 
-        cont = dicts[-1]
-        for f in os.listdir(self.path):
-            if dicts[-1].height >= HEIGHT-5:
-                dicts.append(Container(width=width))
-                dicts[-1]._handle_long_element = lambda *args,**kwargs: None
-
-            p = Prompt(label=f)
-            dicts[-1].add_elements(p)
-
-        set_pipe(handle_menu,{'obj': dicts, 'page': dict_index})
-        if dict_index == 0:
-            add_to_trace([{'dict_index': dict_index},c])
-        
-        for d in dicts:
-            for i,c in enumerate(THEME['corners'].values()):
-                d.set_corner(i,c)
-            d.center()
-
-        c = dicts[0]
-        print(c)
-        return c
-        
+           
 
 class ModeLabel(Label):
     """
@@ -2948,18 +2926,109 @@ class FileManager(Container):
         if path:
             if os.path.exists(path):
                 self.path = path
+        else:
+            self.path = PATH
 
         if not hasattr(self,'path'):
             self.path = PATH
 
-        if completer:
-            self.completer = completer
-        else:
-            self.completer = InputFieldCompleter(height=8,options=lambda: os.listdir(self.path))
-
         self.height = 13
-        self.width = 40
-        self.add_elements([self.completer])
+        self.rows = []
+        self.up_dir = Prompt(label='..',value='')
+        self.up_dir.is_dir = True
+        self.add_elements(Label())
+        self.add_elements([self.up_dir])
+        self.add_elements(Label())
+
+        for _ in range(self.height-2):
+            row = Prompt(value='',label='')
+            self.rows.append(row)
+            self.add_elements(row)
+        self.add_elements(Label())
+
+        self.width  = 40
+        self.query  = None
+        self.field = InputDialogField(pos=self.pos)
+        self.field.og_send = self.field.send
+        self.field.send = self.field_send
+
+        self._repr_pre = self.get_rows
+        # self.center()
+
+    def get_rows(self):
+        files = os.listdir(self.path)
+        files.sort(key=lambda f: f.split('.')[-1])
+        files.sort(key=lambda f: os.path.isfile(os.path.join(self.path,f)))
+        # for f in files:
+            # dbg(f,os.path.join(self.path,f),os.path.isfile(os.path.join(self.path,f)))
+
+        for i,row in enumerate(self.rows):
+            if i < len(files):
+                row.label = files[i]
+                row.real_label = os.path.join(self.path,row.label)
+                row._is_selectable = True
+
+                row.is_dir = os.path.isdir(row.real_label)
+                if row.is_dir:
+                    row.set_style('label',lambda item: color(item,THEME['value']))
+            else:
+                row.label = ''
+                row.real_label = ''
+                row._is_selectable = False
+
+        self.selected_index = min(self.selected_index,len(files))
+        if self._is_centered:
+            self.center('both')
+
+        for i,c in enumerate(THEME['corners'].values()):
+            self.set_corner(i,c)
+
+    def field_send(self,key,**kwargs):
+        if key in ["j","ARROW_DOWN"]:
+            self.selected_index = min(self.selected_index+1,len(self.selectables)-1)
+
+        elif key in ["k","ARROW_UP"]:
+            self.selected_index = max(self.selected_index-1,0)
+
+        elif key == "SIGTERM":
+            handle_action('quit')
+
+        elif key == "ENTER":
+            row = self.selected[0]
+            if row.is_dir:
+                self.cd(row.real_label)
+            else:
+                dbg('not dir')
+
+        elif key == "-":
+            self.cd('..')
+
+        self.select()
+        print(self)
+
+    def cd(self,path):
+        elements = self.path.split('/')
+        if path == '..':
+            elements = elements[:-1]
+        else:
+            elements = path.split('/')
+        
+        if not len(elements) or elements == ['']:
+            return
+        else:
+            self.path = '/'.join(elements)
+
+        self.wipe()
+        print(self)
+   
+    def _handle_long_element(self,e):
+        if not hasattr(e,'label'):
+            return
+
+        if real_length(e.value_style(e.label)) > self.width-3:
+            e.label = e.label[:self.width-9]+'...'
+            
+
 
 
 
@@ -3120,6 +3189,8 @@ if __name__ == "__main__":
     completer = InputFieldCompleter(options=EMOJI_KEYS,threshold=1,field=infield,trigger=':',icon_callback=parse_emoji)
     completer._is_enabled = lambda: COMPLETER_ENABLED
     completer._show_icons = lambda: COMPLETER_ICONS
+
+    filemanager = FileManager()
 
 
     # filemanager = InputDialog(label_value='file manager',dialog_type='field')
