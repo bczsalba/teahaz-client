@@ -23,10 +23,6 @@
 
 # FEATURES 
 ## upcoming checklist
-- [ ] add loading screens to server functions
-    + [ ] global object gets created, whos value can be set by functions
-    + [ ] it launches a thread, then is killed by the caller
-
 - [ ] fix up completer
     - [ ] cant handle less than `self.rows` number of options
 

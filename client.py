@@ -11,6 +11,7 @@ import getch
 import base64
 import pickle
 import binascii
+import datetime
 import requests
 import importlib
 import pytermgui
@@ -1414,6 +1415,10 @@ def handle_menu_actions(action,current_file=None) -> int:
 
         pytermgui.set_attribute_for_id('colorschemes-button_add','handler',
                 lambda prev,self: (add_new_colorscheme('test'),handle_action('reprint')))
+
+    elif menu == "files":
+        ui.create_filepicker()
+        return
     
     elif menu == "login/register":
         pytermgui.set_attribute_for_id('login_type-prompt','handler',lambda prev,self: {
@@ -2252,6 +2257,9 @@ class UIGenerator:
     handle_menu_actions.
     """
 
+    def __init__(self):
+        self.path = None
+
     # wipe most recent ui element
     def wipe(self):
         obj = UI_TRACE[-1][2]
@@ -2600,6 +2608,39 @@ class UIGenerator:
         print(c)
         return c
 
+    def create_filepicker(self,dict_index=0):
+        # this is dumb, look at notes.md :)
+        width = max(40,int(WIDTH*(2/3)))
+
+        c = Container(width=width)
+        c._handle_long_element = lambda *args,**kwargs: None
+        up = Prompt(label='..')
+        c.add_elements(up)
+        dicts = [c]
+
+        cont = dicts[-1]
+        for f in os.listdir(self.path):
+            if dicts[-1].height >= HEIGHT-5:
+                dicts.append(Container(width=width))
+                dicts[-1]._handle_long_element = lambda *args,**kwargs: None
+
+            p = Prompt(label=f)
+            dicts[-1].add_elements(p)
+
+        set_pipe(handle_menu,{'obj': dicts, 'page': dict_index})
+        if dict_index == 0:
+            add_to_trace([{'dict_index': dict_index},c])
+        
+        for d in dicts:
+            for i,c in enumerate(THEME['corners'].values()):
+                d.set_corner(i,c)
+            d.center()
+
+        c = dicts[0]
+        print(c)
+        return c
+        
+
 class ModeLabel(Label):
     """
     Simple Label extension providing a wipe()
@@ -2944,6 +2985,7 @@ MAX_MESSAGE_WIDTH = lambda: int(WIDTH*4/10)
 # menus for handle_menu_actions
 MENUS = [
     "menu_server_picker",
+    "menu_files",
     # "menu_address_picker",
     # "menu_server_new",
     # "menu_serverregister",
@@ -3000,6 +3042,7 @@ if __name__ == "__main__":
     if DO_DEBUG:
         open(LOGFILE,'w').close()
 
+    dbg(datetime.datetime.now())
     dbg('starting teahaz at size',str(WIDTH),str(HEIGHT))
 
     pytermgui.set_debugger(dbg)
@@ -3070,6 +3113,11 @@ if __name__ == "__main__":
     completer._show_icons = lambda: COMPLETER_ICONS
 
 
+    # filemanager = InputDialog(label_value='file manager',dialog_type='field')
+    # filemanager.completer = InputFieldCompleter(options=os.listdir,field=filemanager.field)
+    # filemanager.center()
+
+
     ui = UIGenerator()
     th = TeahazHelper()
 
@@ -3110,5 +3158,7 @@ if __name__ == "__main__":
     get_loop = threading.Thread(target=th.get_loop,name='get_loop')
     get_loop.start()
 
+    
     # main input loop
     getch_loop()        
+
