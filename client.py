@@ -2058,11 +2058,15 @@ class TeahazHelper:
 
             # set up values
             username     = m.get('username')
+
             nickname     = m.get('nickname')
             nickname     = Regex.unic.sub('',nickname)
             if not real_length(nickname):
                 nickname = "< invalid nickname >"
             nickname = parse_emoji(nickname)
+            length = int(WIDTH*MAX_NICK_LENGTH_RATIO)
+            if real_length(nickname) > length:
+                nickname = nickname[:length].rstrip()+'...'
 
             m_time       = m.get('time')
             current_time = int(m_time)
