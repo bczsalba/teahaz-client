@@ -2769,8 +2769,9 @@ class InputFieldCompleter(Container):
         word_start,word_end = get_indices('w')
 
         # make sure it doesnt include the triggerlength
-        word_start -= real_length(self.trigger)
-        word_end   += real_length(self.trigger)
+        if not self.trigger == None:
+            word_start -= real_length(self.trigger)
+            word_end   += real_length(self.trigger)
         word_start = max(0,word_start)
 
         # get word
