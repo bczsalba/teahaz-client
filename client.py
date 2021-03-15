@@ -2079,6 +2079,9 @@ class TeahazHelper:
                         continue
 
                 decoded = decoded.strip()
+                if real_length(decoded) > 2000:
+                    continue
+
                 emojid = parse_emoji(decoded)
                 if PARSE_MARKDOWN:
                     inline = parse_inline_codes(emojid)
