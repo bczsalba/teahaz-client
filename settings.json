@@ -79,6 +79,7 @@
     ],
     "PARSE_MARKDOWN": true,
     "MESSAGE_SEPARATE_TIME": "300",
+    "MAXIMUM_MESSAGE_LENGTH": 2000,
     "MAX_NICK_LENGTH_RATIO": 0.40,
     "FILETYPE_DEFAULTS": {
         "image": "kitty +kitten icat {path} --scale_up",

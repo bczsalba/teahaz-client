@@ -2079,7 +2079,7 @@ class TeahazHelper:
                         continue
 
                 decoded = decoded.strip()
-                if real_length(decoded) > 2000:
+                if real_length(decoded) > MAXIMUM_MESSAGE_LENGTH:
                     continue
 
                 emojid = parse_emoji(decoded)
