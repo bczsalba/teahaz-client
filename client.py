@@ -2078,8 +2078,8 @@ class TeahazHelper:
                     except Exception as e:
                         continue
 
-                decoded = decoded.strip()
-                if real_length(decoded) > MAXIMUM_MESSAGE_LENGTH:
+                decoded = decoded.strip().replace('\t','')
+                if real_length(decoded) > int(MAXIMUM_MESSAGE_LENGTH):
                     continue
 
                 emojid = parse_emoji(decoded)
