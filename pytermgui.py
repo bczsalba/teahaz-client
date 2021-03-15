@@ -564,7 +564,7 @@ class Container:
             lines = repr(e).split('\n')
 
             # remove lines whos line_break returned empty
-            if lines == [""]:
+            if lines == [""] and not e.value == '':
                 self.elements.remove(e)
                 for o in self.selectables:
                     if o[0] == e:

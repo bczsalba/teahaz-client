@@ -1287,6 +1287,9 @@ def handle_menu(key,obj,attributes={},page=0) -> None:
             #print(obj)
             return
 
+    elif hasattr(obj,'field'):
+        obj.field.send(key)
+        return
 
     if key == "ENTER":
         if obj.selected == None:
@@ -2227,7 +2230,7 @@ class TeahazHelper:
                 if not is_set('messages_get_return',self.__dict__):
                     get_time = SESSION.last_get
                     SESSION.last_get = time.time()
-                    data = BASE_DATA
+                    data = BASE_DATA.copy()
                     data['time'] = str(get_time)
                     self.handle_operation(method='get',output='messages_get_return',url=URL+'/api/v0/message/'+CHAT_ID,headers=data,
                             callback= lambda resp: self.add_to_messages(json.loads(resp.text)))
@@ -2406,6 +2409,9 @@ class UIGenerator:
 
         set_pipe(handle_menu,{'obj': [d]})
         add_to_trace([{},d])
+
+        for i,c in enumerate(THEME['corners'].values()):
+            d.set_corner(i,c)
 
         d.center()
         d.select()
