@@ -1893,6 +1893,8 @@ class TeahazHelper:
         if is_set('CONV_HEADER'):
             ogvalue = CONV_HEADER_LABEL.value
             CONV_HEADER_LABEL.set_value(f'{url}: {chatroom["chatroom_name"]}')
+            CONV_HEADER.width = max(CONV_HEADER.width,CONV_HEADER_LABEL.width+3)
+            CONV_HEADER.center()
 
         globals()['CHAT_ID'] = chatroom["chatroom_id"]
 
