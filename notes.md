@@ -1,8 +1,23 @@
 # PLANZ
-- [ ] file manager
-    [ ] a modified InputDialog, containing a field and a completer
-    [ ] has keybind support through completer
-    [ ] does magiks
+```
+> FileManager(Container)
+
+    """
+    Container derivative that would show and let users interact
+    with files.
+    """
+
+    - main methods (other than Container's):
+        * [x] cd                 : change directory
+        * [ ] search(term)       : search for `term` in files
+        * [ ] open(opt: index)   : open selected file with the global filetype handlers
+        * [ ] execute(cmd,regex) : execute given command in bash on the file
+
+    - goals
+        [x] have keybind support through field
+        [ ] highlight files and directories separately
+        [ ] do magiks :exclamation:
+```
 
 - [ ] loading screen object
     - methods:
@@ -32,20 +47,6 @@
     * [ ] bad url
     * [ ] nodename nor service.. no internet
 
-- FileManager(Container)
-
-    """
-    Container derivative that would show and let users interact
-    with files.
-    """
-
-    - main methods (other than Container's):
-        * cd : change directory
-        * search(term) : search for `term` in files
-        * open(opt: index) : open selected file with the global 
-                             filetype handlers
-        * execute(cmd,*maybe regex to match files*) : execute given command
-                             in bash on the file
 
 - windows compatibility:
     * [x] move os specific imports to their proper place
