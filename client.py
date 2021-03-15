@@ -1840,13 +1840,7 @@ class TeahazHelper:
         
         # TODO
         self.extras           = []
-
-    def remove_sent_message(self,clientid):
-        for m in self.extras:
-            if m.get('clientid') == clientid:
-                dbg('removed')
-                self.extras.remove(m)
-        
+ 
     def handle_operation(self,method,output=None,callback=None,*args,**kwargs):
         def _do_operation(*args,**kwargs):
             if method == "post":
