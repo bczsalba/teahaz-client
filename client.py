@@ -2911,18 +2911,18 @@ class InputFieldCompleter(Container):
         return
 
 class FileManager(Container):
+
     """
     Container derivative that would show and let users interact
     with files.
 
     - main methods (other than Container's):
-        * cd : change directory
-        * search(term) : search for `term` in files
-        * open(opt: index) : open selected file with the global 
-                             filetype handlers
-        * execute(cmd,*maybe regex to match files*) : execute given command
-                             in bash on the file
+        * cd                 : change directory
+        * search(term)       : search for `term` in files
+        * execute(cmd)       : execute given command in bash on the file
+        * open(opt: index)   : open selected file with the global filetype handlers
     """
+
     def __init__(self,rows=10,path=None,completer=None,title='pick a file',filetype_highlight=True,**kwargs):
         super().__init__(**kwargs)
         if path:
@@ -2935,8 +2935,10 @@ class FileManager(Container):
             self.path = PATH
 
         # base variables
-        self.rows = []
-        self.pattern  = None
+        self.rows      = []
+        self.pattern   = None
+        self.exec_pid  = None
+        self.exec_mime = None
 
         # add elements
         if title:
@@ -2967,6 +2969,7 @@ class FileManager(Container):
 
         # overwrite methods
         self._repr_pre = self.get_rows
+        self.submit = None
 
     def get_rows(self):
         files = os.listdir(self.path)
@@ -3023,6 +3026,7 @@ class FileManager(Container):
                 self.field.is_active = False
                 self.field.set_value('')
                 self.field.prompt = ''
+
                 if key == "ENTER":
                     self.field_send("ENTER")
 
@@ -3045,10 +3049,28 @@ class FileManager(Container):
 
         elif key == "ENTER":
             row = self.selected[0]
+            if self.submit:
+                self.submit(row)
+                return
+
             if row.is_dir:
                 self.cd(row.real_label)
             else:
-                dbg('not dir')
+                self.open(row.real_label)
+                return
+
+        elif key == "ESC":
+            if self.exec_mime:
+                destroyer = FILETYPE_DEFAULTS[self.exec_mime].get('destroy')
+                if destroyer:
+                    self.execute(destroyer)
+                self.exec_mime = None
+                handle_action('reprint')
+
+            else: 
+                handle_menu('ESC',self,send_escape=False)
+
+            return
  
         elif key == "/":
             self.field.prompt = '/'
@@ -3087,6 +3109,43 @@ class FileManager(Container):
 
         self.get_rows()
 
+    def execute(self,cmd):
+        os.system(cmd)
+
+    def open(self,f):
+        cmd = None
+        guess = filetype.guess(f)
+        if guess:
+            mime = guess.mime.split('/')[0]
+        else:
+            mime = 'text'
+            _,extension = os.path.splitext(f)
+            if extension == '.ptg':
+                mime = 'ptg'
+        
+        values = FILETYPE_DEFAULTS.get(mime)
+        if values:
+            cmd = values.get('open')
+        else:
+            dbg('cant open type',mime)
+            return
+
+        if not cmd:
+            dbg('cant open type',mime)
+            return
+
+        else:
+            cmd = cmd.replace('{path}',f)
+
+        self.exec_mime = mime
+        print('\033[2J')
+        print('\033[HOpening '+f+'...')
+        self.execute(cmd)
+
+        
+
+
+
     def _handle_long_element(self,e):
         if not hasattr(e,'label'):
             return
@@ -3094,7 +3153,6 @@ class FileManager(Container):
         if real_length(e.value_style(e.label)) > self.width-3:
             e.label = e.label[:self.width-9]+'...'
             
-
 
 
 
