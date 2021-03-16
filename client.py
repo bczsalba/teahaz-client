@@ -2921,7 +2921,7 @@ class FileManager(Container):
         * execute(cmd,*maybe regex to match files*) : execute given command
                              in bash on the file
     """
-    def __init__(self,rows=10,path=None,completer=None,filetype_highlight=True,**kwargs):
+    def __init__(self,rows=10,path=None,completer=None,title='pick a file',filetype_highlight=True,**kwargs):
         super().__init__(**kwargs)
         if path:
             if os.path.exists(path):
@@ -2934,10 +2934,15 @@ class FileManager(Container):
 
         # base variables
         self.rows = []
-        self.width  = 40
         self.pattern  = None
 
         # add elements
+        if title:
+            title = Label(value=title)
+            title.set_style('value',pytermgui.CONTAINER_TITLE_STYLE)
+            self.add_elements(title)
+            self.title = title
+
         self.up_dir = Prompt(label='..',value='')
         self.up_dir.is_dir = True
         self.add_elements(Label())
