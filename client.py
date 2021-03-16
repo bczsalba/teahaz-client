@@ -2971,6 +2971,13 @@ class FileManager(Container):
         self._repr_pre = self.get_rows
         self.submit = None
 
+    def _handle_long_element(self,e):
+        if not hasattr(e,'label'):
+            return
+
+        if real_length(e.value_style(e.label)) > self.width-3:
+            e.label = e.label[:self.width-9]+'...'
+
     def get_rows(self):
         files = os.listdir(self.path)
         files.sort(key=lambda f: f.split('.')[-1])
@@ -3138,17 +3145,7 @@ class FileManager(Container):
         print('\033[2J')
         print('\033[HOpening '+f+'...')
         self.execute(cmd)
-
         
-
-
-
-    def _handle_long_element(self,e):
-        if not hasattr(e,'label'):
-            return
-
-        if real_length(e.value_style(e.label)) > self.width-3:
-            e.label = e.label[:self.width-9]+'...'
             
 
 
