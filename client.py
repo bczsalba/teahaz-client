@@ -156,6 +156,9 @@ def load_path(path,key=None) -> dict:
 
 ## handle config file
 def handle_config() -> None:
+    if hasattr(CONFIG,'start'):
+        CONFIG.start(sys.modules[__name__])
+
     if not is_set("CONFIG"):
         return
     
@@ -1725,116 +1728,6 @@ def replace(key,action) -> None:
 
 
 # CLASSES # 
-class InputDialog(Container):
-    """
-    Class extending pytermgui.Container to add support 
-    for more field types, a submit() method and to act
-    as a prefab to the common dialog type Containers
-    """
-    def __init__(self,options=None,label_value='',label_justify="center",label_underpad=0,field_value='',dialog_type=None,**kwargs):
-        super().__init__(**kwargs)
-        gui = pytermgui.__dict__
-        
-        # set up label class
-        self.label = Label(value=label_value,justify=label_justify)
-        self.label.set_style('value',gui['CONTAINER_TITLE_STYLE'])
-
-        # set up field depending on options given
-        self.options = options
-        self.dialog_type = dialog_type
-
-        if self.dialog_type == None:
-            if isinstance(options,list):
-                self.dialog_type = "prompt"
-            else:
-                self.dialog_type = "field"
-
-        if self.dialog_type == "prompt":
-            self.field = Prompt(options=options,width=self.width)
-            self.field.set_style('value',gui['CONTAINER_VALUE_STYLE'])
-            self.field.set_style('label',gui['CONTAINER_LABEL_STYLE'])
-        
-        elif self.dialog_type == "field":
-            self.field = InputDialogField(default=field_value,print_at_start=False)
-            self.field.set_style('value',gui['CONTAINER_VALUE_STYLE'])
-            self.field.field_color = '\033['+THEME['value']+'m'
-            self.width = WIDTH
-            borders = self.borders
-            label_underpad += 2
-            self.set_borders(['',borders[1],'',borders[3]])
-
-        # add label
-        self.add_elements(self.label)
-
-        # add paddings under label
-        for _ in range(label_underpad):
-            self.add_elements(Label())
-
-        # add field
-        self.add_elements(self.field)
-        
-        # set xlimit of field
-        self.field.xlimit = self.width-3
-
-    def submit(self):
-        self.value = self.field.submit()
-        return self.value
-
-    def __repr__(self):
-        self.width = max(self.width,self.field.width)
-        #self.get_border()
-        #self.center()
-        #self.wipe()
-
-        return super().__repr__()
-
-class InputDialogField(getch.InputField):
-    """
-    Class to extend getch's InputField to add compatibility
-    for pytermgui Containers.
-    """
-
-    def __init__(self,**kwargs):
-        super().__init__(**kwargs)
-
-        self.width = len(self.value)
-        self.height = 1
-        self._is_selectable = False
-        self.options = None
-
-        self.value_style = lambda item: item
-
-    # return text of self
-    def __repr__(self):
-        value = self.print(return_line=True)
-        line = self.value_style(value)
-        return line
-    
-    def set_style(self,key,value):
-        setattr(self,key+'_style',value)
-
-    # return value
-    def submit(self):
-        return self.value
-
-class ThreadWithReturnValue(threading.Thread):
-    """
-    Thread object that returns its value in the `join` method.
-    taken from: https://stackoverflow.com/a/40344234
-    """
-
-    def __init__(self,**kwargs):
-        super().__init__(**kwargs)
-        self._return = None
-
-    def run(self):
-        if self._target is not None:
-            self._return = self._target(*self._args, **self._kwargs)
-
-    def join(self,timeout=None):
-        super().join(timeout=timeout)
-        return self._return
-
 class TeahazHelper:
     def __init__(self):
         self.prev_get         = None
@@ -2627,28 +2520,97 @@ class UIGenerator:
         print(filemanager)
         return filemanager
 
-           
-
-class ModeLabel(Label):
+class InputDialog(Container):
     """
-    Simple Label extension providing a wipe()
-    method and a position system
+    Class extending pytermgui.Container to add support 
+    for more field types, a submit() method and to act
+    as a prefab to the common dialog type Containers
     """
-    def __init__(self,**kwargs):
+    def __init__(self,options=None,label_value='',label_justify="center",label_underpad=0,field_value='',dialog_type=None,**kwargs):
         super().__init__(**kwargs)
-        x,y = get_infield_pos(update_modelabel=0)
-        self.pos = [x-1,y+1]
-        #x,y = get_infield_pos(update_modelabel=0)
+        gui = pytermgui.__dict__
+        
+        # set up label class
+        self.label = Label(value=label_value,justify=label_justify)
+        self.label.set_style('value',gui['CONTAINER_TITLE_STYLE'])
+
+        # set up field depending on options given
+        self.options = options
+        self.dialog_type = dialog_type
+
+        if self.dialog_type == None:
+            if isinstance(options,list):
+                self.dialog_type = "prompt"
+            else:
+                self.dialog_type = "field"
+
+        if self.dialog_type == "prompt":
+            self.field = Prompt(options=options,width=self.width)
+            self.field.set_style('value',gui['CONTAINER_VALUE_STYLE'])
+            self.field.set_style('label',gui['CONTAINER_LABEL_STYLE'])
+        
+        elif self.dialog_type == "field":
+            self.field = InputDialogField(default=field_value,print_at_start=False)
+            self.field.set_style('value',gui['CONTAINER_VALUE_STYLE'])
+            self.field.field_color = '\033['+THEME['value']+'m'
+            self.width = WIDTH
+            borders = self.borders
+            label_underpad += 2
+            self.set_borders(['',borders[1],'',borders[3]])
+
+        # add label
+        self.add_elements(self.label)
+
+        # add paddings under label
+        for _ in range(label_underpad):
+            self.add_elements(Label())
+
+        # add field
+        self.add_elements(self.field)
+        
+        # set xlimit of field
+        self.field.xlimit = self.width-3
+
+    def submit(self):
+        self.value = self.field.submit()
+        return self.value
 
     def __repr__(self):
-        x,y = self.pos
+        self.width = max(self.width,self.field.width)
+        #self.get_border()
+        #self.center()
+        #self.wipe()
 
-        return f"\033[{y};{x}H"+super().__repr__()
+        return super().__repr__()
+
+class InputDialogField(getch.InputField):
+    """
+    Class to extend getch's InputField to add compatibility
+    for pytermgui Containers.
+    """
+
+    def __init__(self,**kwargs):
+        super().__init__(**kwargs)
+
+        self.width = len(self.value)
+        self.height = 1
+        self._is_selectable = False
+        self.options = None
+
+        self.value_style = lambda item: item
+
+    # return text of self
+    def __repr__(self):
+        value = self.print(return_line=True)
+        line = self.value_style(value)
+        return line
     
-    def wipe(self,yoffset=0):
-        if self.pos:
-            x,y = self.pos
-            print(f"\033[{y+yoffset};{x}H"+real_length(super().__repr__())*' ')
+    def set_style(self,key,value):
+        setattr(self,key+'_style',value)
+
+    # return value
+    def submit(self):
+        return self.value
 
 class InputFieldCompleter(Container):
     def __init__(self,options,threshold=0,icon_callback=None,completion_callback=None,field=None,height=5,trigger=None,**kwargs):
@@ -2911,7 +2873,6 @@ class InputFieldCompleter(Container):
         return
 
 class FileManager(Container):
-
     """
     Container derivative that would show and let users interact
     with files.
@@ -3145,13 +3106,48 @@ class FileManager(Container):
         print('\033[2J')
         print('\033[HOpening '+f+'...')
         self.execute(cmd)
-        
-            
+
+class ModeLabel(Label):
+    """
+    Simple Label extension providing a wipe()
+    method and a position system
+    """
+    def __init__(self,**kwargs):
+        super().__init__(**kwargs)
+        x,y = get_infield_pos(update_modelabel=0)
+        self.pos = [x-1,y+1]
+        #x,y = get_infield_pos(update_modelabel=0)
+
+    def __repr__(self):
+        x,y = self.pos
+
+        return f"\033[{y};{x}H"+super().__repr__()
+    
+    def wipe(self,yoffset=0):
+        if self.pos:
+            x,y = self.pos
+            print(f"\033[{y+yoffset};{x}H"+real_length(super().__repr__())*' ')
+
+class ThreadWithReturnValue(threading.Thread):
+    """
+    Thread object that returns its value in the `join` method.
+    taken from: https://stackoverflow.com/a/40344234
+    """
+
+    def __init__(self,**kwargs):
+        super().__init__(**kwargs)
+        self._return = None
+
+    def run(self):
+        if self._target is not None:
+            self._return = self._target(*self._args, **self._kwargs)
+
+    def join(self,timeout=None):
+        super().join(timeout=timeout)
+        return self._return
 
 
-
-
-
+           
 
 
 # GLOBALS #
