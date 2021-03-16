@@ -1220,7 +1220,7 @@ def handle_menu(key,obj,attributes={},page=0) -> None:
         # this isnt working yet, TODO
         pytermgui.set_listener('window_size_changed', lambda *args: (d.center() for d in objects))
 
-    if hasattr(obj,'field'):
+    if hasattr(obj,'field') and not isinstance(obj,InputDialog):
         obj.field.send(key)
         return
 
