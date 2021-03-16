@@ -1885,22 +1885,27 @@ class TeahazHelper:
         temp['nickname'] = temp['username']
         temp['message'] = message
         
-        message_update_lambda = lambda resp: self.add_to_messages(json.loads(resp.text))
+        message_update_lambda = lambda resp: {
+                self.add_to_messages(json.loads(resp.text)),
+                (hook__message_send_post(resp.text) if is_set('hook__message_send_post') else None)}
+
         self.handle_operation(
                 method        = 'post',
                 output        = 'message_send_return',
                 url           = URL+'/api/v0/'+endpoint,
-                callback      = lambda resp: self.handle_operation(
-                    method='get',
-                    url=URL+'/api/v0/message/'+CHAT_ID,
-                    headers=data,
-                    callback=message_update_lambda
-                ),
+                callback      = lambda _: self.get_new_messages(callback=message_update_lambda),
+                # callback      = lambda resp: self.handle_operation(
+                    # method='get',
+                    # url=URL+'/api/v0/message/'+CHAT_ID,
+                    # headers=data,
+                    # callback=message_update_lambda
+                # ),
                 json     = data
         )
 
         infield.clear_value()
         self.print_messages(extras=[temp])
+        
 
     def print_messages(self,messages=[],extras=[],offset=0,select=None,reprint=False,dont_ignore=False,do_print=True):
         # get positions
@@ -2110,6 +2115,21 @@ class TeahazHelper:
         if is_set('hook__message_get'):
             hook__message_get(messages,same_user)
 
+    def get_new_messages(self,output=None,callback=None):
+        get_time = SESSION.last_get
+        SESSION.last_get = time.time()
+
+        data = BASE_DATA.copy()
+        data['time'] = str(get_time)
+
+        self.handle_operation(
+                method   = 'get',
+                output   = output,
+                callback = callback,
+                url      = URL+'/api/v0/message/'+CHAT_ID,
+                headers  = data,
+        )
+
     def get_loop(self):
         global WIDTH,HEIGHT,MESSAGES
 
@@ -2123,12 +2143,10 @@ class TeahazHelper:
                 WIDTH,HEIGHT = os.get_terminal_size()
 
                 if not is_set('messages_get_return',self.__dict__):
-                    get_time = SESSION.last_get
-                    SESSION.last_get = time.time()
-                    data = BASE_DATA.copy()
-                    data['time'] = str(get_time)
-                    self.handle_operation(method='get',output='messages_get_return',url=URL+'/api/v0/message/'+CHAT_ID,headers=data,
-                            callback= lambda resp: self.add_to_messages(json.loads(resp.text)))
+                    self.get_new_messages(
+                            'messages_get_return',
+                            callback = lambda resp: self.add_to_messages(json.loads(resp.text))
+                    )
 
                 elif not self.messages_get_return == 'incomplete':
                     if not isinstance(self.messages_get_return,requests.Response):
