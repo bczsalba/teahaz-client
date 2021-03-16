@@ -9,9 +9,9 @@
 
     - main methods (other than Container's):
         * [x] cd                 : change directory
-        * [ ] search(term)       : search for `term` in files
-        * [ ] open(opt: index)   : open selected file with the global filetype handlers
+        * [x] search(term)       : search for `term` in files
         * [ ] execute(cmd,regex) : execute given command in bash on the file
+        * [ ] open(opt: index)   : open selected file with the global filetype handlers
 
     - goals
         [x] have keybind support through field

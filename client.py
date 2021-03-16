@@ -1220,8 +1220,12 @@ def handle_menu(key,obj,attributes={},page=0) -> None:
         # this isnt working yet, TODO
         pytermgui.set_listener('window_size_changed', lambda *args: (d.center() for d in objects))
 
+    if hasattr(obj,'field'):
+        obj.field.send(key)
+        return
+
     # go up one menu using trace 
-    if key == "ESC":
+    elif key == "ESC":
         obj.wipe()
 
         # go up the trace
@@ -1286,10 +1290,6 @@ def handle_menu(key,obj,attributes={},page=0) -> None:
             handle_menu("ESC",obj,attributes={'__ui_keys': obj.__ui_keys})
             #print(obj)
             return
-
-    elif hasattr(obj,'field'):
-        obj.field.send(key)
-        return
 
     if key == "ENTER":
         if obj.selected == None:
@@ -2921,7 +2921,7 @@ class FileManager(Container):
         * execute(cmd,*maybe regex to match files*) : execute given command
                              in bash on the file
     """
-    def __init__(self,path=None,completer=None,filetype_highlight=True,**kwargs):
+    def __init__(self,rows=10,path=None,completer=None,filetype_highlight=True,**kwargs):
         super().__init__(**kwargs)
         if path:
             if os.path.exists(path):
@@ -2932,35 +2932,54 @@ class FileManager(Container):
         if not hasattr(self,'path'):
             self.path = PATH
 
-        self.height = 13
+        # base variables
         self.rows = []
+        self.width  = 40
+        self.pattern  = None
+
+        # add elements
         self.up_dir = Prompt(label='..',value='')
         self.up_dir.is_dir = True
         self.add_elements(Label())
         self.add_elements([self.up_dir])
         self.add_elements(Label())
 
-        for _ in range(self.height-2):
+        # add rows for output
+        for _ in range(rows):
             row = Prompt(value='',label='')
             self.rows.append(row)
             self.add_elements(row)
-        self.add_elements(Label())
 
-        self.width  = 40
-        self.query  = None
+        # set up field
         self.field = InputDialogField(pos=self.pos)
         self.field.og_send = self.field.send
         self.field.send = self.field_send
+        self.field.is_active = False
+        self.field.empty_cursor_char = lambda self: (' ' if self.is_active else '')
+        self.add_elements(self.field)
 
+        # overwrite methods
         self._repr_pre = self.get_rows
-        # self.center()
 
     def get_rows(self):
         files = os.listdir(self.path)
         files.sort(key=lambda f: f.split('.')[-1])
         files.sort(key=lambda f: os.path.isfile(os.path.join(self.path,f)))
-        # for f in files:
-            # dbg(f,os.path.join(self.path,f),os.path.isfile(os.path.join(self.path,f)))
+
+        if self.pattern:
+            new = []
+            for f in files:
+                pair = []
+                pair.append(fw.ratio(self.pattern,f))
+                if pair[0]:
+                    pair.append(f)
+                    new.append(pair)
+
+            new.sort(key=lambda pair: pair[0],reverse=True)
+            new = [value for ratio,value in new]
+            files = new
+
+        # TODO: some files show as directories
 
         for i,row in enumerate(self.rows):
             if i < len(files):
@@ -2979,11 +2998,35 @@ class FileManager(Container):
         self.selected_index = min(self.selected_index,len(files))
         if self._is_centered:
             self.center('both')
+        self.field.pos = self.pos[0]+2,self.pos[1]+self.real_height+1
 
         for i,c in enumerate(THEME['corners'].values()):
             self.set_corner(i,c)
 
     def field_send(self,key,**kwargs):
+        if self.field.is_active:
+            if key in ["CTRL_N","ARROW_DOWN"]:
+                self.selected_index = min(self.selected_index+1,len(self.selectables)-1)
+
+            elif key in ["CTRL_P","ARROW_UP"]:
+                self.selected_index = max(self.selected_index-1,0)
+
+            elif key in ["ESC","ENTER"]:
+                self.pattern = None
+                self.field.is_active = False
+                self.field.set_value('')
+                self.field.prompt = ''
+                if key == "ENTER":
+                    self.field_send("ENTER")
+
+            elif key == "SIGTERM":
+                handle_action('quit')
+            
+            else:
+                self.field.og_send(key,**kwargs)
+                self.field.handle_key(key)
+            key = ''
+
         if key in ["j","ARROW_DOWN"]:
             self.selected_index = min(self.selected_index+1,len(self.selectables)-1)
 
@@ -2999,6 +3042,11 @@ class FileManager(Container):
                 self.cd(row.real_label)
             else:
                 dbg('not dir')
+ 
+        elif key == "/":
+            self.field.prompt = '/'
+            self.field.is_active = True
+            self.field.handle_key = self.search
 
         elif key == "-":
             self.cd('..')
@@ -3021,6 +3069,17 @@ class FileManager(Container):
         self.wipe()
         print(self)
    
+    def search(self,key):
+        if not self.pattern == None and len(self.pattern) == 0 and key == "BACKSPACE":
+            return
+
+        if self.pattern == None:
+            self.pattern = key
+        else:
+            self.pattern += key
+
+        self.get_rows()
+
     def _handle_long_element(self,e):
         if not hasattr(e,'label'):
             return
