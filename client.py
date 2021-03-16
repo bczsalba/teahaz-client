@@ -263,7 +263,7 @@ def toggle_option(options,current) -> any:
     return options[len(options)-1-current_index]
 
 ## switch to input mode, set globals
-def switch_mode(target) -> None:
+def switch_mode(target,force=False) -> None:
     global MODE, VALID_KEYS, BINDS
 
     if VIMMODE:
@@ -281,11 +281,28 @@ def switch_mode(target) -> None:
     if infield.line_offset:
         y += infield.line_offset
 
-    if target == "ESCAPE":
-        MODE_LABEL.wipe()
+    MODE_LABEL.wipe()
 
-    elif not KEEP_PIPE:
-        MODE_LABEL.set_value(bold('-- '+target.upper()+' --'))
+    if target == "ESCAPE":
+        if is_set('replyId',BASE_DATA):
+            del BASE_DATA['replyId']
+
+    elif not KEEP_PIPE or force:
+        value = '-- '+target.upper()+' --'
+        replyId = BASE_DATA.get('replyId')
+        if replyId:
+            preview = 'unknown message'
+            m = th.get_message_by_id(replyId)
+
+            if m:
+                content = parse_emoji(m.get('message'))
+                preview = content[:15].strip()
+                if real_length(content) > 15:
+                    preview += '...'
+
+            value += ' replying to '+preview
+
+        MODE_LABEL.set_value(bold(value))
         print(MODE_LABEL)
 
     VALID_KEYS = [v for k,v in BINDS[MODE].items() if not k.startswith('ui__')]
@@ -429,6 +446,7 @@ def get_infield_pos(update_modelabel=True) -> list:
 
             if update_modelabel:
                 MODE_LABEL.wipe()
+                
                 print(MODE_LABEL)
 
             th.print_messages(reprint=True,offset=offset+1)
@@ -1030,6 +1048,8 @@ def handle_action(action) -> None:
         elif action == "message_select_submit":
             # TODO
             selected = MESSAGES[th.selected_message]
+            handle_action('menu_message_context')
+            return
 
         elif action == 'message_select_next':
             th.selected_message -= 1
@@ -1427,6 +1447,10 @@ def handle_menu_actions(action,current_file=None) -> int:
     elif menu == "files":
         ui.create_filepicker()
         return
+
+    elif menu == "message_context":
+        ui.create_context_menu()
+        return
     
     elif menu == "login/register":
         pytermgui.set_attribute_for_id('login_type-prompt','handler',lambda prev,self: {
@@ -1730,14 +1754,15 @@ def replace(key,action) -> None:
 # CLASSES # 
 class TeahazHelper:
     def __init__(self):
-        self.prev_get         = None
-        self.skip_get         = False
+        self.prev_get           = None
+        self.skip_get           = False
 
-        self.offset           = 0
-        self.selected_message = None
+        self.offset             = 0
+        self.selected_message   = None
+        self.selected_message_y = None
         
         # TODO
-        self.extras           = []
+        self.extras             = []
  
     def handle_operation(self,method,output=None,callback=None,*args,**kwargs):
         def _do_operation(*args,**kwargs):
@@ -1831,6 +1856,13 @@ class TeahazHelper:
 
         return address,SERVERS[address].index(new)
 
+    def get_message_by_id(self,messageId):
+        for m in reversed(MESSAGES):
+            if m.get('messageId') == messageId:
+                return m
+        else:
+            return None
+
     def get(self,parameter,mode="message"):
         data = BASE_DATA
         
@@ -1853,7 +1885,7 @@ class TeahazHelper:
 
     ## sending method
     def send(self,message,endpoint='message'):
-        data = BASE_DATA
+        data = BASE_DATA.copy()
 
         # handle specificities
         if endpoint == 'message':
@@ -1876,6 +1908,10 @@ class TeahazHelper:
 
         else:
             return "Client Error: Invalid message type '"+str(endpoint)+"'"
+
+        if data.get('replyId'):
+            del BASE_DATA['replyId']
+            switch_mode(MODE,force=True)
         
         endpoint = f'{endpoint}/{CHAT_ID}'
         temp = MESSAGE_TEMPLATE.copy()
@@ -1905,7 +1941,16 @@ class TeahazHelper:
 
         infield.clear_value()
         self.print_messages(extras=[temp])
-        
+
+    def handle_context_buttons(self,param,context):
+        if param == 'reply':
+            BASE_DATA['replyId'] = context.get('messageId')
+            switch_mode('INSERT',force=True)
+        else:
+            ui.create_error_dialog(f'404: no server implementation found for "{param}"')
+
+        self.selected_message = None
+        self.selected_message_y = None
 
     def print_messages(self,messages=[],extras=[],offset=0,select=None,reprint=False,dont_ignore=False,do_print=True):
         # get positions
@@ -2006,11 +2051,25 @@ class TeahazHelper:
                             lines[j] = parse_color(THEME['fade'],l)
 
                 if i == self.selected_message:
-                    for j,l in enumerate(lines):
-                        lines[j] = parse_color(THEME['custom_prompt_highlight'],l)
+                    for k,l in enumerate(lines):
+                        lines[k] = parse_color(THEME['custom_prompt_highlight'],l)
 
             else:
                 content = '< '+m.get('filename')+' >'
+
+            replyId = m.get('replyId')
+            if replyId:
+                reply_parent = self.get_message_by_id(replyId).copy()
+                if not reply_parent.get('is_decoded'):
+                    try:
+                        reply_parent['message'] = decode(reply_parent['message'])
+                    except Exception as e:
+                        dbg(e)
+
+                reply = pytermgui.break_line(parse_emoji('> ' + reply_parent.get('message')),MAX_MESSAGE_WIDTH())
+                for l,r in enumerate(reply):
+                    reply[l] = italic(parse_color(THEME['fade'],r))
+                lines = reply+lines
 
 
             # test if the current message is the start of a chunk
@@ -2035,6 +2094,7 @@ class TeahazHelper:
             else:
                 next_msg = None
 
+
             if next_msg:
                 next_time = int(next_msg.get('time'))
                 if next_msg.get('username') == username:
@@ -2051,22 +2111,27 @@ class TeahazHelper:
                 lines.append(parse_color(THEME['fade'],sendtime))
                 lines.append('')
 
-            
+
             # print lines:
-            for i,l in enumerate(reversed(lines)):
-                if dont_ignore or 0 < y <= starty:
+            for k,l in enumerate(reversed(lines)):
+                if not do_print or dont_ignore or 0 < y <= starty:
                     # set cursor location
-                    if username == BASE_DATA.get('username'):
-                        buff += f'\033[{y};{WIDTH-real_length(l)}H'
-                    else:
-                        buff += f'\033[{y};{leftx}H'
-                    buff += l
+                    if do_print:
+                        if username == BASE_DATA.get('username'):
+                            buff += f'\033[{y};{WIDTH-real_length(l)}H'
+                        else:
+                            buff += f'\033[{y};{leftx}H'
+
+                        buff += l
 
                     y -= 1
             y -= 1
 
+            if i == self.selected_message:
+                self.selected_message_y = y
+
         if not do_print:
-            return
+            return lines
 
         for _ in range(offset):
             buff += '\n'
@@ -2539,6 +2604,49 @@ class UIGenerator:
         filemanager.select()
         print(filemanager)
         return filemanager
+
+    def create_context_menu(self):
+        if th.selected_message == None:
+            dbg('selected message is None')
+            return
+
+        m = MESSAGES[-th.selected_message-1]
+
+        lines = th.print_messages([m],do_print=False)
+        y = th.selected_message_y+1
+
+        side = ('right' if m.get('username') == BASE_DATA.get('username') else 'left')
+
+        for i,l in enumerate(lines):
+            if side == 'left':
+                x = 3
+            else:
+                x = WIDTH-real_length(l)
+
+            sys.stdout.write(f'\033[{y+i};{x}H')
+            sys.stdout.write(l)
+        sys.stdout.flush()
+
+        context_menu = Container(width=30)
+
+        for o in CONTEXT_OPTIONS:
+            p = Prompt(options=[o],justify_options=side)
+            p.context = m
+            p.handler = lambda parent,self: {
+                    th.handle_context_buttons(self.value,self.context),
+                    handle_menu('ESC',parent)}
+
+            context_menu.add_elements(p)
+
+        context_menu.move([(x-context_menu.width-1 if side == 'right' else x),y+3])
+        context_menu.set_borders([''*4])
+
+        set_pipe(handle_menu,{'obj': context_menu})
+        add_to_trace([{},context_menu])
+        context_menu.select()
+
+        print(context_menu)
+
 
 class InputDialog(Container):
     """
@@ -3127,6 +3235,8 @@ class FileManager(Container):
         print('\033[HOpening '+f+'...')
         self.execute(cmd)
 
+        
+
 class ModeLabel(Label):
     """
     Simple Label extension providing a wipe()
@@ -3238,6 +3348,11 @@ MESSAGE_TEMPLATE = {
     "filename": None,
     "extension": None
 }
+CONTEXT_OPTIONS = [
+        'reply',
+        'react',
+        'open'
+]
 
 # base data array to append to
 URL = None

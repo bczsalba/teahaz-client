@@ -77,7 +77,7 @@
         true,
         false
     ],
-    "PARSE_MARKDOWN": false,
+    "PARSE_MARKDOWN": true,
     "MESSAGE_SEPARATE_TIME": "300",
     "MAXIMUM_MESSAGE_LENGTH": "2000",
     "MAX_NICK_LENGTH_RATIO": 0.4,
