@@ -82,9 +82,19 @@
     "MAXIMUM_MESSAGE_LENGTH": "2000",
     "MAX_NICK_LENGTH_RATIO": 0.4,
     "FILETYPE_DEFAULTS": {
-        "image": "kitty +kitten icat {path} --scale_up",
-        "video": "mpv {path}",
-        "text": "kitty -e sh vim {path}"
+        "image": {
+            "open": "kitty +kitten icat --scale-up \"{path}\"",
+            "destroy": "kitty +kitten icat --clear"
+        },
+        "video": {
+            "open": "mpv {path}"
+        },
+        "text": {
+            "open": "kitty -1 -e bash -c \"vim {path}\""
+        },
+        "ptg": {
+            "open": "kitty -1 -e bash -c \"/bin/cat {path}; read\""
+        }
     },
     "ui__prompt_options__comp_enabled": [
         true,
