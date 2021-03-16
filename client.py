@@ -1973,11 +1973,13 @@ class TeahazHelper:
 
             # handle message content
             if content:
-                if m in extras or m in self.extras:
+                if m in extras or m in self.extras or m.get('is_decoded'):
                     decoded = content
                 else:
                     try:
                         decoded = decode(content)
+                        m['message'] = decoded
+                        m['is_decoded'] = True
                     except Exception as e:
                         continue
 
