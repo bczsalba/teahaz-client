@@ -3126,12 +3126,9 @@ class FileManager(Container):
         values = FILETYPE_DEFAULTS.get(mime)
         if values:
             cmd = values.get('open')
-        else:
-            dbg('cant open type',mime)
-            return
 
         if not cmd:
-            dbg('cant open type',mime)
+            ui.create_error_dialog(f'Unknown filetype {mime}!\nCould not open {f}.',button="ignore")
             return
 
         else:
