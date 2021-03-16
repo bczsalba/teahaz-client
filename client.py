@@ -10,6 +10,7 @@ import types
 import getch
 import base64
 import pickle
+import filetype
 import binascii
 import datetime
 import requests
@@ -743,6 +744,7 @@ def handle_action(action) -> None:
     elif action == "reprint":
         fun,args,obj = UI_TRACE[-1]
         pytermgui.clr()
+        print('\033[2J')
         if not PIPE_OUTPUT:
             th.print_messages(reprint=True)
 
@@ -1211,7 +1213,7 @@ def handle_action(action) -> None:
 
 
 ## handle action but for menus
-def handle_menu(key,obj,attributes={},page=0) -> None:
+def handle_menu(key,obj,send_escape=True,attributes={},page=0) -> None:
     global PIPE_OUTPUT,UI_TRACE
 
     if isinstance(obj,list):
@@ -1220,7 +1222,7 @@ def handle_menu(key,obj,attributes={},page=0) -> None:
         # this isnt working yet, TODO
         pytermgui.set_listener('window_size_changed', lambda *args: (d.center() for d in objects))
 
-    if hasattr(obj,'field') and not isinstance(obj,InputDialog):
+    if hasattr(obj,'field') and not isinstance(obj,InputDialog) and send_escape:
         obj.field.send(key)
         return
 
