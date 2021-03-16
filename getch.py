@@ -187,8 +187,13 @@ class InputField:
         right = self.value[self.cursor+1:]
 
         # get char under cursor to highlight
+        if callable(self.empty_cursor_char):
+            char = self.empty_cursor_char(self)
+        else:
+            char = self.empty_cursor_char
+
         if self.cursor > len(self.value)-1:
-            charUnderCursor = self.empty_cursor_char
+            charUnderCursor = char
         else:
             charUnderCursor = self.value[self.cursor]
 
