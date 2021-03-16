@@ -1,24 +1,4 @@
 # PLANZ
-```
-> FileManager(Container)
-
-    """
-    Container derivative that would show and let users interact
-    with files.
-    """
-
-    - main methods (other than Container's):
-        * [x] cd                 : change directory
-        * [x] search(term)       : search for `term` in files
-        * [ ] execute(cmd,regex) : execute given command in bash on the file
-        * [ ] open(opt: index)   : open selected file with the global filetype handlers
-
-    - goals
-        [x] have keybind support through field
-        [ ] highlight files and directories separately
-        [ ] do magiks :exclamation:
-```
-
 - [ ] loading screen object
     - methods:
         + set_value
@@ -192,3 +172,23 @@
 
 - [x] fix multiline
 - [x] fix conv header
+
+```
+> FileManager(Container)
+
+    """
+    Container derivative that would show and let users interact
+    with files.
+    """
+
+    - main methods (other than Container's):
+        * [x] cd                 : change directory
+        * [x] search(term)       : search for `term` in files
+        * [x] execute(cmd) : execute given command in bash on the file
+        * [x] open(opt: index)   : open selected file with the global filetype handlers
+
+    - goals
+        [x] have keybind support through field
+        [x] highlight files and directories separately
+        [x] do magiks :exclamation:
+```
