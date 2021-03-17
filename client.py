@@ -3169,10 +3169,15 @@ class FileManager(Container):
 
         elif key == "ENTER":
             row = self.selected[0]
-            if self.submit:
-                self.submit(row)
+            if row.is_dir:
+                self.cd(row.real_label)
+            else:
+                if self.submit:
+                    self.submit(row.real_label)
                 return
 
+        elif key == " ":
+            row = self.selected[0]
             if row.is_dir:
                 self.cd(row.real_label)
             else:
