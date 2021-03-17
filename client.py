@@ -801,6 +801,8 @@ def handle_action(action) -> None:
             msg = hook__message_send(msg)
 
         th.send(msg,'message')
+        th.selected_message = None
+
         infield.clear_value()
 
     elif action == "character_delete":
@@ -879,7 +881,7 @@ def handle_action(action) -> None:
             infield.selected_end = VISUAL_END
 
         elif action == "message_select":
-            th.selected_message = 0
+            th.selected_message = th.offset
             th.print_messages(reprint=True)
             infield.wipe()
 
@@ -1042,11 +1044,10 @@ def handle_action(action) -> None:
     elif action.startswith('message_select'):
         if action == "message_select_reset":
             th.selected_message = None
-            th.offset = 0
+            th.print_messages(reprint=True)
             switch_mode("ESCAPE")
 
         elif action == "message_select_submit":
-            # TODO
             selected = MESSAGES[th.selected_message]
             handle_action('menu_message_context')
             return
@@ -1057,6 +1058,7 @@ def handle_action(action) -> None:
         elif action == 'message_select_previous':
             th.selected_message += 1
 
+        # update offset, selected message values
         if th.selected_message:
             th.offset = th.selected_message - 3
             th.selected_message = max(0,th.selected_message)
@@ -2641,7 +2643,11 @@ class UIGenerator:
 
             context_menu.add_elements(p)
 
-        context_menu.move([(x-context_menu.width-1 if side == 'right' else x),y+3])
+        lines = pytermgui.break_line(m.get('message'),MAX_MESSAGE_WIDTH())
+
+        newx = (x-context_menu.width-1 if side == 'right' else x)
+        newy = y+len(CONTEXT_OPTIONS+message_options+lines)
+        context_menu.move([newx,newy])
         context_menu.set_borders([''*4])
 
         set_pipe(handle_menu,{'obj': context_menu})
@@ -2649,7 +2655,6 @@ class UIGenerator:
         context_menu.select()
 
         print(context_menu)
-
 
 class InputDialog(Container):
     """
@@ -3353,8 +3358,7 @@ MESSAGE_TEMPLATE = {
 }
 CONTEXT_OPTIONS = [
         'reply',
-        'react',
-        'open'
+        'react'
 ]
 
 # base data array to append to
@@ -3395,6 +3399,15 @@ if __name__ == "__main__":
             print()
         sys.exit(1)
 
+    if os.path.exists(CONFIG_FILE):
+        CONFIG = import_path(CONFIG_FILE)
+    else:
+        if not os.path.exists(CONFIG_DIR):
+            try:
+                dbg(f'couldn\'t create config directory "{CONFIG_FILE}": {e}')
+            except Exception as e:
+                os.makedirs(CONFIG_DIR)
+    handle_config()
 
     ## set pytermgui styles
     pytermgui.set_style('container_title',lambda item: parse_color(THEME['title'],item).replace('_',' '))
@@ -3454,14 +3467,6 @@ if __name__ == "__main__":
     th = TeahazHelper()
 
 
-    if os.path.exists(CONFIG_FILE):
-        CONFIG = import_path(CONFIG_FILE)
-    else:
-        if not os.path.exists(CONFIG_DIR):
-            try:
-                dbg(f'couldn\'t create config directory "{CONFIG_FILE}": {e}')
-            except Exception as e:
-                os.makedirs(CONFIG_DIR)
 
     # load session.obj
     SESSIONLOCATION = os.path.join(PATH,'session.obj')
@@ -3474,7 +3479,6 @@ if __name__ == "__main__":
         SESSION = requests.session()
         SESSION.last_get = 0
 
-    handle_config()
     handle_args()
 
     if is_set('CURRENT_CHATROOM'):
