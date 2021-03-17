@@ -55,6 +55,7 @@
 
 ## maybe
 - [ ] change infield cursor char depending on mode
+- [ ] formatting commands, like `!th break`
 
 ## finished
 - pytermgui `get_object_by_id(id)`
