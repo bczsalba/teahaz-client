@@ -1042,21 +1042,35 @@ def handle_action(action) -> None:
             switch_mode('INSERT')
 
     elif action.startswith('message_select'):
-        if action == "message_select_reset":
+        action = action.replace('message_select_','')
+        context_actions = None
+
+        if not th.selected_message == None:
+            selected = MESSAGES[-th.selected_message-1]
+            context_actions = th.get_message_options(selected)
+
+        if action == "reset":
             th.selected_message = None
             th.print_messages(reprint=True)
             switch_mode("ESCAPE")
 
-        elif action == "message_select_submit":
+        elif action == "submit":
             selected = MESSAGES[th.selected_message]
             handle_action('menu_message_context')
             return
 
-        elif action == 'message_select_next':
+        elif action == 'next':
             th.selected_message -= 1
 
-        elif action == 'message_select_previous':
+        elif action == 'previous':
             th.selected_message += 1
+        
+        if context_actions and action in context_actions:
+            do_return = th.handle_context_buttons(action,selected)
+            if do_return:
+                handle_action('message_select_reset')
+                return
+
 
         # update offset, selected message values
         if th.selected_message:
@@ -1945,23 +1959,46 @@ class TeahazHelper:
         self.print_messages(extras=[temp])
 
     def handle_context_buttons(self,param,context):
+        ret_val = False
+
         if param == 'reply':
             BASE_DATA['replyId'] = context.get('messageId')
             switch_mode('INSERT',force=True)
 
-        elif param == 'go to parent':
+        elif param == 'goto_parent':
             parent = self.get_message_by_id(context['replyId'])
             index = MESSAGES[::-1].index(parent)
             th.offset = index - 3
             self.selected_message = index
             switch_mode("SCROLL",force=True)
-            return
+            return ret_val
+
+        elif param == 'copy':
+            clip.copy(context.get('message'))
+            dbg(clip.paste())
+            ret_val = True
 
         else:
             ui.create_error_dialog(f'404: no server implementation found for "{param}"')
 
         self.selected_message = None
         self.selected_message_y = None
+
+        return ret_val
+
+    def get_message_options(self,m):
+        message_options = CONTEXT_OPTIONS.copy()
+        dbg(m)
+
+        if m.get('replyId'):
+            message_options.append('goto_parent')
+
+        if m.get('type') == "file":
+            message_options.append('open')
+
+        dbg(message_options)
+
+        return message_options 
 
     def print_messages(self,messages=[],extras=[],offset=0,select=None,reprint=False,dont_ignore=False,do_print=True):
         # get positions
@@ -2644,13 +2681,9 @@ class UIGenerator:
         context_menu = Container(width=30)
 
         message_options = []
-        if m.get('replyId'):
-            message_options.append('go to parent')
+        options = th.get_message_options(m)
 
-        if m.get('type') == "file":
-            message_options.append('open')
-
-        for o in CONTEXT_OPTIONS+message_options:
+        for o in options:
             p = Prompt(options=[o],justify_options=side)
             p.context = m
             p.handler = lambda parent,self: {
@@ -2662,7 +2695,7 @@ class UIGenerator:
         lines = pytermgui.break_line(m.get('message'),MAX_MESSAGE_WIDTH())
 
         newx = (x-context_menu.width-1 if side == 'right' else x)
-        newy = y+len(CONTEXT_OPTIONS+message_options+lines)
+        newy = y+len(options+lines)
         context_menu.move([newx,newy])
         context_menu.set_borders([''*4])
 
@@ -2671,6 +2704,7 @@ class UIGenerator:
         context_menu.select()
 
         print(context_menu)
+
 
 class InputDialog(Container):
     """
@@ -3379,6 +3413,7 @@ MESSAGE_TEMPLATE = {
 }
 CONTEXT_OPTIONS = [
         'reply',
+        'copy',
         'react'
 ]
 

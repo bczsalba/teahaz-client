@@ -238,7 +238,11 @@
             "message_select_reset": "ESC",
             "message_select_previous": "k",
             "message_select_next": "j",
-            "message_select_submit": "ENTER"
+            "message_select_submit_inactive": "notENTER",
+            "message_select_goto_parent": "g",
+            "message_select_reply": "ENTER",
+            "message_select_edit": "e",
+            "message_select_copy": "y"
         }
     }
 }
