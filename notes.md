@@ -5,7 +5,7 @@
     - [x] add visual representation of replying-to
     - [x] make sent message add replyId
     - [x] make print_messages read & display replyId
-    - [ ] add goto_reply_parent action
+    - [x] add goto_reply_parent action
     - [ ] theres a specific message that breaks it all
 
 - [ ] loading screen object

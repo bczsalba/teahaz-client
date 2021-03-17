@@ -1948,6 +1948,15 @@ class TeahazHelper:
         if param == 'reply':
             BASE_DATA['replyId'] = context.get('messageId')
             switch_mode('INSERT',force=True)
+
+        elif param == 'go to parent':
+            parent = self.get_message_by_id(context['replyId'])
+            index = MESSAGES[::-1].index(parent)
+            th.offset = index - 3
+            self.selected_message = index
+            switch_mode("SCROLL",force=True)
+            return
+
         else:
             ui.create_error_dialog(f'404: no server implementation found for "{param}"')
 
@@ -2634,7 +2643,14 @@ class UIGenerator:
 
         context_menu = Container(width=30)
 
-        for o in CONTEXT_OPTIONS:
+        message_options = []
+        if m.get('replyId'):
+            message_options.append('go to parent')
+
+        if m.get('type') == "file":
+            message_options.append('open')
+
+        for o in CONTEXT_OPTIONS+message_options:
             p = Prompt(options=[o],justify_options=side)
             p.context = m
             p.handler = lambda parent,self: {

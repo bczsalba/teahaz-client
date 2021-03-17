@@ -7,7 +7,7 @@
     ],
     "DO_DEBUG": true,
     "ui__title2": "colors",
-    "ui__prompt_options__colorscheme": [
+    "ui__prompt_options__themes": [
         "draculite"
     ],
     "SELECTED_THEME": "draculite",
