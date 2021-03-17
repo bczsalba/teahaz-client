@@ -342,6 +342,9 @@ def set_pipe(fun,arg,keep=1) -> None:
 def set_current_file(value) -> None:
     globals()['CURRENT_FILE'] = value
 
+def set_mark(mark) -> None:
+    globals()['MARKS'][mark] = th.offset
+
 def add_new_colorscheme(name="new") -> dict:
     global SETTINGS
 
@@ -529,7 +532,6 @@ def parse_emoji(text) -> str:
             text = text.replace(s,new)
 
     return text
-    
 
 def parse_inline_codes(s) -> str:
     for i,(c,func) in enumerate(reversed(THEME['message_styles'].items())):
@@ -801,7 +803,9 @@ def handle_action(action) -> None:
             msg = hook__message_send(msg)
 
         th.send(msg,'message')
+        set_mark('`')
         th.selected_message = None
+        th.offset = 0
 
         infield.clear_value()
 
@@ -838,6 +842,8 @@ def handle_action(action) -> None:
         infield.print()
 
     elif action == "scroll_reset":
+        set_mark('`')
+
         th.offset = 0
         th.print_messages(reprint=True)
         switch_mode('ESCAPE')
@@ -954,10 +960,12 @@ def handle_action(action) -> None:
             th.print_messages(reprint=True)
 
         elif "conv_start" in action:
+            set_mark('`')
             th.offset = len(MESSAGES)-1
             th.print_messages(reprint=True)
 
         elif "conv_end" in action:
+            set_mark('`')
             th.offset = 0
             th.print_messages(reprint=True)
 
@@ -971,8 +979,7 @@ def handle_action(action) -> None:
             if len(infield.value):
                 cursor = min(len(infield.value)-1,cursor+1)
                 insert = False 
-
-    
+         
         # go to start of text
         elif action == "text_start":
             cursor = 0
@@ -1041,6 +1048,12 @@ def handle_action(action) -> None:
         if insert:
             switch_mode('INSERT')
 
+    elif action.startswith('mark_'):
+        if action == 'mark_set':
+            set_pipe(set_mark,{},keep=0)
+        elif action == 'mark_goto':
+            set_pipe(goto_mark,{},keep=0)
+
     elif action.startswith('message_select'):
         action = action.replace('message_select_','')
         context_actions = None
@@ -1051,8 +1064,8 @@ def handle_action(action) -> None:
 
         if action == "reset":
             th.selected_message = None
-            th.print_messages(reprint=True)
-            switch_mode("ESCAPE")
+            handle_action('scroll_reset')
+            return
 
         elif action == "submit":
             selected = MESSAGES[th.selected_message]
@@ -1769,6 +1782,13 @@ def replace(key,action) -> None:
     # set new value
     infield.set_value(val,infield.cursor)
 
+def goto_mark(mark) -> None:
+    offset = MARKS.get(mark)
+    if offset == None:
+        return
+
+    th.offset = offset
+    th.print_messages(reprint=True)
 
 
 
@@ -3428,6 +3448,9 @@ BASE_DATA = {
     "chatroom": None,
 }
 
+MARKS = {
+    "`": 0
+}
 
 
 

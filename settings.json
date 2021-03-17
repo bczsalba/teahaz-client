@@ -173,6 +173,8 @@
             "goto_WORD_next": "W",
             "goto_word_prev": "b",
             "goto_WORD_prev": "B",
+            "mark_goto": "`",
+            "mark_set": "m",
             "find": "f",
             "find_reverse": "F",
             "till": "t",
