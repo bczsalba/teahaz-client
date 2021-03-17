@@ -2068,7 +2068,7 @@ class TeahazHelper:
 
                 reply = pytermgui.break_line(parse_emoji('> ' + reply_parent.get('message')),MAX_MESSAGE_WIDTH())
                 for l,r in enumerate(reply):
-                    reply[l] = italic(parse_color(THEME['fade'],r))
+                    reply[l] = parse_color(THEME['reply'],r)
                 lines = reply+lines
 
 

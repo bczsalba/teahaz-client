@@ -16,6 +16,7 @@
             "ui__title1": "colors",
             "title": "210",
             "fade": "238",
+            "reply": "240",
             "error": "203",
             "success": "76",
             "label": "245",
