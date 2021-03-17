@@ -1783,8 +1783,7 @@ class TeahazHelper:
         self.selected_message   = None
         self.selected_message_y = None
         
-        # TODO
-        self.extras             = []
+        
  
     def handle_operation(self,method,output=None,callback=None,*args,**kwargs):
         def _do_operation(*args,**kwargs):
@@ -2016,11 +2015,11 @@ class TeahazHelper:
 
         # add given messages to global and print all
         elif len(messages):
-            messagelist = messages.copy()+self.extras.copy()
+            messagelist = messages.copy()
 
         # only print extra messages
         elif len(extras):
-            messagelist = MESSAGES.copy()+self.extras.copy()+extras.copy()
+            messagelist = MESSAGES.copy()+extras.copy()
             # self.extras += extras
 
         # return if there's nothing to print
@@ -2072,7 +2071,7 @@ class TeahazHelper:
 
             # handle message content
             if content:
-                if m in extras or m in self.extras or m.get('is_decoded'):
+                if m in extras or m.get('is_decoded'):
                     decoded = content
                 else:
                     try:
