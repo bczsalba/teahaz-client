@@ -94,7 +94,7 @@
             "open": "kitty -1 -e bash -c \"vim {path}\""
         },
         "ptg": {
-            "open": "kitty -1 -e bash -c \"/bin/cat {path}; read\""
+            "open": "clear; bash -c \"/bin/cat {path}\""
         }
     },
     "ui__prompt_options__comp_enabled": [
