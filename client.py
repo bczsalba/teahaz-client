@@ -2201,13 +2201,16 @@ class TeahazHelper:
         global WIDTH,HEIGHT,MESSAGES
 
         while KEEP_GOING:
+            oWIDTH,oHEIGHT = WIDTH,HEIGHT
+            WIDTH,HEIGHT = os.get_terminal_size()
+            if not [WIDTH,HEIGHT] == [oWIDTH,oHEIGHT]:
+                handle_action('reprint')
+
             if self.skip_get:
                 self.skip_get = False
 
             elif not PIPE_OUTPUT and not self.offset \
                 and URL and CHAT_ID and len(SESSION.cookies): 
-
-                WIDTH,HEIGHT = os.get_terminal_size()
 
                 if not is_set('messages_get_return',self.__dict__):
                     self.get_new_messages(
