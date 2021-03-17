@@ -1065,6 +1065,12 @@ def handle_action(action) -> None:
         elif action == 'previous':
             th.selected_message += 1
         
+        elif action == 'debug':
+            if is_set('selected',locals()):
+                dbg(selected)
+            else:
+                dbg('nothing seems to be selected')
+        
         if context_actions and action in context_actions:
             do_return = th.handle_context_buttons(action,selected)
             if do_return:
