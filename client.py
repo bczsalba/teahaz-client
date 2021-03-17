@@ -1993,15 +1993,12 @@ class TeahazHelper:
 
     def get_message_options(self,m):
         message_options = CONTEXT_OPTIONS.copy()
-        dbg(m)
 
         if m.get('replyId'):
             message_options.append('goto_parent')
 
         if m.get('type') == "file":
             message_options.append('open')
-
-        dbg(message_options)
 
         return message_options 
 
@@ -2055,13 +2052,15 @@ class TeahazHelper:
             username     = m.get('username')
 
             nickname     = m.get('nickname')
-            nickname     = Regex.unic.sub('',nickname)
+            nickname     = Regex.unic.sub('',nickname).strip()
             if not real_length(nickname):
                 nickname = "< invalid nickname >"
-            nickname = parse_emoji(nickname)
+            nickname = parse_emoji(nickname).strip()
+
             length = int(WIDTH*MAX_NICK_LENGTH_RATIO)
             if real_length(nickname) > length:
                 nickname = nickname[:length].rstrip()+'...'
+            
 
             m_time       = m.get('time')
             current_time = int(m_time)
