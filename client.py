@@ -3033,7 +3033,7 @@ class FileManager(Container):
         * cd                 : change directory
         * search(term)       : search for `term` in files
         * execute(cmd)       : execute given command in bash on the file
-        * open(opt: index)   : open selected file with the global filetype handlers
+        * open(path)         : open selected file with the global filetype handlers
     """
 
     def __init__(self,rows=10,path=None,completer=None,title='pick a file',filetype_highlight=True,**kwargs):
@@ -3237,14 +3237,14 @@ class FileManager(Container):
     def execute(self,cmd):
         os.system(cmd)
 
-    def open(self,f):
+    def open(self,path):
         cmd = None
-        guess = filetype.guess(f)
+        guess = filetype.guess(path)
         if guess:
             mime = guess.mime.split('/')[0]
         else:
             mime = 'text'
-            _,extension = os.path.splitext(f)
+            _,extension = os.path.splitext(path)
             if extension == '.ptg':
                 mime = 'ptg'
         
@@ -3253,15 +3253,15 @@ class FileManager(Container):
             cmd = values.get('open')
 
         if not cmd:
-            ui.create_error_dialog(f'Unknown filetype {mime}!\nCould not open {f}.',button="ignore")
+            ui.create_error_dialog(f'Unknown filetype {mime}!\nCould not open {path}.',button="ignore")
             return
 
         else:
-            cmd = cmd.replace('{path}',f)
+            cmd = cmd.replace('{path}',path)
 
         self.exec_mime = mime
         print('\033[2J')
-        print('\033[HOpening '+f+'...')
+        print('\033[HOpening '+path+'...')
         self.execute(cmd)
 
         
