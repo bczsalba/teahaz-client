@@ -349,7 +349,7 @@ class Color:
         if not isinstance(fg,int) and not fg.isdigit():
             return '\033[7m'+fg
 
-        return '\033[7m'+ (Color.color(clean_ansi(s),fg) if fg else s)
+        return '\033[7m'+ (Color.color(s,fg) if fg else s)
 
     def color(s,col,reset=True):
         if isinstance(col,list):
