@@ -1,5 +1,6 @@
 # PLANZ
-- [x] `--create-chatroom` arg
+- [ ] fix conv/user switching
+    - [ ] messages should reprint in set_chatroom (lno. 1935)
 
 - [ ] message replies!
     - [x] add submit action to message_select
@@ -205,3 +206,5 @@
         [x] highlight files and directories separately
         [x] do magiks :exclamation:
 ```
+
+- [x] `--create-chatroom` arg

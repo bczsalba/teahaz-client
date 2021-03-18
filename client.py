@@ -395,8 +395,8 @@ def add_new_colorscheme(name="new") -> dict:
 def get_index(obj) -> int:
     return obj.selected_index
 
-def ignore_input(*args):
-    dbg('fixme')
+def ignore_input(key,*args,**kwargs):
+    dbg('ignored',key)
 
 
 
@@ -1773,6 +1773,12 @@ class TeahazHelper:
             if do_output:
                 if not 199 < code < 300:
                     ui.create_error_dialog(resp.text)
+                    if method == 'post':
+                        data = 'post:' + str(kwargs.get('json'))
+                    else:
+                        data = 'get:' + str(kwargs.get('headers'))
+
+                    dbg('sending',data,'to',kwargs.get('url'),'failed, code',code)
                     return
                 else:
                     if success_message:
@@ -1797,16 +1803,20 @@ class TeahazHelper:
         if output:
             setattr(self,output,'incomplete')
 
-        # if kwargs.get('url').endswith('/chatroom/'):
-            # dbg('sending',kwargs.get('json'))
-
         self.operation_thread = threading.Thread(target=_do_operation,args=args,kwargs=kwargs)
         self.operation_thread.start()
 
         if not do_async:
+            # old = PIPE_OUTPUT
+            # set_pipe(ignore_input,{})
             self.operation_thread.join()
 
+            # dbg('resetting to',old)
+            # set_pipe(old[0],old[1])
+
     def login_or_register(self,contype,url,chatid,data):
+        ocontype = contype
+
         if contype == "login":
             d = {
                     'username': data.get('username'),
@@ -1831,21 +1841,20 @@ class TeahazHelper:
 
         endpoint = url+'/'+contype+'/'+chatid
 
-        resp = start_connection('post',contype,url=endpoint,json=d,timeout=None)
         self.handle_operation(
-                success_message = f'Successful {contype}!',
+                success_message = f'Successful {ocontype}!',
                 do_output       = True,
                 method          = 'post',
                 url             = endpoint,
                 json            = d,
                 do_async        = False,
                 callback        = lambda resp,data: {
-                    setattr(th,'login_success',json.loads(resp.text))
+                    setattr(th,'login_success',resp)
                 }
         )
 
         if hasattr(th,'login_success'):
-            chatname = json.loads(resp.text)['name']
+            chatname = json.loads(th.login_success.text)['name']
             BASE_DATA['username'] = d.get('username')
 
             _,chatindex = CURRENT_CHATROOM
@@ -1853,6 +1862,7 @@ class TeahazHelper:
             edit_json('usercfg.json',['SERVERS',url,chatindex,'chatroom_name'],chatname)
             import_json('usercfg')
             th.set_chatroom(url,chatindex)
+            SESSION.last_get = 0
              
     def is_connected(self,url):
         for cookie in SESSION.cookies:
@@ -1915,7 +1925,6 @@ class TeahazHelper:
 
         # set BASE_DATA
         BASE_DATA['username'] = chatroom['username']
-        # BASE_DATA['chatroom'] = chatroom['chatroom_id']
         
         # update json
         edit_json('usercfg.json','CURRENT_CHATROOM',[url,index])
@@ -1923,11 +1932,12 @@ class TeahazHelper:
         dbg('chatroom set to',url,'/',chatroom['chatroom_name'])
 
         # TODO: this is janky as fuck
-        if not ogchat and not ogchat == CURRENT_CHATROOM:
-            globals()['MESSAGES'] = []
+        if False and ogchat and not ogchat == CURRENT_CHATROOM:
+            dbg('janky')
+            edit_json('usercfg.json',['SERVERS',url,CURRENT_CHATROOM[1],'username'],username)
+            # import_json('usercfg')
+
             SESSION.last_get = 0
-            if hasattr(th,'messages_get_return'):
-                del th.messages_get_return
 
     def dump_invite(self,resp,url,chatroom):
         d = {
@@ -1936,7 +1946,8 @@ class TeahazHelper:
                 'invite'   : resp.text.replace('"','').strip()
             }
 
-        with open('inv_file.inv','w') as f:
+        conv_name = SERVERS[URL][CURRENT_CHATROOM[1]]['chatroom_name']
+        with open(conv_name+'.inv','w') as f:
             f.write(json.dumps(d))
 
     def create_invite(self,data):
@@ -1947,8 +1958,9 @@ class TeahazHelper:
                     key = "expr_time"
                 d[key] = value 
 
+        conv_name = SERVERS[URL][CURRENT_CHATROOM[1]]['chatroom_name']
         self.handle_operation(
-                success_message = 'Saved new invite as inv_file.inv!',
+                success_message = f'Saved new invite as {conv_name}.inv!',
                 do_output       = True,
                 method          = 'get',
                 url             = URL+'/api/v0/invite/'+CHAT_ID,
@@ -2700,7 +2712,9 @@ class UIGenerator:
         ui.wipe()
 
         if handler == None:
-            handler = lambda _,self: handle_menu("ESC",self.parent)
+            handler = lambda container,self: {
+                    handle_menu("ESC",container)
+            }
 
         pytermgui.set_attribute_for_id('error-button_'+button,'handler',handler)
 
