@@ -1574,7 +1574,7 @@ def handle_menu_actions(action,current_file=None) -> int:
             }
 
     elif menu == "chatroom_create":
-        pytermgui.set_attribute_for_id('chatroom_create-button_create','handler',
+        pytermgui.set_attribute_for_id('chatroom_create-button','handler',
                 lambda container,self: {
                     container.wipe(),
                     th.create_chatroom(container.dict_path)
@@ -1584,19 +1584,37 @@ def handle_menu_actions(action,current_file=None) -> int:
         source = {
                 "ui__title": f"Create new chatroom at {URL}",
                 "ui__padding0": 0,
-                "ui__id": "chatroom_create-prompt_chatroom",
                 "chatroom_name" : "test",
                 "username"      : "test",
                 "email"         : "test",
                 "nickname"      : "test",
                 "password"      : "1234567890",
-                "ui__padding1": 1,
-                "ui__button": {
-                    "id": "chatroom_create-button_create",
-                    "value": "create!"
+                "ui__padding1"  : 1,
+                "ui__button"    : {
+                    "id"    : "chatroom_create-button",
+                    "value" : "create!"
                 }
             }
 
+    elif menu == "invite_create":
+        pytermgui.set_attribute_for_id('invite_create-button','handler',
+                lambda container,self: {
+                    container.wipe(),
+                    th.create_invite(container.dict_path)
+                }
+        )
+
+        source = {
+                "ui__title"            : "Create new invite",
+                "ui__padding0"         : 0,
+                "expire time (UTC)"    : "1616149420",
+                "uses"                 : "10000",
+                "ui__padding1"         : 1,
+                "ui__button"           : {
+                    "id"    : "invite_create-button",
+                    "value" : "create!" 
+                }
+        }
 
     elif menu == "address_picker":
         ui.create_address_picker()
@@ -1913,7 +1931,6 @@ class TeahazHelper:
                     ),
                 }
         )
-
                 
     def set_chatroom(self,url,index,username=None):
         dbg('called to',url)
@@ -1944,7 +1961,7 @@ class TeahazHelper:
 
         # set BASE_DATA
         BASE_DATA['username'] = chatroom['username']
-        BASE_DATA['chatroom'] = chatroom['chatroom_id']
+        # BASE_DATA['chatroom'] = chatroom['chatroom_id']
         
         # update json
         edit_json('usercfg.json','CURRENT_CHATROOM',[url,index])
@@ -1957,6 +1974,36 @@ class TeahazHelper:
             SESSION.last_get = 0
             if hasattr(th,'messages_get_return'):
                 del th.messages_get_return
+
+    def dump_invite(self,resp,url,chatroom):
+        d = {
+                'url'      : url,
+                'chatroom' : chatroom,
+                'invite'   : resp.text.replace('"','').strip()
+            }
+
+        with open('inv_file.inv','w') as f:
+            f.write(json.dumps(d))
+
+    def create_invite(self,data):
+        d = BASE_DATA.copy()
+        for key,value in data.items():
+            if not key.startswith('ui__'):
+                if key == "expire time (UTC)":
+                    key = "expr_time"
+                d[key] = value 
+
+        self.handle_operation(
+                success_message = 'Saved new invite as inv_file.inv!',
+                do_output       = True,
+                method          = 'get',
+                url             = URL+'/api/v0/invite/'+CHAT_ID,
+                do_async        = False,
+                headers         = d,
+                callback        = lambda resp,data: {
+                    self.dump_invite(resp,URL,CHAT_ID)
+                }
+        )
 
     def add_new_server(self,address,chatroom_id,chatroom_name=None,username=None):
         globals()['URL'] = address
@@ -3481,6 +3528,7 @@ MENUS = [
     # "menu_serverregister",
     # "menu_login/register",
     "menu_login",
+    "menu_invite_create",
     # "menu_settings",
     # "menu_picker"
 ]
@@ -3526,7 +3574,6 @@ CONTEXT_OPTIONS = [
 URL = None
 BASE_DATA = {
     "username": None,
-    "chatroom": None,
 }
 
 MARKS = {
