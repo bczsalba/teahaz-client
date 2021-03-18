@@ -673,6 +673,7 @@ def handle_action(action) -> None:
         with open(SESSIONLOCATION,'wb') as f:
             pickle.dump(SESSION,f)
 
+        dbg('saved session')
         sys.exit()
 
     elif action == "reprint":
@@ -1770,17 +1771,20 @@ class TeahazHelper:
  
             resp = fun(**kwargs)
             code = resp.status_code
-            if do_output:
-                if not 199 < code < 300:
+            if not 199 < code < 300:
+                if do_output:
                     ui.create_error_dialog(resp.text)
-                    if method == 'post':
-                        data = 'post:' + str(kwargs.get('json'))
-                    else:
-                        data = 'get:' + str(kwargs.get('headers'))
 
-                    dbg('sending',data,'to',kwargs.get('url'),'failed, code',code)
-                    return
+                if method == 'post':
+                    data = 'post: ' + str(kwargs.get('json'))
                 else:
+                    data = 'get: ' + str(kwargs.get('headers'))
+
+                dbg('sending',data,'to',kwargs.get('url'),'failed, code',code)
+                return
+
+            else:
+                if do_output:
                     if success_message:
                         sm = success_message
                     else:
@@ -1849,20 +1853,28 @@ class TeahazHelper:
                 json            = d,
                 do_async        = False,
                 callback        = lambda resp,data: {
-                    setattr(th,'login_success',resp)
+                    setattr(th,'login_response',resp),
+                    setattr(th,'login_data',data)
                 }
         )
 
-        if hasattr(th,'login_success'):
-            chatname = json.loads(th.login_success.text)['name']
-            BASE_DATA['username'] = d.get('username')
-
+        if hasattr(th,'login_response'):
             _,chatindex = CURRENT_CHATROOM
-            edit_json('usercfg.json',['SERVERS',url,chatindex,'username'],d.get('username'))
-            edit_json('usercfg.json',['SERVERS',url,chatindex,'chatroom_name'],chatname)
+            data = th.login_data
+
+            try:
+                resp = json.loads(th.login_response.text)
+            except Exception as e:
+                dbg(e)
+                return
+
+
+            globals()['BASE_DATA']['username'] = data.get('username')
+            edit_json('usercfg.json',['SERVERS',url,chatindex,'chatroom_name'],resp['name'])
+            edit_json('usercfg.json',['SERVERS',url,chatindex,'username'],data.get('username'))
             import_json('usercfg')
+
             th.set_chatroom(url,chatindex)
-            SESSION.last_get = 0
              
     def is_connected(self,url):
         for cookie in SESSION.cookies:
@@ -1896,48 +1908,25 @@ class TeahazHelper:
                 }
         )
                 
-    def set_chatroom(self,url,index,username=None):
-        dbg('called to',url)
-        global BASE_DATA,CONV_HEADER,URL
-            
-        # return if certain values are passed
-        if index == 'invalid' or index == 'register':
-            return
+    def set_chatroom(self,url,index):
+        dbg('called to',url,index)
 
-        # set og data to restore in case of problems
-        ogchat = CURRENT_CHATROOM
-        ogdata = BASE_DATA.copy()
-        ogurl = URL
-
-        # set global values
-        globals()['URL'] = url
+        chatroom                      = SERVERS[url][index]        
+        globals()['URL']              = url
         globals()['CURRENT_CHATROOM'] = url,index
+        globals()['CHAT_ID']          = chatroom["chatroom_id"]
 
-        # update header
-        chatroom = SERVERS[url][index]
+        if SERVERS[url][index].get('username'):
+            globals()['BASE_DATA']['username'] = SERVERS[url][index].get('username')
+
         if is_set('CONV_HEADER'):
-            ogvalue = CONV_HEADER_LABEL.value
             CONV_HEADER_LABEL.set_value(f'{url}: {chatroom["chatroom_name"]}')
-            CONV_HEADER.width = max(CONV_HEADER.width,CONV_HEADER_LABEL.width+3)
-            CONV_HEADER.center()
 
-        globals()['CHAT_ID'] = chatroom["chatroom_id"]
-
-        # set BASE_DATA
-        BASE_DATA['username'] = chatroom['username']
-        
-        # update json
         edit_json('usercfg.json','CURRENT_CHATROOM',[url,index])
-
         dbg('chatroom set to',url,'/',chatroom['chatroom_name'])
+        SESSION.last_get = 0
+        
 
-        # TODO: this is janky as fuck
-        if False and ogchat and not ogchat == CURRENT_CHATROOM:
-            dbg('janky')
-            edit_json('usercfg.json',['SERVERS',url,CURRENT_CHATROOM[1],'username'],username)
-            # import_json('usercfg')
-
-            SESSION.last_get = 0
 
     def dump_invite(self,resp,url,chatroom):
         d = {
@@ -1983,18 +1972,29 @@ class TeahazHelper:
         chatroom = data.get('chatroom')
         invite   = data.get('invite')
 
+        if url in SERVERS and any(chatroom['chatroom_id'] == chatroom for chatroom in SERVERS[url]):
+            return
+
         globals()['INVITE'] = invite
-        th.add_new_server(url,chatroom)
-        handle_action('menu_login/register')
+        if th.add_new_server(url,chatroom) == 0:
+            handle_action('menu_login/register')
+        else:
+            ui.create_error_dialog('chatroom already exists!')
 
     def add_new_server(self,address,chatroom_id,chatroom_name=None,username=None):
         globals()['URL'] = address
+        globals()['BASE_DATA']['username'] = username
 
         new = {
                 'chatroom_id': chatroom_id,
                 'chatroom_name': chatroom_name,
                 'username': username,
         }
+
+        for chatrooms in SERVERS.values():
+            for chatroom in chatrooms:
+                if chatroom['chatroom_id'] == chatroom_id:
+                    return 1
 
         # add new data to servers
         if not is_set('SERVERS'):
@@ -2010,9 +2010,9 @@ class TeahazHelper:
         import_json('usercfg')
 
         # set chatroom
-        self.set_chatroom(address,len(SERVERS[address])-1,username)
+        self.set_chatroom(address,len(SERVERS[address])-1)
 
-        return address,SERVERS[address].index(new)
+        return 0
 
     def get_message_by_id(self,messageId):
         for m in reversed(MESSAGES):
@@ -2372,11 +2372,11 @@ class TeahazHelper:
         data['time'] = str(get_time)
 
         self.handle_operation(
-                method   = 'get',
-                output   = output,
-                callback = callback,
-                url      = URL+'/api/v0/message/'+CHAT_ID,
-                headers  = data,
+                method    = 'get',
+                output    = output,
+                callback  = callback,
+                url       = URL+'/api/v0/message/'+CHAT_ID,
+                headers   = data,
         )
 
     def get_loop(self):
@@ -2397,7 +2397,7 @@ class TeahazHelper:
                 if not is_set('messages_get_return',self.__dict__):
                     self.get_new_messages(
                             'messages_get_return',
-                            callback = lambda resp,_: self.add_to_messages(json.loads(resp.text))
+                            callback = lambda resp,_: {dbg(resp.status_code),self.add_to_messages(json.loads(resp.text))}
                     )
 
                 elif not self.messages_get_return == 'incomplete':
@@ -2611,7 +2611,7 @@ class UIGenerator:
                 chat_col = color(chatroom['chatroom_name'],THEME['title'])
 
                 # create, add prompt
-                p = Prompt(options=[chat_col+'@'+url_col],justify_options='center')
+                p = Prompt(options=[chatroom['username']+' '+chat_col+'@'+url_col],justify_options='center')
                 p.url = url_long
                 p.chatroom = chatroom
 
@@ -3666,8 +3666,12 @@ if __name__ == "__main__":
         SESSION.last_get = 0
 
     if is_set('CURRENT_CHATROOM'):
-            url,index = CURRENT_CHATROOM
-            th.set_chatroom(url,index)
+        url,index = CURRENT_CHATROOM
+        th.set_chatroom(url,index)
+        username = SERVERS[url][index]['username']
+        if username == None:
+            ui.create_error_dialog('Something went wrong during login.',handler= lambda container,self: handle_action('menu_login/register'))
+
     else:
         CURRENT_CHATROOM = None
         CHAT_ID = None
