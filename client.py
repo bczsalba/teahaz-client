@@ -3349,7 +3349,7 @@ class FileManager(Container):
                 self.selected_index = max(self.selected_index-1,0)
 
             elif key in ["ESC","ENTER"]:
-                self.pattern = None
+                # self.pattern = None
                 self.field.is_active = False
                 self.field.set_value('')
                 self.field.prompt = ''
@@ -3454,6 +3454,10 @@ class FileManager(Container):
             _,extension = os.path.splitext(path)
             if extension == '.ptg':
                 mime = 'ptg'
+            elif extension == ".inv":
+                with open(path,'r') as f:
+                    th.consume_invite(f)
+                return
         
         values = FILETYPE_DEFAULTS.get(mime)
         if values:
