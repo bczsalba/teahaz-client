@@ -185,6 +185,14 @@ def handle_args() -> None:
         th.add_new_server(url,chatroom)
         handle_action('menu_login/register')
 
+    elif args[0] == '--create-chatroom':
+        if not len(args) > 1:
+            print('Not enough arguments given!')
+
+        globals()['URL'] = args[1]
+        handle_action('menu_chatroom_create')
+
+
 
 
 ## miscellaneous
@@ -1027,7 +1035,6 @@ def handle_action(action) -> None:
 
             # go to previous 
             elif action.endswith("_prev"):
-                dbg(i,index)
                 if i == 0:
                     return
 
@@ -1566,6 +1573,31 @@ def handle_menu_actions(action,current_file=None) -> int:
                 }
             }
 
+    elif menu == "chatroom_create":
+        pytermgui.set_attribute_for_id('chatroom_create-button_create','handler',
+                lambda container,self: {
+                    container.wipe(),
+                    th.create_chatroom(container.dict_path)
+                }
+        )
+
+        source = {
+                "ui__title": f"Create new chatroom at {URL}",
+                "ui__padding0": 0,
+                "ui__id": "chatroom_create-prompt_chatroom",
+                "chatroom_name" : "test",
+                "username"      : "test",
+                "email"         : "test",
+                "nickname"      : "test",
+                "password"      : "1234567890",
+                "ui__padding1": 1,
+                "ui__button": {
+                    "id": "chatroom_create-button_create",
+                    "value": "create!"
+                }
+            }
+
+
     elif menu == "address_picker":
         ui.create_address_picker()
         return
@@ -1577,7 +1609,6 @@ def handle_menu_actions(action,current_file=None) -> int:
     else:
         return 1
 
-    #globals()['CURRENT_FILE'] = path
     set_current_file(source)
 
     # call menu handler
@@ -1761,7 +1792,6 @@ def find(key,offset=0,reverse=False) -> None:
         infield.print()
     
 def replace(key,action) -> None:
-    dbg('action',action)
     val = infield.value
 
     if action == 'replace':
@@ -1805,14 +1835,29 @@ class TeahazHelper:
         
         
  
-    def handle_operation(self,method,output=None,callback=None,*args,**kwargs):
+    def handle_operation(self,method,do_output=False,success_message=None,do_async=True,output=None,callback=None,*args,**kwargs):
+
         def _do_operation(*args,**kwargs):
+            global SESSION
             if method == "post":
                 fun = SESSION.post
             elif method == "get":
                 fun = SESSION.get
  
             resp = fun(**kwargs)
+            code = resp.status_code
+            if do_output:
+                if not 199 < code < 300:
+                    ui.create_error_dialog(resp.text)
+                    return
+                else:
+                    if success_message:
+                        sm = success_message
+                    else:
+                        sm = 'Successfully handled operation!'
+
+                    ui.create_success_dialog(sm)
+
             if output:
                 try:
                     setattr(self,output,resp)
@@ -1820,13 +1865,22 @@ class TeahazHelper:
                     dbg(e)
 
             if callback:
-                callback(resp)
+                data = kwargs.get('json')
+                if not data:
+                    data = {}
+                callback(resp,data)
 
         if output:
             setattr(self,output,'incomplete')
 
+        # if kwargs.get('url').endswith('/chatroom/'):
+            # dbg('sending',kwargs.get('json'))
+
         self.operation_thread = threading.Thread(target=_do_operation,args=args,kwargs=kwargs)
         self.operation_thread.start()
+
+        if not do_async:
+            self.operation_thread.join()
 
     def is_connected(self,url):
         for cookie in SESSION.cookies:
@@ -1835,7 +1889,33 @@ class TeahazHelper:
         else:
             return False
 
-    def set_chatroom(self,url,index):
+    def create_chatroom(self,data):
+        d = {}
+        for key,value in data.items():
+            if not key.startswith('ui__'):
+                d[key] = value
+
+
+        self.handle_operation(
+                success_message = 'Created new chatroom!',
+                do_output       = True,
+                method          = 'post',
+                url             = URL+'/api/v0/chatroom/',
+                json            = d,
+                do_async        = False,
+                callback        = lambda resp,data: {
+                    setattr(th,'response',json.loads(resp.text)),
+                    th.add_new_server(
+                        address       = URL,
+                        chatroom_id   = th.response.get('chatroom'),
+                        chatroom_name = th.response.get('name'),
+                        username      = data.get('username')
+                    ),
+                }
+        )
+
+                
+    def set_chatroom(self,url,index,username=None):
         dbg('called to',url)
         global BASE_DATA,CONV_HEADER,URL
             
@@ -1844,6 +1924,7 @@ class TeahazHelper:
             return
 
         # set og data to restore in case of problems
+        ogchat = CURRENT_CHATROOM
         ogdata = BASE_DATA.copy()
         ogurl = URL
 
@@ -1870,13 +1951,20 @@ class TeahazHelper:
 
         dbg('chatroom set to',url,'/',chatroom['chatroom_name'])
 
-    def add_new_server(self,address,chatroom):
+        # TODO: this is janky as fuck
+        if not ogchat == CURRENT_CHATROOM:
+            globals()['MESSAGES'] = []
+            SESSION.last_get = 0
+            if hasattr(th,'messages_get_return'):
+                del th.messages_get_return
+
+    def add_new_server(self,address,chatroom_id,chatroom_name=None,username=None):
         globals()['URL'] = address
 
         new = {
-                'chatroom_id': chatroom,
-                'chatroom_name': None,
-                'username': None
+                'chatroom_id': chatroom_id,
+                'chatroom_name': chatroom_name,
+                'username': username,
         }
 
         # add new data to servers
@@ -1893,7 +1981,7 @@ class TeahazHelper:
         import_json('usercfg')
 
         # set chatroom
-        self.set_chatroom(address,len(SERVERS[address])-1)
+        self.set_chatroom(address,len(SERVERS[address])-1,username)
 
         return address,SERVERS[address].index(new)
 
@@ -1962,7 +2050,7 @@ class TeahazHelper:
         temp['nickname'] = temp['username']
         temp['message'] = message
         
-        message_update_lambda = lambda resp: {
+        message_update_lambda = lambda resp,_: {
                 self.add_to_messages(json.loads(resp.text)),
                 (hook__message_send_post(resp.text) if is_set('hook__message_send_post') else None)}
 
@@ -1970,14 +2058,8 @@ class TeahazHelper:
                 method        = 'post',
                 output        = 'message_send_return',
                 url           = URL+'/api/v0/'+endpoint,
-                callback      = lambda _: self.get_new_messages(callback=message_update_lambda),
-                # callback      = lambda resp: self.handle_operation(
-                    # method='get',
-                    # url=URL+'/api/v0/message/'+CHAT_ID,
-                    # headers=data,
-                    # callback=message_update_lambda
-                # ),
-                json     = data
+                callback      = lambda resp,data: self.get_new_messages(callback=message_update_lambda),
+                json          = data
         )
 
         infield.clear_value()
@@ -2000,7 +2082,6 @@ class TeahazHelper:
 
         elif param == 'copy':
             clip.copy(context.get('message'))
-            dbg(clip.paste())
             ret_val = True
 
         else:
@@ -2287,7 +2368,7 @@ class TeahazHelper:
                 if not is_set('messages_get_return',self.__dict__):
                     self.get_new_messages(
                             'messages_get_return',
-                            callback = lambda resp: self.add_to_messages(json.loads(resp.text))
+                            callback = lambda resp,_: self.add_to_messages(json.loads(resp.text))
                     )
 
                 elif not self.messages_get_return == 'incomplete':

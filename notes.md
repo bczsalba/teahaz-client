@@ -1,4 +1,6 @@
 # PLANZ
+- [x] `--create-chatroom` arg
+
 - [ ] message replies!
     - [x] add submit action to message_select
     - [x] make reply action pre-set replyId
