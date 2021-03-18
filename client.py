@@ -585,108 +585,6 @@ def minimal_or_custom_highlight(item):
     else:
         return parse_color(THEME['custom_prompt_highlight'],item)
 
-        
-
-
-
-# NETWORK FUNCTIONS #
-
-# start threaded connection, TODO: this is the worst use of Thread humanity has ever witnessed.
-# TODO TODO TODO
-# also this should be under TeahazHelper
-def start_connection(contype,menu=None,**kwargs) -> int:
-    def _connect(*args,**kwargs):
-        # decide function to use
-        dbg('started')
-        contype = args[0]
-        if contype  == 'post':
-            fun = SESSION.post
-        elif contype == 'get':
-            fun = SESSION.get
-        else:
-            dbg('implement',contype,'pls')
-            raise NotImplementedError
-
-        # try to get return value
-        try:
-            ret = fun(**kwargs)
-
-        # connection timeout message
-        except requests.exceptions.ConnectTimeout:
-            ret = ["Connection timed out.",408]
-
-        # connection error message
-        except requests.exceptions.ConnectionError as e:
-            dbg('Exception during',contype+': ',e)
-            ret = ["Error happened during connection. Check log for more info.",-1]
-
-        # unimplemented errors
-        except Exception as e:
-            dbg('implement',type(e).__name__,'pls')
-            raise NotImplementedError
-
-        return ret
-    
-    
-    t = ThreadWithReturnValue(target=_connect,args=(contype,),kwargs=kwargs)
-    t.start()
-    ret_val = t.join()
-    dbg('returned',ret_val)
-
-    if isinstance(ret_val,list):
-        ui.create_error_dialog(ret_val[0],'try again')
-        return False
-
-    elif not 200 <= ret_val.status_code < 300:
-        ui.create_error_dialog(ret_val.text.strip(),'try again')
-        return 0
-
-    else:
-        return ret_val
-        
-def login_or_register(contype,url,chatid,data) -> None:
-    if contype == "login":
-        d = {
-                'username': data.get('username'),
-                'password': data.get('password')
-        }
-    elif contype == "register":
-        d = { 
-                'username': data.get('username'),
-                'password': data.get('password'),
-                'email': data.get('email'),
-                'nickname': data.get('nickname'),
-                'chatroomId': CHAT_ID,
-                'inviteId': INVITE
-        }
-
-    if contype == 'register':
-        contype = 'api/v0/invite'
-
-    if url == "":
-        ui.create_error_dialog('Invalid value "'+url+'" for url.','choose other server')
-        return 0 
-
-    endpoint = url+'/'+contype+'/'+chatid
-
-    resp = start_connection('post',contype,url=endpoint,json=d,timeout=None)
-    chatname = json.loads(resp.text)['name']
-
-    if not resp or not resp.status_code in range(200,299):
-        dbg('bad response:',resp)
-    else:
-        text = "Successfully " + ("logged in" if contype == "login" else "registered")
-        BASE_DATA['username'] = d.get('username')
-
-        _,chatindex = CURRENT_CHATROOM
-        edit_json('usercfg.json',['SERVERS',url,chatindex,'username'],d.get('username'))
-        edit_json('usercfg.json',['SERVERS',url,chatindex,'chatroom_name'],chatname)
-        import_json('usercfg')
-        th.set_chatroom(url,CURRENT_CHATROOM[1])
-         
-        ui.wipe()
-        ui.create_success_dialog(text) 
-
 
 
 
@@ -1520,7 +1418,11 @@ def handle_menu_actions(action,current_file=None) -> int:
         pytermgui.set_attribute_for_id(menu+'-button_submit','address',address)
         pytermgui.set_attribute_for_id(menu+'-button_submit','chatid',chatid)
         pytermgui.set_attribute_for_id(menu+'-button_submit','handler',
-                lambda prev,self: login_or_register(menu,self.address,self.chatid,self.parent.dict_path))
+                lambda container,self: {
+                    container.wipe(),
+                    th.login_or_register(menu,self.address,self.chatid,self.parent.dict_path)
+                }
+        )
 
         if current_file == None:
             if menu == 'login':
@@ -1859,7 +1761,6 @@ class TeahazHelper:
         
  
     def handle_operation(self,method,do_output=False,success_message=None,do_async=True,output=None,callback=None,*args,**kwargs):
-
         def _do_operation(*args,**kwargs):
             global SESSION
             if method == "post":
@@ -1904,6 +1805,55 @@ class TeahazHelper:
 
         if not do_async:
             self.operation_thread.join()
+
+    def login_or_register(self,contype,url,chatid,data):
+        if contype == "login":
+            d = {
+                    'username': data.get('username'),
+                    'password': data.get('password')
+            }
+        elif contype == "register":
+            d = { 
+                    'username': data.get('username'),
+                    'password': data.get('password'),
+                    'email': data.get('email'),
+                    'nickname': data.get('nickname'),
+                    'chatroomId': CHAT_ID,
+                    'inviteId': INVITE
+            }
+
+        if contype == 'register':
+            contype = 'api/v0/invite'
+
+        if url == "":
+            ui.create_error_dialog('Invalid value "'+url+'" for url.','choose other server')
+            return 0 
+
+        endpoint = url+'/'+contype+'/'+chatid
+
+        resp = start_connection('post',contype,url=endpoint,json=d,timeout=None)
+        self.handle_operation(
+                success_message = f'Successful {contype}!',
+                do_output       = True,
+                method          = 'post',
+                url             = endpoint,
+                json            = d,
+                do_async        = False,
+                callback        = lambda resp,data: {
+                    setattr(th,'login_success',json.loads(resp.text))
+                }
+        )
+
+        if hasattr(th,'login_success'):
+            chatname = json.loads(resp.text)['name']
+            BASE_DATA['username'] = d.get('username')
+
+            _,chatindex = CURRENT_CHATROOM
+            edit_json('usercfg.json',['SERVERS',url,chatindex,'username'],d.get('username'))
+            edit_json('usercfg.json',['SERVERS',url,chatindex,'chatroom_name'],chatname)
+            import_json('usercfg')
+            th.set_chatroom(url,chatindex)
+             
 
     def is_connected(self,url):
         for cookie in SESSION.cookies:
