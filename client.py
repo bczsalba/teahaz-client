@@ -181,9 +181,14 @@ def handle_args() -> None:
             return
 
         url, chatroom, invite = args[1:]
-        globals()['INVITE'] = invite
-        th.add_new_server(url,chatroom)
-        handle_action('menu_login/register')
+        d = {
+                'url': url,
+                'chatroom': chatroom,
+                'invite': invite
+        }
+
+        th.consume_invite(d)
+
 
     elif args[0] == '--create-chatroom':
         if not len(args) > 1:
@@ -2005,6 +2010,22 @@ class TeahazHelper:
                 }
         )
 
+    def consume_invite(self,data):
+        if not isinstance(data,dict):
+            try:
+                data = json.load(data)
+            except Exception as e:
+                ui.create_error_dialog('Error consuming invite: '+str(e))
+                return
+
+        url      = data.get('url')
+        chatroom = data.get('chatroom')
+        invite   = data.get('invite')
+
+        globals()['INVITE'] = invite
+        th.add_new_server(url,chatroom)
+        handle_action('menu_login/register')
+
     def add_new_server(self,address,chatroom_id,chatroom_name=None,username=None):
         globals()['URL'] = address
 
@@ -3692,9 +3713,9 @@ if __name__ == "__main__":
 
     handle_args()
 
-    if is_set('CURRENT_CHATROOM'):
-        url,index = CURRENT_CHATROOM
-        th.set_chatroom(url,index)
+    if is_set('CURRENT_CHATROOM') and not is_set('URL'):
+            url,index = CURRENT_CHATROOM
+            th.set_chatroom(url,index)
     else:
         CURRENT_CHATROOM = None
         CHAT_ID = None
