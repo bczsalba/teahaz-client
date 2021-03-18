@@ -2106,7 +2106,7 @@ class TeahazHelper:
             index = MESSAGES[::-1].index(parent)
             th.offset = index - 3
             self.selected_message = index
-            switch_mode("SCROLL",force=True)
+            switch_mode("MESSAGE_SELECT",force=True)
             return ret_val
 
         elif param == 'copy':
@@ -3197,7 +3197,7 @@ class InputFieldCompleter(Container):
 
 class FileManager(Container):
     """
-    Container derivative that would show and let users interact
+    Container derivative that shows and let users interact
     with files.
 
     - main methods (other than Container's):
@@ -3207,7 +3207,7 @@ class FileManager(Container):
         * open(path)         : open selected file with the global filetype handlers
     """
 
-    def __init__(self,rows=10,path=None,completer=None,title='pick a file',filetype_highlight=True,**kwargs):
+    def __init__(self,rows=None,path=None,completer=None,title='pick a file',filetype_highlight=True,**kwargs):
         super().__init__(**kwargs)
         if path:
             if os.path.exists(path):
@@ -3238,6 +3238,10 @@ class FileManager(Container):
         self.add_elements(Label())
 
         # add rows for output
+        # TODO: this should be checked for every repr
+        if rows == None:
+            rows = int(HEIGHT*(2/3))
+
         for _ in range(rows):
             row = Prompt(value='',label='')
             self.rows.append(row)
@@ -3313,7 +3317,6 @@ class FileManager(Container):
                 self.selected_index = max(self.selected_index-1,0)
 
             elif key in ["ESC","ENTER"]:
-                # self.pattern = None
                 self.field.is_active = False
                 self.field.set_value('')
                 self.field.prompt = ''
@@ -3323,6 +3326,9 @@ class FileManager(Container):
 
             elif key == "SIGTERM":
                 handle_action('quit')
+
+            elif key == "BACKSPACE" and real_length(self.field.value)-1 == 0:
+                self.pattern = None
             
             else:
                 self.field.og_send(key,**kwargs)
