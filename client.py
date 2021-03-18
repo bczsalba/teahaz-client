@@ -1854,7 +1854,6 @@ class TeahazHelper:
             import_json('usercfg')
             th.set_chatroom(url,chatindex)
              
-
     def is_connected(self,url):
         for cookie in SESSION.cookies:
             if cookie.domain == urlparse(url).netloc.split(':')[0]:
@@ -1924,7 +1923,7 @@ class TeahazHelper:
         dbg('chatroom set to',url,'/',chatroom['chatroom_name'])
 
         # TODO: this is janky as fuck
-        if not ogchat == CURRENT_CHATROOM:
+        if not ogchat and not ogchat == CURRENT_CHATROOM:
             globals()['MESSAGES'] = []
             SESSION.last_get = 0
             if hasattr(th,'messages_get_return'):
@@ -2829,6 +2828,7 @@ class UIGenerator:
         print(context_menu)
 
 
+
 class InputDialog(Container):
     """
     Class extending pytermgui.Container to add support 
@@ -3425,8 +3425,6 @@ class FileManager(Container):
         print('\033[HOpening '+path+'...')
         self.execute(cmd)
 
-        
-
 class ModeLabel(Label):
     """
     Simple Label extension providing a wipe()
@@ -3665,9 +3663,7 @@ if __name__ == "__main__":
         SESSION = requests.session()
         SESSION.last_get = 0
 
-    handle_args()
-
-    if is_set('CURRENT_CHATROOM') and not is_set('URL'):
+    if is_set('CURRENT_CHATROOM'):
             url,index = CURRENT_CHATROOM
             th.set_chatroom(url,index)
     else:
@@ -3675,6 +3671,7 @@ if __name__ == "__main__":
         CHAT_ID = None
         SERVERS = {}
 
+    handle_args()
 
     # start get loop
     get_loop = threading.Thread(target=th.get_loop,name='get_loop')
