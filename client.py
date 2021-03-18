@@ -1491,11 +1491,11 @@ def handle_menu_actions(action,current_file=None) -> int:
         source = {
                 "ui__title": f"Create new chatroom at {URL}",
                 "ui__padding0": 0,
-                "chatroom_name" : "test",
-                "username"      : "test",
-                "email"         : "test",
-                "nickname"      : "test",
-                "password"      : "1234567890",
+                "chatroom_name" : "",
+                "username"      : "",
+                "email"         : "",
+                "nickname"      : "",
+                "password"      : "",
                 "ui__padding1"  : 1,
                 "ui__button"    : {
                     "id"    : "chatroom_create-button",
