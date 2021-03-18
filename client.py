@@ -3446,24 +3446,6 @@ class ModeLabel(Label):
             x,y = self.pos
             print(f"\033[{y+yoffset};{x}H"+real_length(super().__repr__())*' ')
 
-class ThreadWithReturnValue(threading.Thread):
-    """
-    Thread object that returns its value in the `join` method.
-    taken from: https://stackoverflow.com/a/40344234
-    """
-
-    def __init__(self,**kwargs):
-        super().__init__(**kwargs)
-        self._return = None
-
-    def run(self):
-        if self._target is not None:
-            self._return = self._target(*self._args, **self._kwargs)
-
-    def join(self,timeout=None):
-        super().join(timeout=timeout)
-        return self._return
-
 
            
 
