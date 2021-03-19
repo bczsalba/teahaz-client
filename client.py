@@ -3462,13 +3462,14 @@ class LoadingScreen(Container):
         + can be reimplemented easily in configs
     """
 
-    def __init__(self,sprites,title=None,**kwargs):
+    def __init__(self,sprites,frametime=1/10,title=None,**kwargs):
         super().__init__(**kwargs)
 
         self.current_frame = 0
         self._is_stopped   = False
         self._old_pipe     = PIPE_OUTPUT
         self.width         = int(WIDTH*(2/3))
+        self.frametime     = frametime
 
         if not isinstance(sprites,list) or not len(sprites):
             raise Exception('Please provide a list of multiple sprites!')
@@ -3479,9 +3480,6 @@ class LoadingScreen(Container):
 
         self.title = Label(value=title,justify='left')
         self.title.set_style('value',pytermgui.CONTAINER_TITLE_STYLE)
-
-        # for i,c in enumerate(THEME['corners'].values()):
-            # self.set_corner(i,c)
 
     def set_title(self,value):
         if value == None:
@@ -3533,9 +3531,7 @@ class LoadingScreen(Container):
         while not self._is_stopped:
             self.get_frame()
             print(self)
-            time.sleep(1/45*len(self.sprites))
-
-
+            time.sleep(self.frametime)
 
 class ModeLabel(Label):
     """
@@ -3709,7 +3705,6 @@ if __name__ == "__main__":
     MODE_LABEL.set_style('value',lambda item: color(item,THEME['mode_indicator']))
 
     # set up top bar to indicate current conv
-    # CONV_HEADER = Container(width=int(WIDTH*0.75),dynamic_size=False)
     CONV_HEADER = Container(width=int(WIDTH*0.4))
     CONV_HEADER.center(axes='x')
     CONV_HEADER._repr_pre = CONV_HEADER.wipe_all_containing
@@ -3723,27 +3718,26 @@ if __name__ == "__main__":
         if not c == None:
             CONV_HEADER.set_corner(i,c)
 
-
-    # set up inputfield & container
+    # set up infield
     infield = InputDialogField(pos=get_infield_pos())
     infield.line_offset = None
     infield.visual_color = lambda text: parse_color(THEME['field_highlight'],text)
     switch_mode("ESCAPE")
 
+    # set up completer
     completer = InputFieldCompleter(options=EMOJI_KEYS,threshold=1,field=infield,trigger=':',icon_callback=parse_emoji)
     completer._is_enabled = lambda: COMPLETER_ENABLED
     completer._show_icons = lambda: COMPLETER_ICONS
 
+    # set up filemanager
     filemanager = FileManager()
-    loader      = LoadingScreen(sprites=SPRITES['loading_screen'])
+
+    # set up loading screen
+    loader      = LoadingScreen(frametime=1/8,sprites=[bold(sprite) for sprite in SPRITES['loading_screen']])
     loader.set_title(None)
     loader.set_borders([''*4])
 
-    # filemanager = InputDialog(label_value='file manager',dialog_type='field')
-    # filemanager.completer = InputFieldCompleter(options=os.listdir,field=filemanager.field)
-    # filemanager.center()
-
-
+    # set up category classes
     ui = UIGenerator()
     th = TeahazHelper()
 
