@@ -1,7 +1,7 @@
 # PLANZ
-- [ ] loading screen object
+```py
+> LoadingScreen(Container):
     - methods:
-        + set_value
         + set_title
         + show
             * interrupts input
@@ -10,7 +10,8 @@
     - goals
         + different functions can write data to it
         + callbacks are meant to destroy once loading is done
-        + can be reimplemented easily
+        + can be reimplemented easily in configs
+```
 
 # BUGS
 - [ ] mark_goto only updates after a goto action is sent

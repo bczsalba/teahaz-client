@@ -772,6 +772,11 @@ def handle_action(action) -> None:
         completer.do_completion(newword,word_start,word_end)
         completer.field.print()
 
+    elif action == "load_start":
+        loader.start()
+
+    elif action == "load_stop":
+        loader.stop()
 
 
     ## CATEGORIES
@@ -1770,6 +1775,9 @@ class TeahazHelper:
                 fun = SESSION.get
  
             resp = fun(**kwargs)
+            if not loader._is_stopped:
+                loader.stop()
+
             code = resp.status_code
             if not 199 < code < 300:
                 if do_output:
@@ -1808,13 +1816,14 @@ class TeahazHelper:
             setattr(self,output,'incomplete')
 
         self.operation_thread = threading.Thread(target=_do_operation,args=args,kwargs=kwargs)
+
+        if do_output:
+            loader.start()
+
         self.operation_thread.start()
 
         if not do_async:
-            # TODO: loading screen & input ignoring
-            # loader.start() <- starts the loop of animation
             self.operation_thread.join()
-            # loader.stop()  <- stops the loop
 
     def login_or_register(self,contype,url,chatid,data):
         ocontype = contype
@@ -2037,7 +2046,6 @@ class TeahazHelper:
         response = SESSION.get(url=URL+'/api/v0'+endpoint,headers=BASE_DATA)
         return response.text
 
-    ## sending method
     def send(self,message,endpoint='message'):
         data = BASE_DATA.copy()
 
@@ -3441,6 +3449,97 @@ class FileManager(Container):
         print('\033[HOpening '+path+'...')
         self.execute(cmd)
 
+class LoadingScreen(Container):
+    """
+    Universal loading screen to be called during
+    any long operations. For re-implementation,
+    provide .start() and .stop() methods, and 
+    intercept input.
+
+    - methods:
+        + set_title
+        + show
+            * interrupts input
+        + destroy
+            * resumes input
+    - goals
+        + different functions can write data to it
+        + callbacks are meant to destroy once loading is done
+        + can be reimplemented easily in configs
+    """
+
+    def __init__(self,sprites,title=None,**kwargs):
+        super().__init__(**kwargs)
+
+        self.current_frame = 0
+        self._is_stopped   = False
+        self._old_pipe     = PIPE_OUTPUT
+        self.width         = int(WIDTH*(2/3))
+
+        if not isinstance(sprites,list) or not len(sprites):
+            raise Exception('Please provide a list of multiple sprites!')
+        
+        self.sprites = sprites
+        if not title:
+            title = "Loading..."
+
+        self.title = Label(value=title,justify='left')
+        self.title.set_style('value',pytermgui.CONTAINER_TITLE_STYLE)
+
+        # for i,c in enumerate(THEME['corners'].values()):
+            # self.set_corner(i,c)
+
+    def set_title(self,value):
+        if value == None:
+            self._has_title = False
+        else:
+            self._has_title = True
+            self.title.set_value(value)
+
+    def ignore_key(self,key,**kwargs):
+        if key == "SIGTERM":
+            self.stop()
+
+    def get_frame(self):
+        if self._has_title:
+            self.elements = [self.title]
+        else:
+            self.elements = []
+        
+        if self.current_frame > len(self.sprites)-1:
+            self.current_frame = 0
+
+        for l in self.sprites[self.current_frame].split('\n'):
+            self.add_elements(Label(value=parse_emoji(l)))
+
+        self.current_frame += 1
+        self.center()
+
+    def start(self):
+        self._is_stopped = False
+
+        set_pipe(self.ignore_key,{})
+        self.thread = threading.Thread(target=self.show)
+        self.thread.start()
+
+    def stop(self):
+        self._is_stopped = True
+        if self._old_pipe:
+            fun,args = self._old_pipe
+            set_pipe(fun,args)
+        else:
+            globals()['PIPE_OUTPUT'] = None
+
+        self.wipe()
+
+    def show(self):
+        while not self._is_stopped:
+            self.get_frame()
+            print(self)
+            time.sleep(1/45*len(self.sprites))
+
+
+
 class ModeLabel(Label):
     """
     Simple Label extension providing a wipe()
@@ -3484,6 +3583,7 @@ else:
     with open(os.path.join(PATH,'usercfg.json'),'w') as f:
         f.write('{}')
 import_json('emoji')
+import_json('sprites')
 
 
 DELIMITERS = "!@#$%^&*()[]{}|\\;':\",.<>/? \t"
@@ -3638,7 +3738,9 @@ if __name__ == "__main__":
     completer._show_icons = lambda: COMPLETER_ICONS
 
     filemanager = FileManager()
-
+    loader      = LoadingScreen(sprites=SPRITES['loading_screen'])
+    loader.set_title(None)
+    loader.set_borders([''*4])
 
     # filemanager = InputDialog(label_value='file manager',dialog_type='field')
     # filemanager.completer = InputFieldCompleter(options=os.listdir,field=filemanager.field)
