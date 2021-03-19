@@ -36,18 +36,20 @@ from pytermgui import Container,Prompt,Label,container_from_dict
 
 
 # HELPERS #
-### b64 encode
-def encode(a):
+### b64 encrypt
+def encrypt(a):
     return base64.b64encode(a.encode('utf-8')).decode('utf-8')
 
-### b64 encode into bytes
-def encode_binary(a):
+### b64 encrypt into bytes
+def encrypt_binary(a):
     return base64.b64encode(a).decode('utf-8')
 
-### b64 decode
-def decode(a):
+### b64 decrypt
+def decrypt(a):
     return base64.b64decode(a).decode('utf-8')
 
+def decrypt_binary(a):
+    return base64.b64decode(str(a).encode('utf-8'))
 
 
 
@@ -724,7 +726,7 @@ def handle_action(action) -> None:
 
     elif action == "invisible_ping":
         data = BASE_DATA.copy()
-        data['message'] = '@ this cannot be decoded @'
+        data['message'] = '@ this cannot be decryptd @'
         data['type'] = 'text'
         dbg('ping_resp:',SESSION.post(url=URL+'/api/v0/message/',json=data).text)
 
@@ -1854,7 +1856,11 @@ class TeahazHelper:
                     dbg(e)
 
             if callback:
-                data = kwargs.get('json')
+                if method == "post":
+                    data = kwargs.get('json')
+                else:
+                    data = kwargs.get('headers')
+
                 if not data:
                     data = {}
                 callback(resp,data)
@@ -2072,19 +2078,30 @@ class TeahazHelper:
         else:
             return None
 
+    def save_file(self,resp,filename):
+        try:
+            data = decrypt_binary(resp.text)
+        except Exception as e:
+            dbg(e)
+            return
+
+        with open(os.path.join(DOWNLOAD_PATH,filename),'wb') as f:
+            f.write(data)
+            dbg('written')
+
     def send(self,message,endpoint='message'):
         data = BASE_DATA.copy()
 
         # handle specificities
         if endpoint == 'message':
             # set text-specific fields
-            data["message"] = encode(message)
+            data["message"] = encrypt(message)
             data['type'] = "text"
 
         elif endpoint == 'file':
             # get file contents
             with open(message, 'rb') as infile:
-                contents = encode_binary(infile.read())
+                contents = encrypt_binary(infile.read())
 
             # get file extension bc mimetype sucks sometimes
             extension = message.split(".")[-1]
@@ -2143,6 +2160,28 @@ class TeahazHelper:
             clip.copy(context.get('message'))
             ret_val = True
 
+        elif param == 'open':
+            filename = context.get('filename')
+
+            if context.get('is_local') or filename in os.listdir(DOWNLOAD_PATH):
+                filemanager.open(os.path.join(DOWNLOAD_PATH,filename))
+
+            else:
+                data = BASE_DATA.copy()
+                data['filename'] = filename
+
+                self.handle_operation(
+                    method    = 'get',
+                    callback  = lambda resp,data: {
+                                        self.save_file(resp,data.get('filename')), 
+                                        self.print_messages(reprint=True)
+                                },
+                    url       = URL+'/api/v0/file/'+CHAT_ID,
+                    headers   = data,
+                )
+
+
+
         else:
             ui.create_error_dialog(f'404: no server implementation found for "{param}"')
 
@@ -2160,6 +2199,7 @@ class TeahazHelper:
         if m.get('type') == "file":
             message_options.append('open')
 
+        dbg(message_options)
         return message_options 
 
     def print_messages(self,messages=[],extras=[],offset=0,select=None,reprint=False,dont_ignore=False,do_print=True):
@@ -2224,34 +2264,35 @@ class TeahazHelper:
 
             m_time       = m.get('time')
             current_time = int(m_time)
+            m_type       = m.get('type')
             sendtime     = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(m_time))
             content      = m.get('message')
 
 
             # handle message content
             if content:
-                if m in extras or m.get('is_decoded'):
-                    decoded = content
+                if m in extras or m.get('is_decryptd'):
+                    decryptd = content
                 else:
                     try:
-                        decoded = decode(content)
-                        m['message'] = decoded
-                        m['is_decoded'] = True
+                        decryptd = decrypt(content)
+                        m['message'] = decryptd
+                        m['is_decryptd'] = True
                     except Exception as e:
                         continue
 
-                decoded = decoded.strip().replace('\t','')
-                if real_length(decoded) > int(MAXIMUM_MESSAGE_LENGTH):
+                decryptd = decryptd.strip().replace('\t','')
+                if real_length(decryptd) > int(MAXIMUM_MESSAGE_LENGTH):
                     continue
 
-                emojid = parse_emoji(decoded)
+                emojid = parse_emoji(decryptd)
                 if PARSE_MARKDOWN:
                     inline = parse_inline_codes(emojid)
                     content = inline
                 else:
                     content = emojid
 
-                do_subdivision = (content == decoded)
+                do_subdivision = (content == decryptd)
 
 
             else:
@@ -2260,8 +2301,18 @@ class TeahazHelper:
                 do_subdivision = content
 
             lines = pytermgui.break_line(content,MAX_MESSAGE_WIDTH(),do_subdivision=do_subdivision)
+
             if FADE_SENDING:
                 if m in extras:
+                    if m_type == 'file':
+                        for j,l in enumerate(lines):
+                            lines[j] = parse_color(THEME['fade'],italic(l))
+                    else:
+                        for j,l in enumerate(lines):
+                            lines[j] = parse_color(THEME['fade'],l)
+            
+            if m_type == 'file':
+                if not m in os.listdir(DOWNLOAD_PATH):
                     for j,l in enumerate(lines):
                         lines[j] = parse_color(THEME['fade'],l)
 
@@ -2272,16 +2323,16 @@ class TeahazHelper:
             replyId = m.get('replyId')
             if replyId:
                 reply_parent = self.get_message_by_id(replyId).copy()
-                if not reply_parent.get('is_decoded'):
-                    try:
-                        reply_parent['message'] = decode(reply_parent['message'])
-                    except Exception as e:
-                        dbg(e)
 
                 if reply_parent.get('type') == 'file':
                     message = reply_parent.get('filename')
                 else:
                     message = reply_parent.get('message')
+                    if not reply_parent.get('is_decryptd'):
+                        try:
+                            reply_parent['message'] = decrypt(message)
+                        except Exception as e:
+                            dbg(e)
 
                 reply = pytermgui.break_line(parse_emoji('> ' + message),MAX_MESSAGE_WIDTH())
                 for l,r in enumerate(reply):
@@ -3620,8 +3671,9 @@ class ModeLabel(Label):
 
 
 # GLOBALS #
-PATH = os.path.abspath(os.path.dirname(__file__))
-HOME = os.path.expanduser('~')
+PATH          = os.path.abspath(os.path.dirname(__file__))
+HOME          = os.path.expanduser('~')
+DOWNLOAD_PATH = os.path.join(HOME,'Downloads')
 
 LOGFILE = os.path.join(PATH,'log')
 # TODO: support windows

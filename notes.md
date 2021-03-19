@@ -1,6 +1,7 @@
 # PLANZ
 
 # BUGS
+- [ ] going above top of messages fucking dies
 - [ ] handle_operation loading screen doesnt interrupt input :(
 - [ ] mark_goto only updates after a goto action is sent
 - [ ] add_new button in themes is hidden & doesn't work
