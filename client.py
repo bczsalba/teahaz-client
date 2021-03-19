@@ -1305,8 +1305,7 @@ def handle_menu(key,obj,send_escape=True,attributes={},page=0) -> None:
     
     elif key == " ":
         selected,_,index = obj.selected
-        if selected.__ui_options and len(selected.__ui_options) == 2:
-            #if not globals().get(selected.real_label) == None:
+        if hasattr(selected,'__ui_options') and selected.__ui_options and len(selected.__ui_options) == 2:
             # add to depth
             selected.__ui_keys.append(selected.real_label)
 
@@ -1342,7 +1341,6 @@ def handle_menu(key,obj,send_escape=True,attributes={},page=0) -> None:
             obj.selected_index -= 1
 
         elif len(objects) > 1:
-            obj.wipe()
             if key in ["h","ARROW_LEFT"]:
                 new = max(0,page-1)
 
@@ -1352,9 +1350,12 @@ def handle_menu(key,obj,send_escape=True,attributes={},page=0) -> None:
             else:
                 return
 
-            obj = objects[new]
-            set_pipe(handle_menu,{"obj": objects, "page": new})
-            UI_TRACE[-1][1]['dict_index'] = new
+            if not page == new:
+                obj.wipe()
+
+                obj = objects[new]
+                set_pipe(handle_menu,{"obj": objects, "page": new})
+                UI_TRACE[-1][1]['dict_index'] = new
 
     elif key == "SIGTERM":
         handle_action("quit")
