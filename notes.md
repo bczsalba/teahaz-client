@@ -1,35 +1,36 @@
 # PLANZ
+- [ ] settings should be overwritten by settings in .config/teahaz
 
 # BUGS
+- [ ] handle_operation loading screen doenst interrupt input :(
 - [ ] mark_goto only updates after a goto action is sent
 - [ ] add_new button in themes is hidden & doesn't work
 - [ ] only the first element in multipage containers resizes
 
 # FEATURES 
 ## upcoming checklist
+- [ ] inline action sending
+
+- [ ] work on chatroom selector
+
+- [ ] notifications
+
 - [ ] fix up completer
     - [ ] cant handle less than `self.rows` number of options
-
-- handle errors:
-    * these should get you stuck in an infinite loop of retry
-    * [ ] Connection Refused
-    * [ ] bad url
-    * [ ] nodename nor service.. no internet
-
 
 - windows compatibility:
     * [x] move os specific imports to their proper place
     * [ ] add more keys to keybinds for windows (specifically CTRL_*)
-    * [x] convert \_GetchWindows \__call__ to use wgetch || decode getch output
+    * [x] convert \_GetchWindows \_\_call\_\_ to use wgetch || decode getch output
     * [ ] test on windows
 
 - new binds
     * [ ] `s` 
 
 - multi level inline codes
-
-- general ui
  
+- add help menu for common errors
+
 - FUTURE: gtk plugin
 
 ## maybe
@@ -216,3 +217,5 @@
         + callbacks are meant to destroy once loading is done
         + can be reimplemented easily in configs
 ```
+
+- [ ] universal handling of errors

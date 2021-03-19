@@ -1774,7 +1774,17 @@ class TeahazHelper:
             elif method == "get":
                 fun = SESSION.get
  
-            resp = fun(**kwargs)
+            try:
+                resp = fun(**kwargs)
+            except Exception as e:
+                # TODO: add help menu here for common errors
+                name = type(e).__name__
+                value = "Requests ran into "+str(name)+", check log for full error.\n\nIt is likely your usercfg has incorrect data."
+
+                ui.create_error_dialog(value)
+                dbg('Requests error:',e)
+                return
+
             if not loader._is_stopped:
                 loader.stop()
 
@@ -1817,10 +1827,9 @@ class TeahazHelper:
 
         self.operation_thread = threading.Thread(target=_do_operation,args=args,kwargs=kwargs)
 
+        self.operation_thread.start()
         if do_output:
             loader.start()
-
-        self.operation_thread.start()
 
         if not do_async:
             self.operation_thread.join()
@@ -2025,26 +2034,6 @@ class TeahazHelper:
                 return m
         else:
             return None
-
-    def get(self,parameter,mode="message"):
-        data = BASE_DATA
-        
-        # set endpoint
-        endpoint = "/"+mode+"/"+CHAT_ID
-        dbg(URL+'/api/v0'+endpoint)
-
-        # set parameter based on mode
-        if mode == "message":
-            data["time"] = str(parameter)
-        elif mode == "file":
-            data["filename"] = str(parameter)
-        else:
-            return "Client Error: Invalid get mode '"+str(mode)+"'"
-
-        # return response
-        # dbg('sending',URL+'/api/v0'+endpoint,BASE_DATA) 
-        response = SESSION.get(url=URL+'/api/v0'+endpoint,headers=BASE_DATA)
-        return response.text
 
     def send(self,message,endpoint='message'):
         data = BASE_DATA.copy()
@@ -2401,7 +2390,7 @@ class TeahazHelper:
                 if not is_set('messages_get_return',self.__dict__):
                     self.get_new_messages(
                             'messages_get_return',
-                            callback = lambda resp,_: {dbg(resp.status_code),self.add_to_messages(json.loads(resp.text))}
+                            callback = lambda resp,_: self.add_to_messages(json.loads(resp.text))
                     )
 
                 elif not self.messages_get_return == 'incomplete':
@@ -2701,19 +2690,28 @@ class UIGenerator:
         source = {
                     "ui__error_title": "Error occured!",
                     "ui__padding": "",
-                    "ui__label": {
-                        "value": ''.join(text.split('"')),
-                        "justify": "left",
-                        "padding": 4
-                    },
-                    "ui__padding1": "",
-                    "ui__button": {
-                        "id": "error-button_"+button,
-                        "value": button,
-                    }
                 }
 
         ui.wipe()
+
+        for i,l in enumerate(text.split('\n')):
+            source[f"ui__label{i}"] = {
+                "value": ''.join(l.split('"')),
+                "justify": "left",
+                "padding": 4
+            }
+
+        bottom = {
+            "ui__padding1": "",
+            "ui__button": {
+                "id": "error-button_"+button,
+                "value": button,
+            }
+        }
+
+
+        for key, value in bottom.items():
+            source[key] = value
 
         if handler == None:
             handler = lambda container,self: {
@@ -3499,6 +3497,8 @@ class LoadingScreen(Container):
     def ignore_key(self,key,**kwargs):
         if key == "SIGTERM":
             self.stop()
+        else:
+            dbg(key)
 
     def get_frame(self):
         if self._has_title:
