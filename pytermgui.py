@@ -140,7 +140,7 @@ def set_listener(event,func):
 #
 # returns a list of Container objects, len() > 1 if the 
 # container height wouldn't fit the screen
-def container_from_dict(dic,padding=4,**kwargs):
+def container_from_dict(dic,padding=4,_prompts_selectable=True,**kwargs):
     dic_c = Container(**kwargs)
 
     dicts = [dic_c]
@@ -290,6 +290,7 @@ def container_from_dict(dic,padding=4,**kwargs):
             p.set_style('label',CONTAINER_LABEL_STYLE)
             p.set_style('value',CONTAINER_VALUE_STYLE)
             p.real_value = real_value
+            p._is_selectable = _prompts_selectable
 
             if element_id:
                 set_element_id(p,element_id)

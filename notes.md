@@ -1,5 +1,4 @@
 # PLANZ
-- [ ] settings should be overwritten by settings in .config/teahaz
 
 # BUGS
 - [ ] handle_operation loading screen doenst interrupt input :(
@@ -9,6 +8,9 @@
 
 # FEATURES 
 ## upcoming checklist
+- [ ] settings should be overwritten by settings in .config/teahaz
+- [ ] usercfg & session should be stored under .config/teahaz
+
 - [ ] inline action sending
 
 - [ ] work on chatroom selector
@@ -218,4 +220,6 @@
         + can be reimplemented easily in configs
 ```
 
-- [ ] universal handling of errors
+- [x] universal handling of errors
+
+- [x] ? help menu

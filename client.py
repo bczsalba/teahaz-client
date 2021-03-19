@@ -1348,6 +1348,9 @@ def handle_menu(key,obj,send_escape=True,attributes={},page=0) -> None:
 
             elif key in ["l","ARROW_RIGHT"]:
                 new = min(len(objects)-1,page+1)
+            
+            else:
+                return
 
             obj = objects[new]
             set_pipe(handle_menu,{"obj": objects, "page": new})
@@ -1383,6 +1386,7 @@ def handle_menu_actions(action,current_file=None) -> int:
     menu = action.replace('menu_','')
     corners = [v for k,v in THEME['corners'].items()]
     attrs = {}
+    selectable = True
 
     if menu == "settings":
         corners[3] = "settings"
@@ -1534,14 +1538,22 @@ def handle_menu_actions(action,current_file=None) -> int:
     elif menu == "picker":
         ui.create_menu_picker()
         return
+    
+    elif menu == "help":
+        source = {
+                "ui__title": f"Keybindings set for {MODE}",
+        }
+
+        for key,value in BINDS[MODE].items():
+            source[key] = value
+
+        selectable = False
  
     else:
         return 1
 
     set_current_file(source)
-
-    # call menu handler
-    d = ui.create_menu(source=[load_path,{'path': source}])
+    d = ui.create_menu(source=[load_path,{'path': source}],_prompts_selectable=selectable)
 
     for key,value in attrs.items():
         if key == "id":
@@ -2838,6 +2850,20 @@ class UIGenerator:
         context_menu.select()
 
         print(context_menu)
+
+    def create_help_menu(self):
+        source = {
+                "ui__title": f"Keybindings set for {MODE}"
+        }
+
+        for key,value in BINDS:
+            source[key] = value
+
+        objects = pytermgui.container_from_dict(source)
+        for o in objects:
+            o.center()
+
+
 
 
 
