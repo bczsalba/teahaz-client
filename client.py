@@ -773,10 +773,8 @@ def handle_action(action) -> None:
         completer.field.print()
 
     elif action == "load_start":
+        print('\033[2J')
         loader.start()
-
-    elif action == "load_stop":
-        loader.stop()
 
 
     ## CATEGORIES
@@ -1764,8 +1762,6 @@ class TeahazHelper:
         self.selected_message   = None
         self.selected_message_y = None
         
-        
- 
     def handle_operation(self,method,do_output=False,success_message=None,do_async=True,output=None,callback=None,*args,**kwargs):
         def _do_operation(*args,**kwargs):
             global SESSION
@@ -3497,6 +3493,7 @@ class LoadingScreen(Container):
     def ignore_key(self,key,**kwargs):
         if key == "SIGTERM":
             self.stop()
+            handle_action('reprint')
         else:
             dbg(key)
 
