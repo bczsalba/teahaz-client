@@ -1,16 +1,4 @@
 # PLANZ
-- [ ] fix conv/user switching
-    - [ ] messages should reprint in set_chatroom (lno. 1935)
-
-- [ ] message replies!
-    - [x] add submit action to message_select
-    - [x] make reply action pre-set replyId
-    - [x] add visual representation of replying-to
-    - [x] make sent message add replyId
-    - [x] make print_messages read & display replyId
-    - [x] add goto_reply_parent action
-    - [ ] theres a specific message that breaks it all
-
 - [ ] loading screen object
     - methods:
         + set_value
@@ -208,3 +196,15 @@
 ```
 
 - [x] `--create-chatroom` arg
+
+- [x] fix conv/user switching
+    - [x] messages should reprint in set_chatroom (lno. 1935)
+
+- [x] message replies!
+    - [x] add submit action to message_select
+    - [x] make reply action pre-set replyId
+    - [x] add visual representation of replying-to
+    - [x] make sent message add replyId
+    - [x] make print_messages read & display replyId
+    - [x] add goto_reply_parent action
+    - [x] theres a specific message that breaks it all

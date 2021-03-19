@@ -1811,12 +1811,10 @@ class TeahazHelper:
         self.operation_thread.start()
 
         if not do_async:
-            # old = PIPE_OUTPUT
-            # set_pipe(ignore_input,{})
+            # TODO: loading screen & input ignoring
+            # loader.start() <- starts the loop of animation
             self.operation_thread.join()
-
-            # dbg('resetting to',old)
-            # set_pipe(old[0],old[1])
+            # loader.stop()  <- stops the loop
 
     def login_or_register(self,contype,url,chatid,data):
         ocontype = contype
@@ -1925,8 +1923,6 @@ class TeahazHelper:
         edit_json('usercfg.json','CURRENT_CHATROOM',[url,index])
         dbg('chatroom set to',url,'/',chatroom['chatroom_name'])
         SESSION.last_get = 0
-        
-
 
     def dump_invite(self,resp,url,chatroom):
         d = {
