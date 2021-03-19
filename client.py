@@ -189,7 +189,6 @@ def handle_args() -> None:
 
         th.consume_invite(d)
 
-
     elif args[0] == '--create-chatroom':
         if not len(args) > 1:
             print('Not enough arguments given!')
@@ -324,7 +323,11 @@ def switch_mode(target,force=False) -> None:
             m = th.get_message_by_id(replyId)
 
             if m:
-                content = parse_emoji(m.get('message'))
+                if m.get('type') == 'file':
+                    content = 'file'
+                else:
+                    content = parse_emoji(m.get('message'))
+
                 preview = content[:15].strip()
                 if real_length(content) > 15:
                     preview += '...'
@@ -360,10 +363,14 @@ def add_to_trace(arr) -> None:
         UI_TRACE.append(arr)
 
 ### redirect getch_loop to `fun` with `args`
-def set_pipe(fun,arg,keep=1) -> None:
+def set_pipe(fun,arg=None,keep=1) -> None:
     global PIPE_OUTPUT, KEEP_PIPE
 
-    PIPE_OUTPUT = fun,arg
+    if arg == None:
+        PIPE_OUTPUT = fun
+    else:
+        PIPE_OUTPUT = fun,arg
+
     if not keep == None:
         KEEP_PIPE = keep
 
@@ -622,7 +629,7 @@ def getch_loop() -> None:
             fun(key,**args)
             
             if not KEEP_PIPE:
-                PIPE_OUTPUT = None
+                set_pipe(None)
             continue
         
         # add key to buffer if key+buffer is in either key cluster
@@ -2244,23 +2251,23 @@ class TeahazHelper:
                 else:
                     content = emojid
 
-                if content == decoded:
-                    do_subdivision = True
-                else:
-                    do_subdivision = False
+                do_subdivision = (content == decoded)
 
-                lines = pytermgui.break_line(content,MAX_MESSAGE_WIDTH(),do_subdivision=do_subdivision)
-                if FADE_SENDING:
-                    if m in extras:
-                        for j,l in enumerate(lines):
-                            lines[j] = parse_color(THEME['fade'],l)
-
-                if i == self.selected_message:
-                    for k,l in enumerate(lines):
-                        lines[k] = parse_color(THEME['custom_prompt_highlight'],l)
 
             else:
                 content = '< '+m.get('filename')+' >'
+                lines = break_line(content,MAX_MESSAGE_WIDTH())
+                do_subdivision = content
+
+            lines = pytermgui.break_line(content,MAX_MESSAGE_WIDTH(),do_subdivision=do_subdivision)
+            if FADE_SENDING:
+                if m in extras:
+                    for j,l in enumerate(lines):
+                        lines[j] = parse_color(THEME['fade'],l)
+
+            if i == self.selected_message:
+                for k,l in enumerate(lines):
+                    lines[k] = parse_color(THEME['custom_prompt_highlight'],l)
 
             replyId = m.get('replyId')
             if replyId:
@@ -2271,7 +2278,12 @@ class TeahazHelper:
                     except Exception as e:
                         dbg(e)
 
-                reply = pytermgui.break_line(parse_emoji('> ' + reply_parent.get('message')),MAX_MESSAGE_WIDTH())
+                if reply_parent.get('type') == 'file':
+                    message = reply_parent.get('filename')
+                else:
+                    message = reply_parent.get('message')
+
+                reply = pytermgui.break_line(parse_emoji('> ' + message),MAX_MESSAGE_WIDTH())
                 for l,r in enumerate(reply):
                     reply[l] = parse_color(THEME['reply'],r)
                 lines = reply+lines
@@ -3780,6 +3792,11 @@ if __name__ == "__main__":
 
     # set up filemanager
     filemanager = FileManager()
+    filemanager.submit = lambda f: {
+            th.send(f,endpoint='file'),
+            filemanager.wipe(),
+            set_pipe(None)
+    }
 
     # set up loading screen
     loader      = LoadingScreen(frametime=1/8,sprites=[bold(sprite) for sprite in SPRITES['loading_screen']])
