@@ -1784,6 +1784,7 @@ class TeahazHelper:
  
             try:
                 resp = fun(**kwargs)
+
             except Exception as e:
                 # TODO: add help menu here for common errors
                 name = type(e).__name__
@@ -1791,6 +1792,8 @@ class TeahazHelper:
 
                 ui.create_error_dialog(value)
                 dbg('Requests error:',e)
+
+                setattr(self,output,None)
                 return
 
             if not loader._is_stopped:
@@ -1807,6 +1810,8 @@ class TeahazHelper:
                     data = 'get: ' + str(kwargs.get('headers'))
 
                 dbg('sending',data,'to',kwargs.get('url'),'failed, code',code)
+
+                setattr(self,output,None)
                 return
 
             else:
@@ -2395,7 +2400,7 @@ class TeahazHelper:
             elif not PIPE_OUTPUT and not self.offset \
                 and URL and CHAT_ID and len(SESSION.cookies): 
 
-                if not is_set('messages_get_return',self.__dict__):
+                if not is_set('messages_get_return',self.__dict__) or not self.messages_get_return:
                     self.get_new_messages(
                             'messages_get_return',
                             callback = lambda resp,_: self.add_to_messages(json.loads(resp.text))
@@ -2417,6 +2422,7 @@ class TeahazHelper:
                     del self.messages_get_return
 
             time.sleep(1)
+        dbg('get_loop ended!')
 
 class UIGenerator:
     """
