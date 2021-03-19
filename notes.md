@@ -1,7 +1,7 @@
 # PLANZ
 
 # BUGS
-- [ ] handle_operation loading screen doenst interrupt input :(
+- [ ] handle_operation loading screen doesnt interrupt input :(
 - [ ] mark_goto only updates after a goto action is sent
 - [ ] add_new button in themes is hidden & doesn't work
 - [ ] only the first element in multipage containers resizes
