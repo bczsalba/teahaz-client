@@ -1,17 +1,4 @@
 # PLANZ
-```py
-> LoadingScreen(Container):
-    - methods:
-        + set_title
-        + show
-            * interrupts input
-        + destroy
-            * resumes input
-    - goals
-        + different functions can write data to it
-        + callbacks are meant to destroy once loading is done
-        + can be reimplemented easily in configs
-```
 
 # BUGS
 - [ ] mark_goto only updates after a goto action is sent
@@ -42,13 +29,13 @@
 - multi level inline codes
 
 - general ui
-    * [ ] add pathbar to bottom in settings (maybe other menus too)
  
 - FUTURE: gtk plugin
 
 ## maybe
 - [ ] change infield cursor char depending on mode
 - [ ] formatting commands, like `!th break`
+- [ ] add pathbar to bottom in settings (maybe other menus too)
 
 ## finished
 - pytermgui `get_object_by_id(id)`
@@ -209,3 +196,23 @@
     - [x] make print_messages read & display replyId
     - [x] add goto_reply_parent action
     - [x] theres a specific message that breaks it all
+
+```py
+> LoadingScreen(Container):
+
+    Universal loading screen to be called during
+    any long operations. For re-implementation,
+    provide .start() and .stop() methods, and 
+    intercept input.
+
+    - methods:
+        + set_title
+        + show
+            * interrupts input
+        + destroy
+            * resumes input
+    - goals
+        + different functions can write data to it
+        + callbacks are meant to destroy once loading is done
+        + can be reimplemented easily in configs
+```
