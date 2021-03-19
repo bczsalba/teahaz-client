@@ -197,6 +197,22 @@ def handle_args() -> None:
         globals()['URL'] = args[1]
         handle_action('menu_chatroom_create')
 
+    elif args[0] == '--dump-log':
+        if len(args) > 1:
+            f = open(args[1],'w')
+        else:
+            f = sys.stdout
+
+        with open(LOGFILE,'r') as log:
+            lines = log.readlines()
+            for l in lines:
+                f.write(clean_ansi(l))
+             
+            if f == sys.stdout:
+                sys.stdout.flush()
+
+            f.close()
+        sys.exit()
 
 
 
