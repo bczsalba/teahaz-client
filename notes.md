@@ -1,12 +1,11 @@
 # PLANZ
 
 # BUGS
-- [ ] going to insert mode after m_select doesnt print mode label, keep pipe stays set
-- [ ] going above top of messages fucking dies
-- [ ] handle_operation loading screen doesnt interrupt input :(
-- [ ] mark_goto only updates after a goto action is sent
-- [ ] add_new button in themes is hidden & doesn't work
-- [ ] only the first element in multipage containers resizes
+- going to insert mode after m_select doesnt print mode label, keep pipe stays set
+- handle_operation loading screen doesnt interrupt input :(
+- mark_goto only updates after a goto action is sent
+- add_new button in themes is hidden & doesn't work
+- only the first element in multipage containers resizes
 
 # FEATURES 
 ## upcoming checklist
