@@ -726,7 +726,7 @@ def handle_action(action) -> None:
 
     elif action == "invisible_ping":
         data = BASE_DATA.copy()
-        data['message'] = '@ this cannot be decryptd @'
+        data['message'] = '@ this cannot be decrypted @'
         data['type'] = 'text'
         dbg('ping_resp:',SESSION.post(url=URL+'/api/v0/message/',json=data).text)
 
@@ -1836,6 +1836,7 @@ class TeahazHelper:
                     data = 'get: ' + str(kwargs.get('headers'))
 
                 dbg('sending',data,'to',kwargs.get('url'),'failed, code',code)
+                dbg(resp.text)
 
                 setattr(self,output,None)
                 return
@@ -2199,10 +2200,12 @@ class TeahazHelper:
         if m.get('type') == "file":
             message_options.append('open')
 
-        dbg(message_options)
         return message_options 
 
     def print_messages(self,messages=[],extras=[],offset=0,select=None,reprint=False,dont_ignore=False,do_print=True):
+        if PIPE_OUTPUT:
+            return
+
         # get positions
         leftx = infield.pos[0]
 
@@ -2271,33 +2274,37 @@ class TeahazHelper:
 
             # handle message content
             if content:
-                if m in extras or m.get('is_decryptd'):
-                    decryptd = content
+                if m in extras or m.get('is_decrypted'):
+                    decrypted = content
                 else:
                     try:
-                        decryptd = decrypt(content)
-                        m['message'] = decryptd
-                        m['is_decryptd'] = True
+                        decrypted = decrypt(content)
+                        m['message'] = decrypted
+                        m['is_decrypted'] = True
                     except Exception as e:
                         continue
 
-                decryptd = decryptd.strip().replace('\t','')
-                if real_length(decryptd) > int(MAXIMUM_MESSAGE_LENGTH):
+                decrypted = decrypted.strip().replace('\t','')
+                if real_length(decrypted) > int(MAXIMUM_MESSAGE_LENGTH):
                     continue
 
-                emojid = parse_emoji(decryptd)
+                emojid = parse_emoji(decrypted)
                 if PARSE_MARKDOWN:
                     inline = parse_inline_codes(emojid)
                     content = inline
                 else:
                     content = emojid
 
-                do_subdivision = (content == decryptd)
+                do_subdivision = (content == decrypted)
 
 
             else:
-                content = '< '+m.get('filename')+' >'
-                lines = break_line(content,MAX_MESSAGE_WIDTH())
+                extension = m.get('extension')
+                content = '<-'+m.get('filename')
+                if not extension == '_':
+                    content += '.'+extension
+                content += '->'
+
                 do_subdivision = content
 
             lines = pytermgui.break_line(content,MAX_MESSAGE_WIDTH(),do_subdivision=do_subdivision)
@@ -2312,9 +2319,9 @@ class TeahazHelper:
                             lines[j] = parse_color(THEME['fade'],l)
             
             if m_type == 'file':
-                if not m in os.listdir(DOWNLOAD_PATH):
+                if not self.is_local(m.get('filename')+'.'+m.get('extension')):
                     for j,l in enumerate(lines):
-                        lines[j] = parse_color(THEME['fade'],l)
+                        lines[j] = italic(l)
 
             if i == self.selected_message:
                 for k,l in enumerate(lines):
@@ -2328,11 +2335,12 @@ class TeahazHelper:
                     message = reply_parent.get('filename')
                 else:
                     message = reply_parent.get('message')
-                    if not reply_parent.get('is_decryptd'):
+                    if not reply_parent.get('is_decrypted'):
                         try:
                             reply_parent['message'] = decrypt(message)
                         except Exception as e:
                             dbg(e)
+                    message = reply_parent.get('message')
 
                 reply = pytermgui.break_line(parse_emoji('> ' + message),MAX_MESSAGE_WIDTH())
                 for l,r in enumerate(reply):
@@ -2519,9 +2527,12 @@ class UIGenerator:
 
     # wipe most recent ui element
     def wipe(self):
-        obj = UI_TRACE[-1][2]
-        if hasattr(obj,'wipe'):
-            obj.wipe()
+        if PIPE_OUTPUT:
+            obj = UI_TRACE[-1][2]
+            if hasattr(obj,'wipe'):
+                obj.wipe()
+        else:
+            print('\033[2J')
 
     # create menu from a dictionary source
     def create_menu(self,source,corners=[None]*4,width=None,index=None,dict_index=0,**container_args):
