@@ -698,7 +698,6 @@ def handle_action(action) -> None:
         with open(SESSIONLOCATION,'wb') as f:
             pickle.dump(SESSION,f)
 
-        dbg('saved session')
         sys.exit()
 
     elif action == "reprint":
@@ -720,7 +719,6 @@ def handle_action(action) -> None:
             print(CONV_HEADER)
 
     elif action == "toggle_md_parser":
-        dbg('toggling!')
         edit_json('settings.json','PARSE_MARKDOWN',not PARSE_MARKDOWN)
         th.print_messages(reprint=True)
 
@@ -2079,6 +2077,9 @@ class TeahazHelper:
         else:
             return None
 
+    def is_local(self,filename):
+        return filename in os.listdir(DOWNLOAD_PATH)
+
     def save_file(self,resp,filename):
         try:
             data = decrypt_binary(resp.text)
@@ -2086,9 +2087,13 @@ class TeahazHelper:
             dbg(e)
             return
 
-        with open(os.path.join(DOWNLOAD_PATH,filename),'wb') as f:
-            f.write(data)
-            dbg('written')
+        try:
+            with open(os.path.join(DOWNLOAD_PATH,filename),'wb') as f:
+                f.write(data)
+
+        except Exception as e:
+            ui.create_error_dialog('Could not save file!\n\nCheck log for details.')
+            dbg(str(e))
 
     def send(self,message,endpoint='message'):
         data = BASE_DATA.copy()
@@ -2105,7 +2110,9 @@ class TeahazHelper:
                 contents = encrypt_binary(infile.read())
 
             # get file extension bc mimetype sucks sometimes
-            extension = message.split(".")[-1]
+            _,extension = os.path.splitext(message)
+            if extension == '':
+                extension = '_'
 
             # set file-specific fields
             data['type'] = "file"
@@ -2162,24 +2169,38 @@ class TeahazHelper:
             ret_val = True
 
         elif param == 'open':
-            filename = context.get('filename')
+            print('\033[2J')
+            filename  = context.get('filename')
+            extension = context.get('extension')
+            if not extension == "_":
+                filename += '.'+extension
 
-            if context.get('is_local') or filename in os.listdir(DOWNLOAD_PATH):
-                filemanager.open(os.path.join(DOWNLOAD_PATH,filename))
+            if self.is_local(filename):
+                defaults = filemanager.open(os.path.join(DOWNLOAD_PATH,filename))
+
+                if defaults.get('destroy'):
+                    set_pipe(lambda key,**kwargs: {
+                                    filemanager.execute(defaults.get('destroy')),
+                                    handle_action('reprint')
+                            },{},keep=0)
+
 
             else:
                 data = BASE_DATA.copy()
-                data['filename'] = filename
+                data['filename']  = context.get('filename')
+                data['extension'] = extension
 
                 self.handle_operation(
                     method    = 'get',
                     callback  = lambda resp,data: {
-                                        self.save_file(resp,data.get('filename')), 
-                                        self.print_messages(reprint=True)
+                                    self.save_file(resp,filename), 
+                                    self.print_messages(reprint=True)
                                 },
                     url       = URL+'/api/v0/file/'+CHAT_ID,
                     headers   = data,
                 )
+            
+            return ret_val
 
 
 
@@ -3548,7 +3569,7 @@ class FileManager(Container):
             elif extension == ".inv":
                 with open(path,'r') as f:
                     th.consume_invite(f)
-                return
+                return {}
         
         values = FILETYPE_DEFAULTS.get(mime)
         if values:
@@ -3556,7 +3577,7 @@ class FileManager(Container):
 
         if not cmd:
             ui.create_error_dialog(f'Unknown filetype {mime}!\nCould not open {path}.',button="ignore")
-            return
+            return {}
 
         else:
             cmd = cmd.replace('{path}',path)
@@ -3565,6 +3586,8 @@ class FileManager(Container):
         print('\033[2J')
         print('\033[HOpening '+path+'...')
         self.execute(cmd)
+
+        return values
 
 class LoadingScreen(Container):
     """
