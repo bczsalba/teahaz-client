@@ -370,6 +370,7 @@ def set_pipe(fun,arg=None,keep=1) -> None:
 
     if arg == None:
         PIPE_OUTPUT = fun
+        keep = 0
     else:
         PIPE_OUTPUT = fun,arg
 
