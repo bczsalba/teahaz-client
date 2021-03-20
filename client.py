@@ -825,11 +825,6 @@ def handle_action(action) -> None:
             infield.selected_start = VISUAL_START
             infield.selected_end = VISUAL_END
 
-        elif action == "message_select":
-            th.selected_message = th.offset
-            th.print_messages(reprint=True)
-            infield.wipe()
-
         infield.print()
 
         # switch to mode
@@ -891,11 +886,32 @@ def handle_action(action) -> None:
                 cursor += WIDTH
 
         elif "scroll_up" in action:
-            th.offset += 1
+            if not MODE == "MESSAGE_SELECT":
+                switch_mode("MESSAGE_SELECT")
+
+            if th.selected_message == None:
+                th.selected_message = 0
+            else:
+                if th.selected_message > 3:
+                    th.offset += 1
+                th.selected_message += 1
+
             th.print_messages(reprint=True)
 
         elif "scroll_down" in action:
-            th.offset -= 1
+            if not MODE == "MESSAGE_SELECT":
+                switch_mode("MESSAGE_SELECT")
+
+            if th.selected_message == None:
+                return
+
+            elif th.selected_message == 0:
+                th.selected_message = None
+
+            else:
+                th.offset -= 1
+                th.selected_message -= 1
+
             th.print_messages(reprint=True)
 
         elif "conv_start" in action:
@@ -997,8 +1013,12 @@ def handle_action(action) -> None:
         context_actions = None
 
         if not th.selected_message == None:
-            selected = MESSAGES[-th.selected_message-1]
-            context_actions = th.get_message_options(selected)
+            if th.selected_message < len(MESSAGES):
+                selected = MESSAGES[-th.selected_message-1]
+                context_actions = th.get_message_options(selected)
+
+        else:
+            th.selected_message = th.offset-3
 
         if action == "reset":
             th.selected_message = None
