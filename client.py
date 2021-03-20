@@ -2040,9 +2040,6 @@ class TeahazHelper:
             ui.create_error_dialog('chatroom already exists!')
 
     def add_new_server(self,address,chatroom_id,chatroom_name=None,username=None):
-        globals()['URL'] = address
-        globals()['BASE_DATA']['username'] = username
-
         new = {
                 'chatroom_id': chatroom_id,
                 'chatroom_name': chatroom_name,
@@ -2053,6 +2050,9 @@ class TeahazHelper:
             for chatroom in chatrooms:
                 if chatroom['chatroom_id'] == chatroom_id:
                     return 1
+
+        globals()['URL'] = address
+        globals()['BASE_DATA']['username'] = username
 
         # add new data to servers
         if not is_set('SERVERS'):
