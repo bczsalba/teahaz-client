@@ -94,7 +94,7 @@
             "open": "kitty -1 -e bash -c \"vim {path}\""
         },
         "ptg": {
-            "open": "clear; bash -c \"/bin/cat {path}\""
+            "open": "clear; bash -c \"/bin/cat {path}\"; python3 -c \"import getch; getch.getch()\""
         }
     },
     "ui__prompt_options__comp_enabled": [
