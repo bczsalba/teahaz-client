@@ -2948,6 +2948,14 @@ class UIGenerator:
         return c
 
     def create_filepicker(self,dict_index=0):
+        # set up filemanager
+        filemanager = FileManager()
+        filemanager.submit = lambda f: {
+                th.send(f,endpoint='file'),
+                filemanager.wipe(),
+                set_pipe(None)
+        }
+
         set_pipe(handle_menu,{'obj': filemanager})
         add_to_trace([{},filemanager])
 
@@ -3385,7 +3393,7 @@ class FileManager(Container):
         * open(path)         : open selected file with the global filetype handlers
     """
 
-    def __init__(self,rows=None,path=None,completer=None,title='pick a file',filetype_highlight=True,**kwargs):
+    def __init__(self,rows=None,path=None,completer=None,title=None,filetype_highlight=True,**kwargs):
         super().__init__(**kwargs)
         if path:
             if os.path.exists(path):
@@ -3397,10 +3405,12 @@ class FileManager(Container):
             self.path = PATH
 
         # base variables
-        self.rows      = []
-        self.pattern   = None
-        self.exec_pid  = None
-        self.exec_mime = None
+        self.rows          = []
+        self.files         = []
+        self.pattern       = None
+        self.exec_pid      = None
+        self.exec_mime     = None
+        self.selected_file = 0
 
         # add elements
         if title:
@@ -3433,6 +3443,11 @@ class FileManager(Container):
         self.field.empty_cursor_char = lambda self: (' ' if self.is_active else '')
         self.add_elements(self.field)
 
+        self.pathbar = Label()
+        self.add_elements(self.pathbar)
+        self.pathbar.set_value(self.path)
+        self.pathbar.set_style('value',pytermgui.CONTAINER_TITLE_STYLE)
+
         # overwrite methods
         self._repr_pre = self.get_rows
         self.submit = None
@@ -3446,7 +3461,8 @@ class FileManager(Container):
 
     def get_rows(self):
         files = os.listdir(self.path)
-        files.sort(key=lambda f: f.split('.')[-1])
+        self.files = files
+        files.sort()
         files.sort(key=lambda f: os.path.isfile(os.path.join(self.path,f)))
 
         if self.pattern:
@@ -3462,17 +3478,18 @@ class FileManager(Container):
             new = [value for ratio,value in new]
             files = new
 
-        # TODO: some files show as directories
 
         for i,row in enumerate(self.rows):
-            if i < len(files):
-                row.label = files[i]
+            if i < len(files)-self.selected_file:
+                row.label = files[i+self.selected_file]
                 row.real_label = os.path.join(self.path,row.label)
                 row._is_selectable = True
 
                 row.is_dir = os.path.isdir(row.real_label)
                 if row.is_dir:
                     row.set_style('label',lambda item: color(item,THEME['value']))
+                else:
+                    row.set_style('label',lambda item: item)
             else:
                 row.label = ''
                 row.real_label = ''
@@ -3485,6 +3502,14 @@ class FileManager(Container):
 
         for i,c in enumerate(THEME['corners'].values()):
             self.set_corner(i,c)
+
+        if self.selected_file:
+            self.pathbar.set_value("▲ "+self.path)
+        elif len(self.files) > len(self.rows)-1:
+            self.pathbar.set_value("▼ "+self.path)
+        else:
+            self.pathbar.set_value("  "+self.path)
+
 
     def field_send(self,key,**kwargs):
         if self.field.is_active:
@@ -3505,7 +3530,7 @@ class FileManager(Container):
             elif key == "SIGTERM":
                 handle_action('quit')
 
-            elif key == "BACKSPACE" and real_length(self.field.value)-1 == 0:
+            elif key == "BACKSPACE" and real_length(self.field.value) == 0:
                 self.pattern = None
             
             else:
@@ -3515,9 +3540,13 @@ class FileManager(Container):
 
         if key in ["j","ARROW_DOWN"]:
             self.selected_index = min(self.selected_index+1,len(self.selectables)-1)
+            if self.selected_index >= len(self.selectables)-1:
+                self.selected_file  = min(self.selected_file+1,len(self.files)-len(self.rows)-1)
 
         elif key in ["k","ARROW_UP"]:
             self.selected_index = max(self.selected_index-1,0)
+            if self.selected_index == 0:
+                self.selected_file  = max(self.selected_file-1,0)
 
         elif key == "SIGTERM":
             handle_action('quit')
@@ -3540,7 +3569,11 @@ class FileManager(Container):
                 return
 
         elif key == "ESC":
-            if self.exec_mime:
+            if self.pattern:
+                self.pattern = None
+                print(self)
+
+            elif self.exec_mime:
                 destroyer = FILETYPE_DEFAULTS[self.exec_mime].get('destroy')
                 if destroyer:
                     self.execute(destroyer)
@@ -3575,7 +3608,11 @@ class FileManager(Container):
         else:
             self.path = '/'.join(elements)
 
+        self.selected_index = 0
+        self.selected_file = 0
         self.wipe()
+        
+        self.pathbar.set_value(self.path)
         print(self)
    
     def search(self,key):
@@ -3913,13 +3950,6 @@ if __name__ == "__main__":
     completer._is_enabled = lambda: COMPLETER_ENABLED
     completer._show_icons = lambda: COMPLETER_ICONS
 
-    # set up filemanager
-    filemanager = FileManager()
-    filemanager.submit = lambda f: {
-            th.send(f,endpoint='file'),
-            filemanager.wipe(),
-            set_pipe(None)
-    }
 
     # set up loading screen
     loader      = LoadingScreen(frametime=1/8,sprites=[bold(sprite) for sprite in SPRITES['loading_screen']])
@@ -3929,6 +3959,9 @@ if __name__ == "__main__":
     # set up category classes
     ui = UIGenerator()
     th = TeahazHelper()
+
+    # used for open & exec 
+    filemanager = FileManager()
 
 
 
