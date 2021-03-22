@@ -1805,7 +1805,7 @@ def goto_mark(mark) -> None:
         return
 
     th.offset = offset
-    th.selected_message = offset+3
+    th.selected_message = offset+(WIDTH//HEIGHT)
 
     set_pipe(None)
     th.print_messages(reprint=True)
@@ -2206,7 +2206,7 @@ class TeahazHelper:
         elif param == 'goto_parent':
             parent = self.get_message_by_id(context['replyId'])
             index = MESSAGES[::-1].index(parent)
-            th.offset = index - 3
+            th.offset = index - (WIDTH//HEIGHT)
             self.selected_message = index
             switch_mode("MESSAGE_SELECT",force=True)
             return ret_val
