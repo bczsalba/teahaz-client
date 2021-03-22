@@ -1,7 +1,6 @@
 # PLANZ
 
 # BUGS
-- add_new button in themes is hidden & doesn't work
 
 # FEATURES 
 ## upcoming checklist

@@ -392,7 +392,7 @@ def add_new_colorscheme(name="new") -> dict:
                 continue
 
             if isinstance(v,dict):
-                d[k] = empty_dict(v)
+                d[k] = empty_dict(v.copy())
             else:
                 d[k] = type(k)()
         return d
@@ -400,21 +400,22 @@ def add_new_colorscheme(name="new") -> dict:
     base = THEMES[list(THEMES.keys())[0]].copy()
     skeleton = empty_dict(base)
 
-    #padder = SETTINGS['THEMES']['ui__padding']
+    padder = SETTINGS['THEMES']['ui__padding']
     button = SETTINGS['THEMES']['ui__button']
 
-    #del SETTINGS['THEMES']['ui__padding']
+    del SETTINGS['THEMES']['ui__padding']
     del SETTINGS['THEMES']['ui__button']
 
     with open('settings.json','w') as f:
         f.write(json.dumps(SETTINGS,indent=4))
     import_json('settings')
     
-    edit_json('settings.json',f"THEMES/{name}",skeleton)
-    edit_json('settings.json',"THEMES/ui__button",button)
+    edit_json('settings.json',["THEMES",name],skeleton)
+    edit_json('settings.json',["THEMES","ui__padding"],padder)
+    edit_json('settings.json',["THEMES","ui__button"],button)
 
-    themes = list(SETTINGS["ui__prompt_options__colorscheme"])
-    edit_json('settings.json',"ui__prompt_options__colorscheme",themes+[name])
+    themes = list(SETTINGS["ui__prompt_options__themes"])
+    edit_json('settings.json',"ui__prompt_options__themes",themes+[name])
 
 ### return current index of object
 def get_index(obj) -> int:

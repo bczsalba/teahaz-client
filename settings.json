@@ -62,8 +62,8 @@
                 "value": "show color guide"
             }
         },
-        "ui__nopadding_": 0,
-        "ui__nobutton": {
+        "ui__padding_": 0,
+        "ui__button": {
             "id": "colorschemes-button_add",
             "value": "add new"
         }
