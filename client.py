@@ -1818,7 +1818,7 @@ class TeahazHelper:
         self.selected_message   = None
         self.selected_message_y = None
         
-    def handle_operation(self,method,do_output=False,success_message=None,do_async=True,output=None,callback=None,*args,**kwargs):
+    def handle_operation(self,method,do_output=False,success_message=None,output=None,callback=None,*args,**kwargs):
         def _do_operation(*args,**kwargs):
             global SESSION
             if method == "post":
@@ -1837,7 +1837,8 @@ class TeahazHelper:
                 ui.create_error_dialog(value)
                 dbg('Requests error:',e)
 
-                setattr(self,output,None)
+                if output:
+                    setattr(self,output,'')
                 return
 
             if not loader._is_stopped:
@@ -1856,7 +1857,8 @@ class TeahazHelper:
                 dbg('sending',data,'to',kwargs.get('url'),'failed, code',code)
                 dbg(resp.text)
 
-                setattr(self,output,None)
+                if output:
+                    setattr(self,output,'')
                 return
 
             else:
@@ -1893,8 +1895,8 @@ class TeahazHelper:
         if do_output:
             loader.start()
 
-        if not do_async:
-            self.operation_thread.join()
+        # if not do_async:
+            # self.operation_thread.join()
 
     def login_or_register(self,contype,url,chatid,data):
         ocontype = contype
@@ -1929,7 +1931,6 @@ class TeahazHelper:
                 method          = 'post',
                 url             = endpoint,
                 json            = d,
-                do_async        = False,
                 callback        = lambda resp,data: {
                     setattr(th,'login_response',resp),
                     setattr(th,'login_data',data)
@@ -1974,7 +1975,6 @@ class TeahazHelper:
                 method          = 'post',
                 url             = URL+'/api/v0/chatroom/',
                 json            = d,
-                do_async        = False,
                 callback        = lambda resp,data: {
                     setattr(th,'response',json.loads(resp.text)),
                     th.add_new_server(
@@ -2029,7 +2029,6 @@ class TeahazHelper:
                 do_output       = True,
                 method          = 'get',
                 url             = URL+'/api/v0/invite/'+CHAT_ID,
-                do_async        = False,
                 headers         = d,
                 callback        = lambda resp,data: {
                     self.dump_invite(resp,URL,CHAT_ID)
