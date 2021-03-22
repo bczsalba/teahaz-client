@@ -1268,6 +1268,7 @@ def handle_menu(key,obj,send_escape=True,attributes={},page=0) -> None:
             if len(obj.__ui_keys):
                 obj.__ui_keys.pop(-1)
 
+        del removed
         return
 
     # get if horizontal navigation between prompt options should be used
@@ -1822,7 +1823,7 @@ class TeahazHelper:
         self.selected_message   = None
         self.selected_message_y = None
         
-    def handle_operation(self,method,do_output=False,success_message=None,output=None,callback=None,*args,**kwargs):
+    def handle_operation(self,method,do_success=False,do_error=False,success_message=None,output=None,callback=None,*args,**kwargs):
         def _do_operation(*args,**kwargs):
             global SESSION
             if method == "post":
@@ -1850,7 +1851,7 @@ class TeahazHelper:
 
             code = resp.status_code
             if not 199 < code < 300:
-                if do_output:
+                if do_error:
                     ui.create_error_dialog(resp.text)
 
                 if method == 'post':
@@ -1866,7 +1867,7 @@ class TeahazHelper:
                 return
 
             else:
-                if do_output:
+                if do_success:
                     if success_message:
                         sm = success_message
                     else:
@@ -1896,7 +1897,7 @@ class TeahazHelper:
         self.operation_thread = threading.Thread(target=_do_operation,args=args,kwargs=kwargs)
 
         self.operation_thread.start()
-        if do_output:
+        if do_success or do_error:
             loader.start()
             loader._is_stoppable = False
 
@@ -1932,7 +1933,8 @@ class TeahazHelper:
 
         self.handle_operation(
                 success_message = f'Successful {ocontype}!',
-                do_output       = True,
+                do_success      = True,
+                do_error        = True,
                 method          = 'post',
                 url             = endpoint,
                 json            = d,
@@ -1976,7 +1978,8 @@ class TeahazHelper:
 
         self.handle_operation(
                 success_message = 'Created new chatroom!',
-                do_output       = True,
+                do_success      = True,
+                do_error        = True,
                 method          = 'post',
                 url             = URL+'/api/v0/chatroom/',
                 json            = d,
@@ -2008,6 +2011,9 @@ class TeahazHelper:
         edit_json('usercfg.json','CURRENT_CHATROOM',[url,index])
         dbg('chatroom set to',url,'/',chatroom['chatroom_name'])
         SESSION.last_get = 0
+        globals()['MESSAGES'] = []
+        th.messages_get_return = ''
+        self.update()
 
     def dump_invite(self,resp,url,chatroom):
         d = {
@@ -2025,13 +2031,14 @@ class TeahazHelper:
         for key,value in data.items():
             if not key.startswith('ui__'):
                 if key == "expire time (UTC)":
-                    key = "expr_time"
+                    key = "expr-time"
                 d[key] = value 
 
         conv_name = SERVERS[URL][CURRENT_CHATROOM[1]]['chatroom_name']
         self.handle_operation(
                 success_message = f'Saved new invite as {conv_name}.inv!',
-                do_output       = True,
+                do_success      = True,
+                do_error        = True,
                 method          = 'get',
                 url             = URL+'/api/v0/invite/'+CHAT_ID,
                 headers         = d,
@@ -2164,6 +2171,8 @@ class TeahazHelper:
 
         self.handle_operation(
                 method        = 'post',
+                do_success    = 0,
+                do_error      = (endpoint == 'file'),
                 output        = 'message_send_return',
                 url           = URL+'/api/v0/'+endpoint,
                 callback      = lambda resp,data: self.get_new_messages(callback=message_update_lambda),
@@ -2518,42 +2527,45 @@ class TeahazHelper:
                 headers   = data,
         )
 
-    def get_loop(self):
+    def update(self):
         global WIDTH,HEIGHT,MESSAGES
 
+        oWIDTH,oHEIGHT = WIDTH,HEIGHT
+        WIDTH,HEIGHT = os.get_terminal_size()
+        if not [WIDTH,HEIGHT] == [oWIDTH,oHEIGHT]:
+            handle_action('reprint')
+
+        if self.skip_get:
+            self.skip_get = False
+
+        elif not PIPE_OUTPUT and self.offset <= 0 \
+            and URL and CHAT_ID and len(SESSION.cookies): 
+            
+            if not is_set('messages_get_return',self.__dict__) or not self.messages_get_return:
+                self.get_new_messages(
+                        'messages_get_return',
+                        callback = lambda resp,_: self.add_to_messages(json.loads(resp.text))
+                )
+
+            elif not self.messages_get_return == 'incomplete':
+                if not isinstance(self.messages_get_return,requests.Response):
+                    dbg('get return is not a Response!',type(self.messages_get_return),self.messages_get_return)
+                    return
+
+                try:
+                    messages = json.loads(self.messages_get_return.text)
+                except ValueError as e:
+                    dbg('Couldn\'t jsonize messages:',str(e))
+
+                if len(messages):
+                    self.add_to_messages(messages)
+                
+                del self.messages_get_return
+
+    def get_loop(self):
+
         while KEEP_GOING:
-            oWIDTH,oHEIGHT = WIDTH,HEIGHT
-            WIDTH,HEIGHT = os.get_terminal_size()
-            if not [WIDTH,HEIGHT] == [oWIDTH,oHEIGHT]:
-                handle_action('reprint')
-
-            if self.skip_get:
-                self.skip_get = False
-
-            elif not PIPE_OUTPUT and not self.offset \
-                and URL and CHAT_ID and len(SESSION.cookies): 
-
-                if not is_set('messages_get_return',self.__dict__) or not self.messages_get_return:
-                    self.get_new_messages(
-                            'messages_get_return',
-                            callback = lambda resp,_: self.add_to_messages(json.loads(resp.text))
-                    )
-
-                elif not self.messages_get_return == 'incomplete':
-                    if not isinstance(self.messages_get_return,requests.Response):
-                        dbg('get return is not a Response!',type(self.messages_get_return),self.messages_get_return)
-                        continue
-
-                    try:
-                        messages = json.loads(self.messages_get_return.text)
-                    except ValueError as e:
-                        dbg('Couldn\'t jsonize messages:',str(e))
-
-                    if len(messages):
-                        self.add_to_messages(messages)
-                    
-                    del self.messages_get_return
-
+            self.update()
             time.sleep(1)
         dbg('get_loop ended!')
 
