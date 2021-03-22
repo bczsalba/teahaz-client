@@ -247,7 +247,7 @@
             "message_select_next": "j",
             "message_select_goto_parent": "g",
             "message_select_reply": "ENTER",
-            "message_select_open": "o",
+            "message_select_open": " ",
             "message_select_edit": "e",
             "message_select_copy": "y",
             "message_select_debug": "*",

@@ -1823,7 +1823,7 @@ class TeahazHelper:
         self.selected_message   = None
         self.selected_message_y = None
         
-    def handle_operation(self,method,do_success=False,do_error=False,success_message=None,output=None,callback=None,*args,**kwargs):
+    def handle_operation(self,method,do_async=True,do_success=False,do_error=False,success_message=None,output=None,callback=None,*args,**kwargs):
         def _do_operation(*args,**kwargs):
             global SESSION
             if method == "post":
@@ -1901,8 +1901,8 @@ class TeahazHelper:
             loader.start()
             loader._is_stoppable = False
 
-        # if not do_async:
-            # self.operation_thread.join()
+        if not do_async:
+            self.operation_thread.join()
 
     def login_or_register(self,contype,url,chatid,data):
         ocontype = contype
@@ -1913,6 +1913,13 @@ class TeahazHelper:
                     'password': data.get('password')
             }
         elif contype == "register":
+            if not is_set('INVITE'):
+                ui.create_error_dialog(
+                    """Register requires an invite, which could not be found.
+
+                        Try using the invite file again.""")
+                return
+
             d = { 
                     'username': data.get('username'),
                     'password': data.get('password'),
@@ -1934,6 +1941,7 @@ class TeahazHelper:
         self.handle_operation(
                 success_message = f'Successful {ocontype}!',
                 do_success      = True,
+                do_async        = False,
                 do_error        = True,
                 method          = 'post',
                 url             = endpoint,
@@ -2127,6 +2135,11 @@ class TeahazHelper:
             dbg(str(e))
 
     def send(self,message,endpoint='message'):
+        if not is_set('URL'):
+            ui.create_error_dialog("""Failed to send!
+
+            URL is not set. Try logging in again.""")
+
         data = BASE_DATA.copy()
 
         # handle specificities
@@ -2766,7 +2779,12 @@ class UIGenerator:
                 chat_col = parse_color(THEME['title'],chatroom['chatroom_name'])
 
                 # create, add prompt
-                p = Prompt(options=[chatroom['username']+' '+chat_col+'@'+url_col],justify_options='center')
+                try:
+                    p = Prompt(options=[chatroom['username']+' '+chat_col+'@'+url_col],justify_options='center')
+                except TypeError as e:
+                    dbg(e)
+                    continue
+
                 p.url = url_long
                 p.chatroom = chatroom
 
@@ -2903,6 +2921,33 @@ class UIGenerator:
         d = self.create_menu(source,width=25)
         return d
 
+    def create_confirmation_dialog(self,text,callback,options=None):
+        def reset(container):
+            handle_menu('ESC',container)
+            th.print_messages(reprint=True)
+
+        if not options:
+            options = ["Yes","No"]
+        
+        source = {
+                    "ui__title": text,
+                    "ui__padding": "",
+                    "ui__id": "confirmation-prompt",
+                    "ui__prompt": options,
+                }
+
+        ui.wipe()
+
+        pytermgui.set_attribute_for_id('confirmation-prompt','handler',lambda container,self:
+                callback() if self.selected_index == 0 else reset(container)
+        )
+
+        d = self.create_menu(source)
+        return d
+
+
+
+
     # color code menu for settings/themes
     def create_colormenu(self,dict_index=0):
         width = max(40,int(WIDTH*(2/3)))
@@ -2951,10 +2996,14 @@ class UIGenerator:
         # set up filemanager
         filemanager = FileManager()
         filemanager.submit = lambda f: {
-                th.send(f,endpoint='file'),
-                filemanager.wipe(),
-                set_pipe(None)
-        }
+                ui.create_confirmation_dialog(f'Send {f}?',callback=
+                    lambda: [
+                        th.send(f,endpoint='file'),
+                        filemanager.wipe(),
+                        set_pipe(None)
+                    ]
+                )
+            }
 
         set_pipe(handle_menu,{'obj': filemanager})
         add_to_trace([{},filemanager])
