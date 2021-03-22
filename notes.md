@@ -1,12 +1,10 @@
 # PLANZ
 
 # BUGS
-- CONFIG is referenced before being set during initial startup
-- going to insert mode after m_select doesnt print mode label, keep pipe stays set
 - handle_operation loading screen doesnt interrupt input :(
 - mark_goto only updates after a goto action is sent
-- add_new button in themes is hidden & doesn't work
 - only the first element in multipage containers resizes
+- add_new button in themes is hidden & doesn't work
 
 # FEATURES 
 ## upcoming checklist

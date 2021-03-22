@@ -158,16 +158,15 @@ def load_path(path,key=None) -> dict:
 
 ## handle config file
 def handle_config() -> None:
-    if hasattr(CONFIG,'start'):
-        CONFIG.start(sys.modules[__name__])
+    if is_set("CONFIG"):
+        if hasattr(CONFIG,'start'):
+            CONFIG.start(sys.modules[__name__])
 
-    if not is_set("CONFIG"):
-        return
-    
-    else:
         for key,value in vars(CONFIG).items():
             if not Regex.dunder.search(key):
                 globals()[key] = value
+    else:
+        dbg('CONFIG file not found!')
 
 ## handle sys.argv
 def handle_args() -> None:
