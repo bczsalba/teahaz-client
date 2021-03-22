@@ -2763,7 +2763,7 @@ class UIGenerator:
 
             # go through chatrooms
             for chatroom in data:
-                chat_col = color(chatroom['chatroom_name'],THEME['title'])
+                chat_col = parse_color(THEME['title'],chatroom['chatroom_name'])
 
                 # create, add prompt
                 p = Prompt(options=[chatroom['username']+' '+chat_col+'@'+url_col],justify_options='center')
