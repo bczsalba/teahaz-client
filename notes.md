@@ -1,7 +1,6 @@
 # PLANZ
 
 # BUGS
-- mark_goto only updates after a goto action is sent
 - only the first element in multipage containers resizes
 - add_new button in themes is hidden & doesn't work
 

@@ -1803,6 +1803,9 @@ def goto_mark(mark) -> None:
         return
 
     th.offset = offset
+    th.selected_message = offset+3
+
+    set_pipe(None)
     th.print_messages(reprint=True)
 
 

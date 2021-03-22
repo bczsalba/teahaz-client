@@ -176,8 +176,6 @@
             "goto_WORD_next": "W",
             "goto_word_prev": "b",
             "goto_WORD_prev": "B",
-            "mark_goto": "`",
-            "mark_set": "m",
             "find": "f",
             "find_reverse": "F",
             "till": "t",
@@ -252,7 +250,9 @@
             "message_select_open": "o",
             "message_select_edit": "e",
             "message_select_copy": "y",
-            "message_select_debug": "*"
+            "message_select_debug": "*",
+            "mark_goto": "`",
+            "mark_set": "m"
         }
     }
 }
