@@ -2338,7 +2338,7 @@ class TeahazHelper:
                     except Exception as e:
                         continue
 
-                decrypted = decrypted.strip().replace('\t','')
+                decrypted = clean_ansi(decrypted.strip().replace('\t',''))
                 if real_length(decrypted) > int(MAXIMUM_MESSAGE_LENGTH):
                     continue
 
