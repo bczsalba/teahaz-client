@@ -2139,6 +2139,7 @@ class TeahazHelper:
             ui.create_error_dialog("""Failed to send!
 
             URL is not set. Try logging in again.""")
+            return
 
         data = BASE_DATA.copy()
 
