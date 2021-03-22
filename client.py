@@ -665,6 +665,9 @@ def getch_loop() -> None:
         if key == "SIGTERM":
             handle_action('quit')
 
+        elif len(key) > 3 and os.path.isfile(key):
+            filemanager.submit(key)
+
         # shortcuts
         elif key in VALID_KEYS:   
             action = reverse_dict_lookup(BINDS[MODE],key)
@@ -2996,15 +2999,6 @@ class UIGenerator:
     def create_filepicker(self,dict_index=0):
         # set up filemanager
         filemanager = FileManager()
-        filemanager.submit = lambda f: {
-                ui.create_confirmation_dialog(f'Send {f}?',callback=
-                    lambda: [
-                        th.send(f,endpoint='file'),
-                        filemanager.wipe(),
-                        set_pipe(None)
-                    ]
-                )
-            }
 
         set_pipe(handle_menu,{'obj': filemanager})
         add_to_trace([{},filemanager])
@@ -3500,7 +3494,15 @@ class FileManager(Container):
 
         # overwrite methods
         self._repr_pre = self.get_rows
-        self.submit = None
+        self.submit = lambda f: {
+                ui.create_confirmation_dialog(f'Send {f}?',callback=
+                    lambda: [
+                        th.send(f,endpoint='file'),
+                        ui.wipe(),
+                        set_pipe(None)
+                    ]
+                )
+            }
 
     def _handle_long_element(self,e):
         if not hasattr(e,'label'):
@@ -3562,7 +3564,13 @@ class FileManager(Container):
 
 
     def field_send(self,key,**kwargs):
-        if self.field.is_active:
+        if len(key) > 3 and os.path.isfile(key):
+            if self.submit:
+                self.wipe()
+                self.submit(key)
+            return
+            
+        elif self.field.is_active:
             if key in ["CTRL_N","ARROW_DOWN"]:
                 self.selected_index = min(self.selected_index+1,len(self.selectables)-1)
 
