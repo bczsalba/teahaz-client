@@ -3804,6 +3804,7 @@ CONTEXT_OPTIONS = [
 # base data array to append to
 URL = None
 BASE_DATA = {
+    "User-Agent": "teahaz-client-v0",
     "username": None,
 }
 
