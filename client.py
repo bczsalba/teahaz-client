@@ -1894,6 +1894,7 @@ class TeahazHelper:
         self.operation_thread.start()
         if do_output:
             loader.start()
+            loader._is_stoppable = False
 
         # if not do_async:
             # self.operation_thread.join()
@@ -3632,6 +3633,7 @@ class LoadingScreen(Container):
 
         self.current_frame = 0
         self._is_stopped   = False
+        self._is_stoppable = True
         self._old_pipe     = PIPE_OUTPUT
         self.width         = int(WIDTH*(2/3))
         self.frametime     = frametime
@@ -3654,11 +3656,10 @@ class LoadingScreen(Container):
             self.title.set_value(value)
 
     def ignore_key(self,key,**kwargs):
-        if key == "SIGTERM":
+        if key == "SIGTERM" and self._is_stoppable:
             self.stop()
             handle_action('reprint')
-        else:
-            dbg(key)
+            self._is_stoppable = True
 
     def get_frame(self):
         if self._has_title:
