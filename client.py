@@ -1904,10 +1904,27 @@ class TeahazHelper:
             loader.start()
             loader._is_stoppable = False
 
-        if not do_async:
-            self.operation_thread.join()
+        # if not do_async:
+            # self.operation_thread.join()
 
     def login_or_register(self,contype,url,chatid,data):
+        def login_post(resp,data):
+            _,chatindex = CURRENT_CHATROOM
+
+            try:
+                resp = json.loads(resp.text)
+            except Exception as e:
+                dbg(e)
+                return
+
+
+            globals()['BASE_DATA']['username'] = data.get('username')
+            edit_json('usercfg.json',['SERVERS',url,chatindex,'chatroom_name'],resp['name'])
+            edit_json('usercfg.json',['SERVERS',url,chatindex,'username'],data.get('username'))
+            import_json('usercfg')
+
+            th.set_chatroom(url,chatindex)
+
         ocontype = contype
 
         if contype == "login":
@@ -1944,35 +1961,14 @@ class TeahazHelper:
         self.handle_operation(
                 success_message = f'Successful {ocontype}!',
                 do_success      = True,
-                do_async        = False,
+                do_async        = True,
                 do_error        = True,
                 method          = 'post',
                 url             = endpoint,
                 json            = d,
-                callback        = lambda resp,data: {
-                    setattr(th,'login_response',resp),
-                    setattr(th,'login_data',data)
-                }
+                callback        = login_post
         )
-
-        if hasattr(th,'login_response'):
-            _,chatindex = CURRENT_CHATROOM
-            data = th.login_data
-
-            try:
-                resp = json.loads(th.login_response.text)
-            except Exception as e:
-                dbg(e)
-                return
-
-
-            globals()['BASE_DATA']['username'] = data.get('username')
-            edit_json('usercfg.json',['SERVERS',url,chatindex,'chatroom_name'],resp['name'])
-            edit_json('usercfg.json',['SERVERS',url,chatindex,'username'],data.get('username'))
-            import_json('usercfg')
-
-            th.set_chatroom(url,chatindex)
-             
+ 
     def is_connected(self,url):
         for cookie in SESSION.cookies:
             if cookie.domain == urlparse(url).netloc.split(':')[0]:
