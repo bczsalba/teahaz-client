@@ -2794,25 +2794,34 @@ class UIGenerator:
                 d.set_corner(i,c)
 
         # create, add title
-        title = Label('choose chatroom',justify='center')
-        title.set_style('value',pytermgui.CONTAINER_TITLE_STYLE)
-        d.add_elements([title,Label()])
+        # title = Label('choose chatroom',justify='center')
+        # title.set_style('value',pytermgui.CONTAINER_TITLE_STYLE)
 
         # go through servers
         for url_long,data in SERVERS.items():
+            d.add_elements([Label()])
+
             # convert url to a nicer form
             url = urlparse(url_long).netloc
             if url == "":
                 url = url_long
             url_col = color(url,THEME['value'])
 
+            subtitle = Label(value=url+':',justify='left')
+            subtitle.set_style('value',pytermgui.CONTAINER_TITLE_STYLE)
+            d.add_elements(subtitle)
+
             # go through chatrooms
             for chatroom in data:
-                chat_col = parse_color(THEME['title'],chatroom['chatroom_name'])
+                chatname = chatroom['chatroom_name']
+
+                chat_col = parse_color(THEME['value'],chatname)
+                username = chatroom['username']
 
                 # create, add prompt
                 try:
-                    p = Prompt(options=[chatroom['username']+' '+chat_col+'@'+url_col],justify_options='center')
+                    value = f"{chat_col}: {username}"
+                    p = Prompt(options=[value],justify_options='left',padding=4)
                 except TypeError as e:
                     dbg(e)
                     continue
@@ -2845,7 +2854,7 @@ class UIGenerator:
         add_to_trace([{},d])
 
         d.center()
-        d.select()
+        d.select(CURRENT_CHATROOM[1])
         print(d)
 
         return d
