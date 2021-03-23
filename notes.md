@@ -9,8 +9,6 @@
 
 - [ ] inline action sending
 
-- [ ] work on chatroom selector
-
 - [ ] notifications
 
 - [ ] fix up completer
@@ -219,3 +217,5 @@
 - [x] universal handling of errors
 
 - [x] ? help menu
+
+- [x] work on chatroom selector

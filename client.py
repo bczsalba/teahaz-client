@@ -2807,7 +2807,7 @@ class UIGenerator:
                 url = url_long
             url_col = color(url,THEME['value'])
 
-            subtitle = Label(value=url+':',justify='left')
+            subtitle = Label(value=url+':',justify='center')
             subtitle.set_style('value',pytermgui.CONTAINER_TITLE_STYLE)
             d.add_elements(subtitle)
 
@@ -2821,7 +2821,7 @@ class UIGenerator:
                 # create, add prompt
                 try:
                     value = f"{chat_col}: {username}"
-                    p = Prompt(options=[value],justify_options='left',padding=4)
+                    p = Prompt(options=[value],justify_options='center',padding=0)
                 except TypeError as e:
                     dbg(e)
                     continue
