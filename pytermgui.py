@@ -322,7 +322,7 @@ def container_from_dict(dic,padding=4,_prompts_selectable=True,**kwargs):
 
         if do_tabline:
             tabline = Prompt(options=[n for n in range(len(dicts))])
-            tabline.set_style('highlight',TABBAR_HIGHLIGHT_STYLE)
+            tabline.set_style('short_highlight',TABBAR_HIGHLIGHT_STYLE)
             tabline.select(i)
             tabline._is_selectable = False
             d.add_elements([Label(),tabline])
@@ -1013,7 +1013,7 @@ class Prompt:
             line = ''
             if isinstance(self.options, list):
                 for i,option in enumerate(self.options):
-                    option = self.value_style(option)
+                    option = self.value_style(str(option))
                     line += self._get_option_highlight(i,'short')(start+option+end)+'  '
             else:
                 line = self.value_style(self.value)
