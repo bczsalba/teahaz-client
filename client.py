@@ -2225,7 +2225,7 @@ class TeahazHelper:
             filename  = context.get('filename')
             extension = context.get('extension')
             if not extension == "_":
-                filename += '.'+extension
+                filename += extension
 
             if self.is_local(filename):
                 defaults = filemanager.open(os.path.join(DOWNLOAD_PATH,filename))
@@ -2375,7 +2375,7 @@ class TeahazHelper:
                 extension = m.get('extension')
                 content = '<-'+m.get('filename')
                 if not extension == '_':
-                    content += '.'+extension
+                    content += extension
                 content += '->'
 
                 do_subdivision = content
@@ -2392,7 +2392,7 @@ class TeahazHelper:
                             lines[j] = parse_color(THEME['fade'],l)
             
             if m_type == 'file':
-                if not self.is_local(m.get('filename')+'.'+m.get('extension')):
+                if not self.is_local(m.get('filename')+m.get('extension')):
                     for j,l in enumerate(lines):
                         lines[j] = italic(l)
 
