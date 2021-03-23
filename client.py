@@ -2793,10 +2793,6 @@ class UIGenerator:
             if not c == None:
                 d.set_corner(i,c)
 
-        # create, add title
-        # title = Label('choose chatroom',justify='center')
-        # title.set_style('value',pytermgui.CONTAINER_TITLE_STYLE)
-
         # go through servers
         for url_long,data in SERVERS.items():
             d.add_elements([Label()])
@@ -3505,17 +3501,24 @@ class FileManager(Container):
             self.add_elements(title)
             self.title = title
 
+        self.pathbar = Label()
+        self.add_elements(self.pathbar)
+        self.pathbar.set_value(self.path)
+        self.pathbar.set_style('value',pytermgui.CONTAINER_TITLE_STYLE)
+
         self.up_dir = Prompt(label='..',value='')
+        self.up_dir.set_style('delimiter',lambda: None)
         self.up_dir.is_dir = True
         self.add_elements(Label())
         self.add_elements([self.up_dir])
         self.add_elements(Label())
 
         if rows == None:
-            rows = int(HEIGHT*(2/3))
+            rows = int(HEIGHT*(2/3))-3
 
         for _ in range(rows):
-            row = Prompt(value='',label='')
+            row = Prompt(value='',label=None,justify_options='left')
+            row.set_style('delimiter',lambda: None)
             self.rows.append(row)
             self.add_elements(row)
 
@@ -3527,10 +3530,10 @@ class FileManager(Container):
         self.field.empty_cursor_char = lambda self: (' ' if self.is_active else '')
         self.add_elements(self.field)
 
-        self.pathbar = Label()
-        self.add_elements(self.pathbar)
-        self.pathbar.set_value(self.path)
-        self.pathbar.set_style('value',pytermgui.CONTAINER_TITLE_STYLE)
+        self.bottombar = Label()
+        self.bottombar.set_style('value',pytermgui.CONTAINER_TITLE_STYLE)
+        self.add_elements(self.bottombar)
+
 
         # overwrite methods
         self._repr_pre = self.get_rows
@@ -3546,7 +3549,7 @@ class FileManager(Container):
             }
 
     def _handle_long_element(self,e):
-        if not hasattr(e,'label'):
+        if not hasattr(e,'label') or e.label == None:
             return
 
         if real_length(e.value_style(e.label)) > self.width-3:
@@ -3605,11 +3608,13 @@ class FileManager(Container):
             self.set_corner(i,c)
 
         if self.selected_file:
-            self.pathbar.set_value("▲ "+self.path)
+            self.bottombar.set_value("▲")
         elif len(self.files) > len(self.rows)-1:
-            self.pathbar.set_value("▼ "+self.path)
+            self.bottombar.set_value("▼")
         else:
-            self.pathbar.set_value("  "+self.path)
+            self.bottombar.set_value("")
+
+        self.pathbar.set_value(self.path)
 
     def field_send(self,key,**kwargs):
         if len(key) > 3 and os.path.isfile(key):
@@ -3630,8 +3635,8 @@ class FileManager(Container):
                 self.field.set_value('')
                 self.field.prompt = ''
 
-                if key == "ENTER":
-                    self.field_send("ENTER")
+                # if key == "ENTER":
+                    # self.field_send("ENTER")
 
             elif key == "SIGTERM":
                 handle_action('quit')
@@ -3694,6 +3699,8 @@ class FileManager(Container):
         elif key == "/":
             self.field.prompt = '/'
             self.field.is_active = True
+            self.selected_file = 0
+            self.selected_index = 1
             self.field.handle_key = self.search
 
         elif key == "-":
