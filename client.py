@@ -2356,7 +2356,7 @@ class TeahazHelper:
                     continue
 
                 emojid = parse_emoji(decrypted)
-                if PARSE_MARKDOWN:
+                if PARSE_MARKDOWN and not self.selected_message == i:
                     inline = parse_inline_codes(emojid)
                     content = inline
                 else:
@@ -3465,8 +3465,6 @@ class FileManager(Container):
         self.add_elements([self.up_dir])
         self.add_elements(Label())
 
-        # add rows for output
-        # TODO: this should be checked for every repr
         if rows == None:
             rows = int(HEIGHT*(2/3))
 
@@ -3557,7 +3555,6 @@ class FileManager(Container):
             self.pathbar.set_value("▼ "+self.path)
         else:
             self.pathbar.set_value("  "+self.path)
-
 
     def field_send(self,key,**kwargs):
         if len(key) > 3 and os.path.isfile(key):
