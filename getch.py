@@ -118,8 +118,8 @@ class InputField:
             key = ''
 
         # TODO
-        elif key == '\n':
-            pass
+        # elif key == '\n':
+            # pass
 
         else:
             if not (self.xlimit and len(self.value+key) > self.xlimit):
@@ -175,8 +175,21 @@ class InputField:
     # clear the space occupied by input currently
     def wipe(self):
         x,y = self.pos
-        length = real_length(self.prompt+self.value)+2
-        sys.stdout.write(f'\033[{y};{x}H'+(length)*' ')
+        lines = []
+        buff = ''
+        for i,c in enumerate(self.value):
+            if c == "\n":
+                lines.append(buff)
+                buff = ''
+            else:
+                buff += c
+        lines.append(buff)
+
+        for i,l in enumerate(lines):
+            sys.stdout.write(f'\033[{y-i};{x}H'+(real_length(l)+2)*' ')
+
+        # length = real_length(self.prompt+self.value)+2
+        # sys.stdout.write(f'\033[{y};{x}H'+(length)*'a')
         sys.stdout.flush()
 
 

@@ -926,10 +926,11 @@ class Prompt:
     option is chosen, and the options given are disregarded.
 
     Styles:
-        - highlight_style : used for highlighting
-        - label_style     : used for labels in type1 of prompt
-        - value_style     : used for values (between [ and ],
-                            non-inclusive.)
+        - short_highlight_style : used for type 1
+        - long_highlight_style  : used for type 2
+        - label_style           : used for labels in type1 of prompt
+        - value_style           : used for values (between [ and ],
+                                  non-inclusive.)
     """
     
     def __init__(self,width=None,options=None,label=None,real_label=None,justify_options='center',value="",padding=0): 

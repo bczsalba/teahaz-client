@@ -329,7 +329,7 @@ def switch_mode(target,force=False) -> None:
                 else:
                     content = parse_emoji(m.get('message'))
 
-                preview = content[:15].strip()
+                preview = content.split('\n')[0][:15].strip()
                 if real_length(content) > 15:
                     preview += '...'
 
@@ -481,11 +481,11 @@ def is_in_last_word(index,string,mode='delimiters') -> bool:
 ## get what position infield should be at
 def get_infield_pos(update_modelabel=True) -> list:
     if 'infield' in globals().keys() and len(infield.value):
-        offset = (len(infield.value)+1)//WIDTH
+        offset = (len(infield.value)+1)//WIDTH + infield.value.count('\n')
 
         if not infield.line_offset == offset:
-            infield.wipe()
 
+            infield.wipe()
             if update_modelabel:
                 MODE_LABEL.wipe()
                 
@@ -769,7 +769,7 @@ def handle_action(action) -> None:
 
     elif action == "paste":
         cursor = infield.cursor
-        paste = clip.paste().replace('\n','') #TODO: this is temp
+        paste = clip.paste().replace('\n','\n') #TODO: this is temp
 
         offset = (1 if VIMMODE else 0)
 
@@ -803,6 +803,10 @@ def handle_action(action) -> None:
         print('\033[2J')
         loader.start()
 
+    elif action == "insert_newline":
+        infield.send('\n')
+        get_infield_pos()
+        # infield.print()
 
     ## CATEGORIES
     # mode switching
@@ -2381,6 +2385,17 @@ class TeahazHelper:
                 do_subdivision = content
 
             lines = pytermgui.break_line(content,MAX_MESSAGE_WIDTH(),do_subdivision=do_subdivision)
+            
+            newlines = []
+            for newi,line in enumerate(lines):
+                if not '\n' in line:
+                    continue
+
+                newlines += line.split('\n')
+
+            if len(newlines):
+                lines = newlines
+                        
 
             if FADE_SENDING:
                 if m in extras:
@@ -2416,6 +2431,17 @@ class TeahazHelper:
                     message = reply_parent.get('message')
 
                 reply = pytermgui.break_line(parse_emoji('> ' + message),MAX_MESSAGE_WIDTH())
+                newlines = []
+                for l in reply:
+                    if l.count('\n'):
+                        newlines += l.split('\n')
+
+                if len(newlines) > 2:
+                    reply = newlines[:1] + [newlines[1]+'...']
+
+                elif len(newlines):
+                    reply = newlines
+
                 for l,r in enumerate(reply):
                     reply[l] = parse_color(THEME['reply'],r)
                 lines = reply+lines
@@ -3191,7 +3217,8 @@ class InputFieldCompleter(Container):
 
         # create rows
         for i in range(height):
-            p = Prompt(label='',justify_options="left")
+            p = Prompt(label=None,justify_options="left")
+            p.set_style('delimiter',lambda: None)
             self.add_elements(p)
             self.rows.append(p)
         
@@ -3209,7 +3236,6 @@ class InputFieldCompleter(Container):
             options = self.options
 
         # self.width = max(len(l)+5 for l in options.keys())
-        self.wipe = self.wipe_all_containing
         self.match_highlight_style = lambda char: bold(underline(char))
         self.set_style(Prompt,'highlight',lambda item: bold('> ')+item)
 
@@ -3259,11 +3285,11 @@ class InputFieldCompleter(Container):
             th.print_messages(reprint=True) 
 
     def wipe(self,*args,**kwargs):
-        x = self.pos[0] + 1
+        x = self.pos[0]
         y = self.pos[1] + 2
         buff = ''
         for i,row in enumerate(self.rows):
-            if row.label:
+            if row.value:
                 buff += f'\033[{y+i};{x}H'+'\033[K'
 
         print(buff)
@@ -3385,7 +3411,7 @@ class InputFieldCompleter(Container):
                 value = ''.join(value_list)
 
                 row.real_label = output[i]
-                row.label = icon+value
+                row.value = icon+value
 
                 if not row in self.elements:
                     self.add_elements(row)
@@ -3401,7 +3427,7 @@ class InputFieldCompleter(Container):
                     # sys.stdout.write((prev_length)*' ')
                     # sys.stdout.flush()
             else:
-                row.label = ''
+                row.value = ''
                 if row in self.elements:
                     self.elements.remove(row)
 
@@ -3421,6 +3447,7 @@ class InputFieldCompleter(Container):
             self.selected_index = len(self.elements)-1
 
         self.prev_output = output
+        self.wipe()
 
             
     def handle_bindings(self,key):
@@ -3519,7 +3546,6 @@ class FileManager(Container):
     def get_rows(self):
         files = os.listdir(self.path)
         self.files = files
-        dbg()
 
         if self.hard_filter:
             new = []
