@@ -350,7 +350,7 @@ class Color:
         if not isinstance(fg,int) and not fg.isdigit():
             return '\033[7m'+fg
 
-        return '\033[7m'+ (Color.color(s,fg) if fg else s)
+        return '\033[7m'+ (Color.color(clean_ansi(s),fg) if fg else s)
 
     def color(s,col,reset=True):
         if isinstance(col,list):
@@ -701,7 +701,7 @@ class Container:
 
         ## get x
         if side == 'right':
-            startx = px+self.width+3 - real_length(value) - offset
+            startx = px+self.width+2 - real_length(value) - offset
         elif side == 'left':
             startx = px+1 + offset
 
@@ -958,7 +958,8 @@ class Prompt:
         self.real_value = self.value
 
         # styles
-        self.highlight_style = PROMPT_HIGHLIGHT_STYLE
+        self.long_highlight_style = PROMPT_LONG_HIGHLIGHT_STYLE
+        self.short_highlight_style = PROMPT_SHORT_HIGHLIGHT_STYLE
         self.label_style = PROMPT_LABEL_STYLE
         self.value_style = PROMPT_VALUE_STYLE
         self.delimiter_style = PROMPT_DELIMITER_STYLE
@@ -995,15 +996,15 @@ class Prompt:
             label = self.label_style(self.label)
             value = self.value_style(self.value)
 
-            highlight_len = real_length(self.highlight_style(''))
-            highlight = (self.highlight_style if self._is_selected else lambda item: highlight_len*' '+item)
+            highlight_len = real_length(self.long_highlight_style(''))
+            highlight = (self.long_highlight_style if self._is_selected else lambda item: highlight_len*' '+item)
             middle_pad = (self.width-real_length(label)) - real_length(start+end) - real_length(value) - max(self.padding,2)
             middle_pad = max(2,middle_pad)
 
             left = ' ' + label + middle_pad*" "
-            right = start + value + end + ' '
+            right = start + value + end
 
-            line = (self.padding-1-highlight_len)*' '+highlight(left + right)+' '
+            line = (self.padding-1-highlight_len)*' '+highlight(left + right)+'  '
             self.width = max(self.width,real_length(line))
 
         # else print all options
@@ -1013,7 +1014,7 @@ class Prompt:
             if isinstance(self.options, list):
                 for i,option in enumerate(self.options):
                     option = self.value_style(option)
-                    line += self._get_option_highlight(i)(f"{start}{option}{end}")+'  '
+                    line += self._get_option_highlight(i,'short')(start+option+end)+'  '
             else:
                 line = self.value_style(self.value)
 
@@ -1049,12 +1050,11 @@ class Prompt:
 
 
     # get highlight value for index in options
-    def _get_option_highlight(self,index):
+    def _get_option_highlight(self,index,which='long'):
         if self._is_selected and self.selected_index == index:
-            highlight = self.highlight_style
+            return getattr(self,which+'_highlight_style')
         else:
-            highlight = lambda item: item
-        return highlight
+            return lambda item: item
 
 
     # select index in options
@@ -1159,21 +1159,22 @@ CURSOR_HIGHLIGHT_STYLE = GLOBAL_HIGHLIGHT_STYLE
 TABBAR_HIGHLIGHT_STYLE = GLOBAL_HIGHLIGHT_STYLE
 
 # container
-CONTAINER_BORDER_CHARS = lambda: "|-"
-CONTAINER_BORDER_STYLE = lambda item: item
-CONTAINER_CORNER_STYLE = lambda item: item
-CONTAINER_LABEL_STYLE = lambda item: item
-CONTAINER_VALUE_STYLE = lambda item: item
-CONTAINER_CORNER_STYLE = lambda char: char
-CONTAINER_TITLE_STYLE = lambda item: Color.italic(Color.bold(item))
-CONTAINER_ERROR_STYLE = lambda item: Color.color(Color.bold(item),'38;5;196')
+CONTAINER_BORDER_CHARS  = lambda: "|-"
+CONTAINER_BORDER_STYLE  = lambda item: item
+CONTAINER_CORNER_STYLE  = lambda item: item
+CONTAINER_LABEL_STYLE   = lambda item: item
+CONTAINER_VALUE_STYLE   = lambda item: item
+CONTAINER_CORNER_STYLE  = lambda char: char
+CONTAINER_TITLE_STYLE   = lambda item: Color.italic(Color.bold(item))
+CONTAINER_ERROR_STYLE   = lambda item: Color.color(Color.bold(item),'38;5;196')
 CONTAINER_SUCCESS_STYLE = lambda item: Color.color(Color.bold(item),'2')
 
 ## prompt
 PROMPT_LABEL_STYLE = lambda item: item
 PROMPT_VALUE_STYLE = lambda item: item
 PROMPT_DELIMITER_STYLE = lambda: '[]'
-PROMPT_HIGHLIGHT_STYLE = GLOBAL_HIGHLIGHT_STYLE
+PROMPT_SHORT_HIGHLIGHT_STYLE = GLOBAL_HIGHLIGHT_STYLE
+PROMPT_LONG_HIGHLIGHT_STYLE = GLOBAL_HIGHLIGHT_STYLE
 
 ## label
 LABEL_VALUE_STYLE = lambda item: item
@@ -1200,33 +1201,4 @@ def perspective(color,index):
 
 # TEST CODE #
 if __name__ == "__main__":
-    import requests
-
-    print('\033[2J')
-    r = requests.get('https://online.sprinter.hu/terkep/data.json')
-    d = r.json()
-    d = d[0]
-        
-    c = container_from_dict(d)[0]
-    #c.set_corner(0,'example using sprinter json')
-    #c.set_corner(3,'pytermgui')
-    corners = ["┌","┐","└","┘"]
-    for i,corner in enumerate(corners):
-        c.set_corner(i,corner)
-    c.set_style(Prompt,'highlight',lambda a: Color.highlight(a,'74'))
-    c.set_style(Container,'corner',lambda a: Color.color(a,'220'))
-    c.set_style(Container,'border',lambda a: Color.color(a,'220'))
-    c.set_style(Prompt,'label',lambda a: Color.color(a,'103'))
-    c.set_style(Prompt,'value',lambda a: Color.color(a,'61'))
-    c.set_style(Prompt,'delimiter',lambda: None)
-    c.set_borders('│─')
-    c.select(3)
-    c.center()
-    #c.move([0,HEIGHT+10])
-    repr(c)
-
-    #print(c)
-    #with open('sprinter.ptg','w') as f:
-    #    f.write(repr(c))
-    print(c)
-    print('\033[i')
+    pass

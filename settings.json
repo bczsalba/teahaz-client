@@ -22,28 +22,28 @@
             "label": "245",
             "value": "72",
             "border": "60",
+            "corner": "bold(color(245))",
             "field_highlight": "gradient(72)",
+            "prompt_highlight": "highlight(72)",
             "mode_indicator": "72",
             "ui__title2": "characters",
-            "border_chars": "\u2502\u2500",
+            "border_chars": "|-",
             "ui__prompt_options__delimiters": [
                 "<>",
                 "[]",
                 "{}",
                 null
             ],
-            "prompt_delimiters": null,
+            "prompt_delimiters": "<>",
             "ui__prompt_options_highlight": [
                 "minimal",
                 "custom"
             ],
-            "prompt_highlight": "minimal",
-            "custom_prompt_highlight": "highlight(72)",
-            "corners": {
-                "top_left": "\u250c",
-                "top_right": "\u2510",
-                "bottom_left": "\u2514",
-                "bottom_right": "\u2518"
+            "corner_chars": {
+                "top_left": "x",
+                "top_right": "X",
+                "bottom_left": "X",
+                "bottom_right": "x"
             },
             "message_styles": {
                 "*": "italic",
@@ -81,10 +81,10 @@
     "PARSE_MARKDOWN": true,
     "MESSAGE_SEPARATE_TIME": "300",
     "MAXIMUM_MESSAGE_LENGTH": "2000",
-    "MAX_NICK_LENGTH_RATIO": 0.4, 
+    "MAX_NICK_LENGTH_RATIO": 0.4,
     "FILETYPE_DEFAULTS": {
         "image": {
-            "open": "kitty +kitten icat --scale-up \"{path}\"",
+            "open": "kitty +kitten icat \"{path}\"",
             "destroy": "kitty +kitten icat --clear"
         },
         "video": {

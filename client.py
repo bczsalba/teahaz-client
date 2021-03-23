@@ -1433,7 +1433,7 @@ def handle_menu_actions(action,current_file=None) -> int:
         pytermgui.clr()
 
     menu = action.replace('menu_','')
-    corners = [v for k,v in THEME['corners'].items()]
+    corners = [v for k,v in THEME['corner_chars'].items()]
     attrs = {}
     selectable = True
 
@@ -1826,7 +1826,13 @@ class TeahazHelper:
         self.selected_message   = None
         self.selected_message_y = None
         
-    def handle_operation(self,method,do_async=True,do_success=False,do_error=False,success_message=None,output=None,callback=None,*args,**kwargs):
+    def handle_operation(self,method,
+                do_async=True,  do_success=False,
+                do_error=False, success_message=None,
+                output=None,    callback=None,
+                timeout=1,
+                *args,**kwargs):
+
         def _do_operation(*args,**kwargs):
             global SESSION
             if method == "post":
@@ -2392,7 +2398,7 @@ class TeahazHelper:
 
             if i == self.selected_message:
                 for k,l in enumerate(lines):
-                    lines[k] = parse_color(THEME['custom_prompt_highlight'],l)
+                    lines[k] = parse_color(THEME['prompt_highlight'],l)
 
             replyId = m.get('replyId')
             if replyId:
@@ -2626,7 +2632,7 @@ class UIGenerator:
                 o.dict_path = kwargs['path']
 
             # set theme corners
-            for i,c in enumerate([v for k,v in THEME['corners'].items()]):
+            for i,c in enumerate([v for k,v in THEME['corner_chars'].items()]):
                 if not c == None:
                     o.set_corner(i,c)
             
@@ -2706,7 +2712,7 @@ class UIGenerator:
             dic.setting = source.real_label
             dic.real_value = source.real_value
             dic.center()
-            for i,c in enumerate([v for k,v in THEME['corners'].items()]):
+            for i,c in enumerate([v for k,v in THEME['corner_chars'].items()]):
                 dic.set_corner(i,c)
 
         d = dicts[dict_index]
@@ -2743,7 +2749,7 @@ class UIGenerator:
         set_pipe(handle_menu,{'obj': [d]})
         add_to_trace([{},d])
 
-        for i,c in enumerate(THEME['corners'].values()):
+        for i,c in enumerate(THEME['corner_chars'].values()):
             d.set_corner(i,c)
 
         d.center()
@@ -2757,7 +2763,7 @@ class UIGenerator:
         d = Container(width=50)
 
         # set container corners
-        for i,c in enumerate([v for k,v in THEME['corners'].items()]):
+        for i,c in enumerate([v for k,v in THEME['corner_chars'].items()]):
             if not c == None:
                 d.set_corner(i,c)
 
@@ -2801,7 +2807,10 @@ class UIGenerator:
 
         pytermgui.set_attribute_for_id(button.id,'handler',lambda prev,self: {
             prev.wipe(),
-            handle_action('menu_server_new')})
+            setattr(self,'inv_picker',ui.create_filepicker()),
+            setattr(self.inv_picker,'hard_filter','.inv'),
+            print(self.inv_picker)
+            })
 
         d.add_elements([Label(),button])
 
@@ -2822,7 +2831,7 @@ class UIGenerator:
         d = Container(width=50)
 
         # set container corners
-        for i,c in enumerate([v for k,v in THEME['corners'].items()]):
+        for i,c in enumerate([v for k,v in THEME['corner_chars'].items()]):
             if not c == None:
                 d.set_corner(i,c)
 
@@ -2992,9 +3001,9 @@ class UIGenerator:
         print(c)
         return c
 
-    def create_filepicker(self,dict_index=0):
+    def create_filepicker(self,dict_index=0,**kwargs):
         # set up filemanager
-        filemanager = FileManager()
+        filemanager = FileManager(width=min(40,int(WIDTH*(2/3))),**kwargs)
 
         set_pipe(handle_menu,{'obj': filemanager})
         add_to_trace([{},filemanager])
@@ -3433,7 +3442,7 @@ class FileManager(Container):
         * open(path)         : open selected file with the global filetype handlers
     """
 
-    def __init__(self,rows=None,path=None,completer=None,title=None,filetype_highlight=True,**kwargs):
+    def __init__(self,rows=None,path=None,hard_filter=None,completer=None,title=None,filetype_highlight=True,**kwargs):
         super().__init__(**kwargs)
         if path:
             if os.path.exists(path):
@@ -3450,6 +3459,7 @@ class FileManager(Container):
         self.pattern       = None
         self.exec_pid      = None
         self.exec_mime     = None
+        self.hard_filter   = hard_filter
         self.selected_file = 0
 
         # add elements
@@ -3488,6 +3498,7 @@ class FileManager(Container):
 
         # overwrite methods
         self._repr_pre = self.get_rows
+        self.set_style(Prompt,'long_highlight',lambda item: parse_color(THEME['prompt_highlight'],item))
         self.submit = lambda f: {
                 ui.create_confirmation_dialog(f'Send {f}?',callback=
                     lambda: [
@@ -3508,6 +3519,15 @@ class FileManager(Container):
     def get_rows(self):
         files = os.listdir(self.path)
         self.files = files
+        dbg()
+
+        if self.hard_filter:
+            new = []
+            for f in files:
+                if self.hard_filter in f or os.path.isdir(os.path.join(self.path,f)):
+                    new.append(f)
+            files = new
+
         files.sort()
         files.sort(key=lambda f: os.path.isfile(os.path.join(self.path,f)))
 
@@ -3546,7 +3566,7 @@ class FileManager(Container):
             self.center('both')
         self.field.pos = self.pos[0]+2,self.pos[1]+self.real_height+1
 
-        for i,c in enumerate(THEME['corners'].values()):
+        for i,c in enumerate(THEME['corner_chars'].values()):
             self.set_corner(i,c)
 
         if self.selected_file:
@@ -3963,9 +3983,10 @@ if __name__ == "__main__":
     pytermgui.set_style('container_label',lambda item: parse_color(THEME['label'],item.lower()))
     pytermgui.set_style('container_value',lambda item: parse_color(THEME['value'],item))
     pytermgui.set_style('container_border',lambda item: parse_color(THEME['border'],item))
-    pytermgui.set_style('container_corner',pytermgui.CONTAINER_BORDER_STYLE)
+    pytermgui.set_style('container_corner',lambda item: parse_color(THEME['corner'],item))
 
-    pytermgui.set_style('prompt_highlight',lambda item: minimal_or_custom_highlight(item))
+    pytermgui.set_style('prompt_long_highlight',lambda item: "> "+parse_color('bold()',item))
+    pytermgui.set_style('prompt_short_highlight',lambda item: parse_color(THEME['prompt_highlight'],item))
     pytermgui.set_style('tabbar_highlight',lambda item: parse_color(THEME['title'],item))
 
     pytermgui.set_style('container_border_chars',lambda: [bold(v) for v in THEME['border_chars']])
@@ -3986,7 +4007,7 @@ if __name__ == "__main__":
     CONV_HEADER.hidden = False
 
     # set corners for header
-    for i,c in enumerate([v for k,v in THEME['corners'].items()]):
+    for i,c in enumerate([v for k,v in THEME['corner_chars'].items()]):
         if not c == None:
             CONV_HEADER.set_corner(i,c)
 
