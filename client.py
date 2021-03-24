@@ -2436,11 +2436,11 @@ class TeahazHelper:
                     if l.count('\n'):
                         newlines += l.split('\n')
 
-                if len(newlines) > 2:
-                    reply = newlines[:1] + [newlines[1]+'...']
-
-                elif len(newlines):
+                if len(newlines):
                     reply = newlines
+
+                if len(reply) > 2:
+                    reply = reply[:1] + [reply[1]+'...']
 
                 for l,r in enumerate(reply):
                     reply[l] = parse_color(THEME['reply'],r)
