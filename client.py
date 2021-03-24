@@ -3,6 +3,7 @@
 # IMPORTS
 import os
 import re
+import api
 import sys
 import json
 import time
@@ -32,25 +33,6 @@ highlight      =  Color.highlight
 gradient       =  Color.gradient
 get_gradient   =  Color.get_gradient
 from pytermgui import Container,Prompt,Label,container_from_dict
-
-
-
-# HELPERS #
-### b64 encrypt
-def encrypt(a):
-    return base64.b64encode(a.encode('utf-8')).decode('utf-8')
-
-### b64 encrypt into bytes
-def encrypt_binary(a):
-    return base64.b64encode(a).decode('utf-8')
-
-### b64 decrypt
-def decrypt(a):
-    return base64.b64decode(a).decode('utf-8')
-
-def decrypt_binary(a):
-    return base64.b64decode(str(a).encode('utf-8'))
-
 
 
 
@@ -1830,11 +1812,93 @@ class TeahazHelper:
         self.selected_message   = None
         self.selected_message_y = None
         
+    def send_by_chunks(self,url,data):
+        content = True
+        fileId  = None
+
+        f = data.get('file')
+        del data['file']
+        length = data.get('length')
+
+        chunk_size = int((1048576*3)/4) - 1
+
+        while content:
+            chunk = f.read(chunk_size)
+
+            if len(chunk) < chunk_size or f.tell() >= length:
+                content = False
+
+            data['fileId'] = fileId
+            data['part'] = content
+            data['data'] = api.encrypt_binary(chunk)
+            
+            resp = SESSION.post(url,json=data)
+            if not resp.status_code == 200:
+                break
+            else:
+                fileId = resp.text.strip(' ').strip('\n').strip('"')
+
+            dbg('chunk sent!')
+
+        return resp
+
+    def get_by_chunks(self,url,kwargs):
+        section    = 1
+        keep_going = True
+        filename   = kwargs.get('filename')
+        del kwargs['filename']
+
+
+        oname = os.path.join(DOWNLOAD_PATH,filename)
+        name  = oname
+        extra = 0
+        while os.path.isfile(name):
+            extra += 1
+            name = oname+str(extra)
+
+        if os.path.exists(name):
+            os.remove(name)
+
+        headers = kwargs.copy()
+        while keep_going:
+            dbg('chunk')
+            headers['section'] = str(section)
+            resp = SESSION.get(url,headers=headers)
+
+            if not resp.status_code == 200:
+                ui.create_error_dialog('Could not get '+filename+'.')
+                return
+
+            stripped = resp.text.strip(' ').strip('\n').strip('"')
+            dbg(len(stripped))
+            if not len(stripped):
+                dbg('end')
+                break
+
+            try:
+                data = api.decrypt_binary(stripped)
+            except Exception as e:
+                dbg(f'Error decoding {filename}: {e}')
+
+            with open(name,'ab+') as f:
+                f.write(data)
+
+            section += 1
+
+
+        dbg('writing to ',name) 
+        with open(name,'wb') as f:
+            f.write(data)
+
+        return resp
+
+
+
     def handle_operation(self,method,
                 do_async=True,  do_success=False,
                 do_error=False, success_message=None,
-                output=None,    callback=None,
-                timeout=1,
+                do_chunks=False,output=None,
+                callback=None,timeout=1,
                 *args,**kwargs):
 
         def _do_operation(*args,**kwargs):
@@ -1845,12 +1909,24 @@ class TeahazHelper:
                 fun = SESSION.get
  
             try:
-                resp = fun(**kwargs)
+                if do_chunks:
+                    if method == "post":
+                        resp = self.send_by_chunks(kwargs.get('url'),kwargs.get('json'))
+                    elif method == "get":
+                        resp = self.get_by_chunks(kwargs.get('url'),kwargs.get('headers'))
+                    else:
+                        dbg('invalid method!',method)
+                        return
+                else:
+                    resp = fun(**kwargs)
+
+                if resp == None:
+                    return
 
             except Exception as e:
                 # TODO: add help menu here for common errors
                 name = type(e).__name__
-                value = "Requests ran into "+str(name)+", check log for full error.\n\nIt is likely your usercfg has incorrect data."
+                value = "Requests ran into "+str(name)+", check log for full error."
 
                 ui.create_error_dialog(value)
                 dbg('Requests error:',e)
@@ -1865,6 +1941,7 @@ class TeahazHelper:
             code = resp.status_code
             if not 199 < code < 300:
                 if do_error:
+                    dbg('doing')
                     ui.create_error_dialog(resp.text)
 
                 if method == 'post':
@@ -1914,8 +1991,8 @@ class TeahazHelper:
             loader.start()
             loader._is_stoppable = False
 
-        # if not do_async:
-            # self.operation_thread.join()
+        if not do_async:
+            self.operation_thread.join()
 
     def login_or_register(self,contype,url,chatid,data):
         def login_post(resp,data):
@@ -2130,7 +2207,7 @@ class TeahazHelper:
 
     def save_file(self,resp,filename):
         try:
-            data = decrypt_binary(resp.text)
+            data = api.decrypt_binary(resp.text)
         except Exception as e:
             dbg(e)
             return
@@ -2155,23 +2232,14 @@ class TeahazHelper:
         # handle specificities
         if endpoint == 'message':
             # set text-specific fields
-            data["message"] = encrypt(message)
+            data["message"] = api.encrypt_message(message)
             data['type'] = "text"
 
         elif endpoint == 'file':
-            # get file contents
-            with open(message, 'rb') as infile:
-                contents = encrypt_binary(infile.read())
-
-            # get file extension bc mimetype sucks sometimes
-            _,extension = os.path.splitext(message)
-            if extension == '':
-                extension = '_'
-
-            # set file-specific fields
-            data['type'] = "file"
-            data['extension'] = extension
-            data['data'] = contents
+            data['type'] = 'file'
+            data['file'] = open(message,'rb+')
+            data['length'] = os.path.getsize(message)
+            data['filename'] = api.sanitize_filename(os.path.split(message)[1])
 
         else:
             return "Client Error: Invalid message type '"+str(endpoint)+"'"
@@ -2195,7 +2263,9 @@ class TeahazHelper:
         self.handle_operation(
                 method        = 'post',
                 do_success    = 0,
-                do_error      = (endpoint == 'file'),
+                do_async      = True,
+                do_error      = (endpoint.startswith('file')),
+                do_chunks     = (endpoint.startswith('file')),
                 output        = 'message_send_return',
                 url           = URL+'/api/v0/'+endpoint,
                 callback      = lambda resp,data: self.get_new_messages(callback=message_update_lambda),
@@ -2243,13 +2313,13 @@ class TeahazHelper:
 
             else:
                 data = BASE_DATA.copy()
-                data['filename']  = context.get('filename')
-                data['extension'] = extension
+                data['fileId']  = context.get('fileId')
+                data['filename'] = context.get('filename')
 
                 self.handle_operation(
                     method    = 'get',
+                    do_chunks = True,
                     callback  = lambda resp,data: {
-                                    self.save_file(resp,filename), 
                                     self.print_messages(reprint=True)
                                 },
                     url       = URL+'/api/v0/file/'+CHAT_ID,
@@ -2355,10 +2425,11 @@ class TeahazHelper:
                     decrypted = content
                 else:
                     try:
-                        decrypted = decrypt(content)
+                        decrypted = api.decrypt_message(content)
                         m['message'] = decrypted
                         m['is_decrypted'] = True
                     except Exception as e:
+                        MESSAGES.remove(m)
                         continue
 
                 decrypted = clean_ansi(decrypted.strip().replace('\t',''))
@@ -2378,6 +2449,10 @@ class TeahazHelper:
             else:
                 extension = m.get('extension')
                 content = '<-'+m.get('filename')
+                if extension == None:
+                    m['extension'] = ''
+                    extension = ''
+
                 if not extension == '_':
                     content += extension
                 content += '->'
@@ -2417,15 +2492,18 @@ class TeahazHelper:
 
             replyId = m.get('replyId')
             if replyId:
-                reply_parent = self.get_message_by_id(replyId).copy()
+                reply_parent = self.get_message_by_id(replyId)
+            else:
+                reply_parent = None
 
+            if reply_parent:
                 if reply_parent.get('type') == 'file':
                     message = reply_parent.get('filename')
                 else:
                     message = reply_parent.get('message')
                     if not reply_parent.get('is_decrypted'):
                         try:
-                            reply_parent['message'] = decrypt(message)
+                            reply_parent['message'] = api.decrypt_message(message)
                         except Exception as e:
                             dbg(e)
                     message = reply_parent.get('message')
@@ -2608,7 +2686,6 @@ class TeahazHelper:
                 del self.messages_get_return
 
     def get_loop(self):
-
         while KEEP_GOING:
             self.update()
             time.sleep(1)

@@ -41,8 +41,8 @@
             ],
             "corner_chars": {
                 "top_left": "x",
-                "top_right": "X",
-                "bottom_left": "X",
+                "top_right": "x",
+                "bottom_left": "x",
                 "bottom_right": "x"
             },
             "message_styles": {

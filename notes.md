@@ -1,11 +1,15 @@
 # PLANZ
 
 # BUGS
+- files with the same name but different content are seen as being the same
 
 # FEATURES 
 ## upcoming checklist
 - [ ] settings should be overwritten by settings in .config/teahaz
 - [ ] usercfg & session should be stored under .config/teahaz
+
+- [ ] indicator for sending files
+- [ ] indicator for downloading files
 
 - [ ] inline action sending
 
