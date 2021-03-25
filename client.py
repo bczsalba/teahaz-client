@@ -1919,8 +1919,6 @@ class TeahazHelper:
 
         return resp
 
-
-
     def handle_operation(self,method,
                 do_async=True,  do_success=False,
                 do_error=False, success_message=None,
