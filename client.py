@@ -2480,18 +2480,7 @@ class TeahazHelper:
 
                 do_subdivision = content
 
-            lines = pytermgui.break_line(content,MAX_MESSAGE_WIDTH(),do_subdivision=do_subdivision)
-            
-            newlines = []
-            for newi,line in enumerate(lines):
-                if not '\n' in line:
-                    continue
-
-                newlines += line.split('\n')
-
-            if len(newlines):
-                lines = newlines
-                        
+            lines = pytermgui.break_line(content,MAX_MESSAGE_WIDTH(),do_subdivision=do_subdivision) 
 
             if FADE_SENDING:
                 if m in extras:

@@ -46,16 +46,29 @@ def break_line(_inline,_len,_pad=0,_separator=' ',do_subdivision=True):
 
     if _len == None:
         return [_inline]
+    
+    if _inline.count('\n'):
+        lines = _inline.split('\n')
+        newlines = []
+        for l in lines:
+            newlines += break_line(l,_len,_pad,_separator,do_subdivision)
+
+        return newlines
+
 
     # check if line is over length provided
-    if real_length(_inline) > _len:
+    elif real_length(_inline) > _len:
         clean = clean_ansi(_inline)
         current = ''
         control = ''
         lines = []
         pad = lambda l: (_pad*' ' if len(l) else '')
 
-        for i,(clen,real) in enumerate(zip(clean.split(_separator),_inline.split(_separator))):
+        pattern    = f'[{_separator}]'
+        cleansplit = clean.split(_separator)
+        insplit    = _inline.split(_separator)
+
+        for i,(clen,real) in enumerate(zip(cleansplit,insplit)):
             # dont add separator if no current
             sep = (_separator if len(current) else "") 
 
@@ -75,7 +88,7 @@ def break_line(_inline,_len,_pad=0,_separator=' ',do_subdivision=True):
             lines.append(pad(lines)+current)
 
         if not len(lines):
-            lines = _inline.split('\n')
+            lines = insplit
 
 
     # return original line in array
@@ -105,6 +118,8 @@ def break_line(_inline,_len,_pad=0,_separator=' ',do_subdivision=True):
         newlines = lines
 
     return newlines
+
+
 
 def set_element_id(element,element_id):
     element.id = element_id
