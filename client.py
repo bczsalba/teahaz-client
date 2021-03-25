@@ -2641,6 +2641,7 @@ class TeahazHelper:
         
         # print
         globals()['MESSAGES'] += added
+        MESSAGES.sort(key=lambda m: int(m['time']))
         th.print_messages(MESSAGES)
         self.skip_get = True
         
@@ -2703,6 +2704,8 @@ class TeahazHelper:
         while KEEP_GOING:
             self.update()
             time.sleep(1)
+
+        ui.create_error_dialog('Get loop ended!\n\nRestart your client.')
         dbg('get_loop ended!')
 
 class UIGenerator:
