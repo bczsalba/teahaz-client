@@ -153,6 +153,7 @@
             "mode_message_select": " ",
             "message_select_reset": "ESC",
             "toggle_md_parser": "-",
+            "open_editor": "CTRL_E",
             "select_line": "V",
             "quit": "q",
             "reprint": "CTRL_L",
@@ -200,7 +201,8 @@
             "mode_escape": "ESC",
             "message_send": "ENTER",
             "menu_settings": "CTRL_/",
-            "reprint": "CTRL_L"
+            "reprint": "CTRL_L",
+            "insert_newline": "CTRL_N"
         },
         "VISUAL": {
             "ui__title1": "modes & misc",
