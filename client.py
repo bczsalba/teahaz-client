@@ -18,6 +18,7 @@ import requests
 import importlib
 import pytermgui
 import threading
+import subprocess
 import pyperclip as clip
 from fuzzywuzzy import fuzz as fw
 from urllib.parse import urlparse
@@ -797,6 +798,12 @@ def handle_action(action) -> None:
 
         subprocess.call([editor,scratchfile])
 
+        th.print_messages(reprint=True)
+        infield.set_cursor_visible(False)
+
+        if not os.path.exists(scratchfile):
+            return
+
         with open(scratchfile,'r') as f:
             buff = ''
             lines = f.readlines()
@@ -808,7 +815,6 @@ def handle_action(action) -> None:
             th.send(buff)
         
         os.remove(scratchfile)
-        th.print_messages(reprint=True)
 
 
     ## CATEGORIES
