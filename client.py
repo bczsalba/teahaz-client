@@ -4198,7 +4198,6 @@ if __name__ == "__main__":
     # start get loop
     get_loop = threading.Thread(target=th.get_loop,name='get_loop')
     get_loop.start()
-
     
     # main input loop
     getch_loop()        
