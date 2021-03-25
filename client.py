@@ -790,6 +790,27 @@ def handle_action(action) -> None:
         get_infield_pos()
         # infield.print()
 
+    elif action == "open_editor":
+        editor = os.environ.get('EDITOR','vim')
+        print('\033[2J')
+        scratchfile = os.path.join(PATH,'scratch')
+
+        subprocess.call([editor,scratchfile])
+
+        with open(scratchfile,'r') as f:
+            buff = ''
+            lines = f.readlines()
+            for l in lines:
+                if not l.startswith('#'):
+                    buff += l
+            
+        if len(buff):
+            th.send(buff)
+        
+        os.remove(scratchfile)
+        th.print_messages(reprint=True)
+
+
     ## CATEGORIES
     # mode switching
     if action.startswith('mode_'):
