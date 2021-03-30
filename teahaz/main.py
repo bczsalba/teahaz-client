@@ -43,8 +43,13 @@ from pytermgui import Container,Prompt,Label,container_from_dict
 
 ## settings
 ### import settings from json
-def import_json(name) -> None:
-    with open(os.path.join(PATH,'data',name+'.json'),'r') as f:
+def import_json(name,direct_path=False) -> None:
+    if direct_path:
+        path = name
+    else:
+        path = os.path.join(PATH,'data',name+'.json')
+
+    with open(name,'r') as f:
         globals()[name.upper()] = json.load(f)
         d = globals()[name.upper()]
         for key,item in d.items():
@@ -3994,16 +3999,13 @@ LOGFILE = os.path.join(PATH,'log')
 CONFIG_DIR = os.path.join(HOME,'.config/teahaz')
 CONFIG_FILE = os.path.join(CONFIG_DIR,'thconf.py')
 
-if os.path.exists(os.path.join(PATH,'data/settings.json')):
-    import_json("settings")
 
-if os.path.exists(os.path.join(PATH,'data/usercfg.json')):
-    import_json("usercfg")
-else:
-    with open(os.path.join(PATH,'data/usercfg.json'),'w') as f:
-        f.write('{}')
+import_json("settings")
 import_json('emoji')
 import_json('sprites')
+
+if 'settings.json' in os.listdir(CONFIG_DIR):
+    import_json(os.path.join(CONFIG_DIR,'settings.json'),True)
 
 
 DELIMITERS = "!@#$%^&*()[]{}|\\;':\",.<>/? \t"

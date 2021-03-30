@@ -1,4 +1,8 @@
 # PLANZ
+- [ ] teahaz.py integration
+    * [ ] git submodule
+    * [ ] set up base loop, print_messages
+    * [ ] update all ui functions to support it
 
 # BUGS
 - files with the same name but different content are seen as being the same
@@ -23,6 +27,7 @@
     * [ ] add more keys to keybinds for windows (specifically CTRL_*)
     * [x] convert \_GetchWindows \_\_call\_\_ to use wgetch || decode getch output
     * [ ] test on windows
+    * [ ] config path support
 
 - new binds
     * [ ] `s` 
