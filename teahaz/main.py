@@ -44,7 +44,7 @@ from pytermgui import Container,Prompt,Label,container_from_dict
 ## settings
 ### import settings from json
 def import_json(name) -> None:
-    with open(os.path.join(PATH,name+'.json'),'r') as f:
+    with open(os.path.join(PATH,'data',name+'.json'),'r') as f:
         globals()[name.upper()] = json.load(f)
         d = globals()[name.upper()]
         for key,item in d.items():
@@ -77,7 +77,7 @@ def edit_json(json_path,key,value) -> None:
     if isinstance(json_path,dict):
         data = json_path
     else:
-        with open(os.path.join(PATH,json_path),'r') as f:
+        with open(os.path.join(PATH,'data',json_path),'r') as f:
             data = json.load(f)
 
     if isinstance(key,str):
@@ -1452,7 +1452,7 @@ def handle_menu_actions(action,current_file=None) -> int:
 
     if menu == "settings":
         corners[3] = "settings"
-        source = os.path.join(PATH,'settings.json')
+        source = os.path.join(PATH,'data','settings.json')
         pytermgui.set_attribute_for_id('settings-themes_showcolors','handler',
                 lambda prev,self: (prev.wipe(),ui.create_colormenu()))
 
@@ -3994,13 +3994,13 @@ LOGFILE = os.path.join(PATH,'log')
 CONFIG_DIR = os.path.join(HOME,'.config/teahaz')
 CONFIG_FILE = os.path.join(CONFIG_DIR,'thconf.py')
 
-if os.path.exists(os.path.join(PATH,'settings.json')):
+if os.path.exists(os.path.join(PATH,'data/settings.json')):
     import_json("settings")
 
-if os.path.exists(os.path.join(PATH,'usercfg.json')):
+if os.path.exists(os.path.join(PATH,'data/usercfg.json')):
     import_json("usercfg")
 else:
-    with open(os.path.join(PATH,'usercfg.json'),'w') as f:
+    with open(os.path.join(PATH,'data/usercfg.json'),'w') as f:
         f.write('{}')
 import_json('emoji')
 import_json('sprites')
