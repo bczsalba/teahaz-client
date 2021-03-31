@@ -1,7 +1,6 @@
 # PLANZ
 - [ ] teahaz.py integration
-    * [ ] git submodule
-    * [ ] set up base loop, print_messages
+    * [x] set up base loop, print_messages
     * [ ] update all ui functions to support it
 
 # BUGS

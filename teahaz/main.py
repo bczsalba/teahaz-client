@@ -3,7 +3,6 @@
 # IMPORTS
 import os
 import re
-import api
 import sys
 import json
 import time
@@ -11,6 +10,7 @@ import types
 import getch
 import base64
 import pickle
+import teahaz
 import filetype
 import binascii
 import datetime
@@ -46,10 +46,11 @@ from pytermgui import Container,Prompt,Label,container_from_dict
 def import_json(name,direct_path=False) -> None:
     if direct_path:
         path = name
+        name = os.path.split(name)[1]
     else:
         path = os.path.join(PATH,'data',name+'.json')
 
-    with open(name,'r') as f:
+    with open(path,'r') as f:
         globals()[name.upper()] = json.load(f)
         d = globals()[name.upper()]
         for key,item in d.items():
@@ -72,6 +73,7 @@ def import_path(path):
     spec.loader.exec_module(module)
     sys.modules[module_name] = module
     return module
+
 
 ## edit setting in json (needed because lambda cannot do assignments)
 def edit_json(json_path,key,value) -> None:
@@ -144,8 +146,69 @@ def load_path(path,key=None) -> dict:
             out = out[key]
     return out
 
+
+
+
+## init
+def _create_objects() -> None:
+    global MODE_LABEL,CONV_HEADER,infield,completer,loader,filemanager
+
+    # set up bottom mode label
+    MODE_LABEL = ModeLabel(value='-- ESCAPE --',justify='left')
+    MODE_LABEL.set_style('value',lambda item: color(item,THEME['mode_indicator']))
+
+    # set up top bar to indicate current conv
+    CONV_HEADER = Container(width=int(WIDTH*0.4))
+    CONV_HEADER.center(axes='x')
+    CONV_HEADER._repr_pre = CONV_HEADER.wipe_all_containing
+    CONV_HEADER_LABEL = Label(justify='center')
+    CONV_HEADER_LABEL.set_style('value',pytermgui.CONTAINER_VALUE_STYLE)
+    CONV_HEADER.add_elements(CONV_HEADER_LABEL)
+    CONV_HEADER.hidden = False
+
+    # set corners for header
+    for i,c in enumerate([v for k,v in THEME['corner_chars'].items()]):
+        if not c == None:
+            CONV_HEADER.set_corner(i,c)
+
+    # set up infield
+    infield = InputDialogField(pos=get_infield_pos())
+    infield.line_offset = None
+    infield.visual_color = lambda text: parse_color(THEME['field_highlight'],text)
+    switch_mode("ESCAPE")
+
+    # set up completer
+    completer = InputFieldCompleter(options=EMOJI_KEYS,threshold=1,field=infield,trigger=':',icon_callback=parse_emoji)
+    completer._is_enabled = lambda: COMPLETER_ENABLED
+    completer._show_icons = lambda: COMPLETER_ICONS
+
+
+    # set up loading screen
+    loader      = LoadingScreen(frametime=1/8,sprites=[bold(sprite) for sprite in SPRITES['loading_screen']])
+    loader.set_title(None)
+    loader.set_borders([''*4])
+
+    # used for open & exec 
+    filemanager = FileManager()
+
+def _set_styles() -> None:
+    pytermgui.set_style('container_title',lambda item: parse_color(THEME['title'],item).replace('_',' '))
+    pytermgui.set_style('container_error',lambda item: parse_color(THEME['error'],item.upper())),
+    pytermgui.set_style('container_success',lambda item: parse_color(THEME['success'],item.upper()))
+    pytermgui.set_style('container_label',lambda item: parse_color(THEME['label'],item.lower()))
+    pytermgui.set_style('container_value',lambda item: parse_color(THEME['value'],item))
+    pytermgui.set_style('container_border',lambda item: parse_color(THEME['border'],item))
+    pytermgui.set_style('container_corner',lambda item: parse_color(THEME['corner'],item))
+
+    pytermgui.set_style('prompt_long_highlight',lambda item: "> "+parse_color('bold()',item))
+    pytermgui.set_style('prompt_short_highlight',lambda item: parse_color(THEME['prompt_highlight'],item))
+    pytermgui.set_style('tabbar_highlight',lambda item: parse_color(THEME['title'],item))
+
+    pytermgui.set_style('container_border_chars',lambda: [bold(v) for v in THEME['border_chars']])
+    pytermgui.set_style('prompt_delimiter_style',lambda: THEME['prompt_delimiters'])
+
 ## handle config file
-def handle_config() -> None:
+def _handle_config() -> None:
     if is_set("CONFIG"):
         if hasattr(CONFIG,'start'):
             CONFIG.start(sys.modules[__name__])
@@ -157,7 +220,7 @@ def handle_config() -> None:
         dbg('CONFIG file not found!')
 
 ## handle sys.argv
-def handle_args() -> None:
+def _handle_args() -> None:
     args = sys.argv[1:]
     if not len(args):
         return
@@ -201,7 +264,6 @@ def handle_args() -> None:
 
             f.close()
         sys.exit()
-
 
 
 ## miscellaneous
@@ -248,6 +310,7 @@ def do_after(ms,fun,control='true',args={}) -> None:
 
     threading.Thread(target=timed).start()
 
+
 ### merge two dicts together, on conflict overwrite one's values
 def merge(one,two) -> dict:
     merged = one.copy()
@@ -255,6 +318,7 @@ def merge(one,two) -> dict:
         for subkey,value in two[key].items():
             merged[key][subkey] = value
     return merged
+
 
 ### look up key in dict by value
 def reverse_dict_lookup(d,value) -> [dict,None]:
@@ -268,6 +332,7 @@ def reverse_dict_lookup(d,value) -> [dict,None]:
         return None
 
 
+
 ## variables
 ### check if variable is in scope
 def is_set(var,scope=None) -> bool:
@@ -278,6 +343,7 @@ def is_set(var,scope=None) -> bool:
 def toggle_option(options,current) -> any:
     current_index = options.index(current)
     return options[len(options)-1-current_index]
+
 
 ## switch to input mode, set globals
 def switch_mode(target,force=False) -> None:
@@ -309,7 +375,10 @@ def switch_mode(target,force=False) -> None:
         replyId = BASE_DATA.get('replyId')
         if replyId:
             preview = 'unknown message'
-            m = th.get_message_by_id(replyId)
+            m = th.local_get_by_id(replyId)
+
+            if m == None:
+                m = self.get_by_id(replyId,join=True)
 
             if m:
                 if m.get('type') == 'file':
@@ -327,6 +396,7 @@ def switch_mode(target,force=False) -> None:
         print(MODE_LABEL)
 
     VALID_KEYS = [v for k,v in BINDS[MODE].items() if not k.startswith('ui__')]
+
 
 ### add caller of ui element to ui trace
 def add_to_trace(arr) -> None:
@@ -351,6 +421,7 @@ def add_to_trace(arr) -> None:
     if not (oldfun == newfun and oldargs == newargs):# and oldargs == newargs):
         UI_TRACE.append(arr)
 
+
 ### redirect getch_loop to `fun` with `args`
 def set_pipe(fun,arg=None,keep=1) -> None:
     global PIPE_OUTPUT, KEEP_PIPE
@@ -363,6 +434,7 @@ def set_pipe(fun,arg=None,keep=1) -> None:
 
     if not keep == None:
         KEEP_PIPE = keep
+
 
 ### set current ui file, accepts file paths and dicts
 def set_current_file(value) -> None:
@@ -404,6 +476,7 @@ def add_new_colorscheme(name="new") -> dict:
 
     themes = list(SETTINGS["ui__prompt_options__themes"])
     edit_json('settings.json',"ui__prompt_options__themes",themes+[name])
+
 
 ### return current index of object
 def get_index(obj) -> int:
@@ -451,6 +524,7 @@ def split_by_delimiters(s,return_indices=False) -> list:
     else:
         return wordlist
 
+
 ### return True if the given `index` is part of the last word in the strong
 def is_in_last_word(index,string,mode='delimiters') -> bool:
     if mode == 'delimiters':
@@ -488,6 +562,7 @@ def get_infield_pos(update_modelabel=True) -> list:
     x,y = 3,HEIGHT-2-offset
     return x,y
 
+
 ## return to normal input
 def return_to_infield(*args,**kwargs) -> None:
     global PIPE_OUTPUT,KEEP_PIPE
@@ -497,6 +572,7 @@ def return_to_infield(*args,**kwargs) -> None:
 
     th.print_messages(reprint=True)
     infield.print()
+
 
 def parse_color(_color,s,level=0) -> types.FunctionType:
     output = []
@@ -550,6 +626,7 @@ def parse_color(_color,s,level=0) -> types.FunctionType:
 
     return ''.join(output)
 
+
 def parse_emoji(text) -> str:
     found = Regex.emoji.findall(text)
 
@@ -559,6 +636,7 @@ def parse_emoji(text) -> str:
             text = text.replace(s,new)
 
     return text
+
 
 def parse_inline_codes(s) -> str:
     for i,(c,func) in enumerate(reversed(THEME['message_styles'].items())):
@@ -592,6 +670,7 @@ def parse_inline_codes(s) -> str:
 
     return s
  
+
 # this is run at every single color call which is probably not good
 def minimal_or_custom_highlight(item):
     if THEME['prompt_highlight'] == 'minimal':
@@ -687,8 +766,8 @@ def handle_action(action) -> None:
     if action == "quit":
         print('\033[?25h')
         KEEP_GOING = 0
-        with open(SESSIONLOCATION,'wb') as f:
-            pickle.dump(SESSION,f)
+        with open(CLIENT_LOCATION,'wb') as f:
+            pickle.dump(th,f)
 
         sys.exit()
 
@@ -729,7 +808,7 @@ def handle_action(action) -> None:
         if is_set('hook__message_send'):
             msg = hook__message_send(msg)
 
-        th.send(msg,'message')
+        th.send_message(msg,callback=lambda resp: dbg(resp.text))
         set_mark('`')
         th.selected_message = None
         th.offset = 0
@@ -1835,7 +1914,7 @@ def goto_mark(mark) -> None:
 
 
 # CLASSES # 
-class TeahazHelper:
+class old__TeahazHelper:
     def __init__(self):
         self.prev_get           = None
         self.skip_get           = False
@@ -2224,13 +2303,6 @@ class TeahazHelper:
         self.set_chatroom(address,len(SERVERS[address])-1)
 
         return 0
-
-    def get_message_by_id(self,messageId):
-        for m in reversed(MESSAGES):
-            if m.get('messageId') == messageId:
-                return m
-        else:
-            return None
 
     def is_local(self,filename):
         return filename in os.listdir(DOWNLOAD_PATH)
@@ -2712,6 +2784,350 @@ class TeahazHelper:
 
         ui.create_error_dialog('Get loop ended!\n\nRestart your client.')
         dbg('get_loop ended!')
+
+class TeahazHelper(teahaz.Client):
+    def __init__(self):
+        super().__init__()
+
+        self.offset             = 0
+        self.selected_message   = None
+        self.selected_message_y = None
+
+    def on_ready(self):
+        dbg('client ready!')
+
+    def on_message(self,messages):
+        same_user = (messages[-1].get('username') == self.username)
+
+        if is_set('hook__message_get'):
+            hook__message_get(messages,same_user)
+
+        # dbg('1714e1a8-87ee-11eb-931c-0242ac110002')
+        self.add_to_messages(messages)
+
+    def handle_context_buttons(self,param,context):
+        ret_val = False
+
+        if param == 'reply':
+            BASE_DATA['replyId'] = context.get('messageId')
+            switch_mode('INSERT',force=True)
+
+        elif param == 'goto_parent':
+            parent = self.get_message_by_id(context['replyId'])
+            index = MESSAGES[::-1].index(parent)
+            th.offset = index - (WIDTH//HEIGHT)
+            self.selected_message = index
+            switch_mode("MESSAGE_SELECT",force=True)
+            return ret_val
+
+        elif param == 'copy':
+            clip.copy(context.get('message'))
+            ret_val = True
+
+        elif param == 'open':
+            print('\033[2J')
+            filename  = context.get('filename')
+            extension = context.get('extension')
+            if not extension == "_":
+                filename += extension
+
+            if self.is_local(filename):
+                defaults = filemanager.open(os.path.join(DOWNLOAD_PATH,filename))
+
+                if defaults.get('destroy'):
+                    set_pipe(lambda key,**kwargs: {
+                                    filemanager.execute(defaults.get('destroy')),
+                                    handle_action('reprint')
+                            },{},keep=0)
+
+
+            else:
+                data = BASE_DATA.copy()
+                data['fileId']  = context.get('fileId')
+                data['filename'] = context.get('filename')
+
+                self.handle_operation(
+                    method    = 'get',
+                    do_chunks = True,
+                    callback  = lambda resp,data: {
+                                    self.print_messages(reprint=True)
+                                },
+                    url       = URL+'/api/v0/file/'+CHAT_ID,
+                    headers   = data,
+                )
+            
+            return ret_val
+
+
+
+        else:
+            ui.create_error_dialog(f'404: no server implementation found for "{param}"')
+
+        self.selected_message = None
+        self.selected_message_y = None
+
+        return ret_val
+
+    def get_message_options(self,m):
+        message_options = CONTEXT_OPTIONS.copy()
+
+        if m.get('replyId'):
+            message_options.append('goto_parent')
+
+        if m.get('type') == "file":
+            message_options.append('open')
+
+        return message_options 
+
+    def local_get_by_id(self,messageId):
+        for m in reversed(MESSAGES):
+            if m.get('messageId') == messageId:
+                return m
+        else:
+            return None
+
+    def add_to_messages(self,messages):
+        # dbg('happen')
+        globals()['MESSAGES'] += messages
+        self.print_messages(MESSAGES)
+
+    def print_messages(self,messages=[],extras=[],
+                        offset=0,select=None,reprint=False,
+                        dont_ignore=False,do_print=True):
+
+        if PIPE_OUTPUT:
+            return
+
+        # get positions
+        leftx = infield.pos[0]
+
+        # print same messages
+        if reprint:
+            messagelist = MESSAGES.copy()
+
+        # add given messages to global and print all
+        elif len(messages):
+            messagelist = messages.copy()
+
+        # only print extra messages
+        elif len(extras):
+            messagelist = MESSAGES.copy()+extras.copy()
+            # self.extras += extras
+
+        # return if there's nothing to print
+        else:
+            return 
+
+        # messages are printed in reverse order
+        messagelist.reverse()
+
+        # get starting y coord
+        starty = infield.pos[1]-2
+        if completer._has_printed:
+            starty -= len(completer.rows)
+        y = starty
+
+        # normalize offset
+        self.offset = max(self.offset,0)
+        self.offset = min(len(MESSAGES)-1,self.offset)
+        y += self.offset
+
+
+        buff = ''
+        for i,m in enumerate(messagelist):
+            if not isinstance(m,dict):
+                dbg('message is not a dict!',type(m),m)
+                continue
+
+            # TODO: messages not matching offset should be ignored too
+            if not dont_ignore and y < 0:
+                continue
+
+            # set up values
+            username     = m.get('username')
+
+            nickname     = m.get('nickname')
+            nickname     = Regex.unic.sub('',nickname).strip()
+            if not real_length(nickname):
+                nickname = "< invalid nickname >"
+            nickname = parse_emoji(nickname).strip()
+
+            length = int(WIDTH*MAX_NICK_LENGTH_RATIO)
+            if real_length(nickname) > length:
+                nickname = nickname[:length].rstrip()+'...'
+            
+
+            m_time       = m.get('time')
+            current_time = int(m_time)
+            m_type       = m.get('type')
+            sendtime     = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(m_time))
+            content      = m.get('message')
+
+
+            # handle message content
+            if content:
+                message = clean_ansi(content.strip().replace('\t',''))
+                if real_length(message) > int(MAXIMUM_MESSAGE_LENGTH):
+                    continue
+
+                emojid = parse_emoji(message)
+                if PARSE_MARKDOWN and not self.selected_message == i:
+                    inline = parse_inline_codes(emojid)
+                    content = inline
+                else:
+                    content = emojid
+
+                do_subdivision = (content == message)
+
+
+            else:
+                extension = m.get('extension')
+                content = '<-'+m.get('filename')
+                if extension == None:
+                    m['extension'] = ''
+                    extension = ''
+
+                if not extension == '_':
+                    content += extension
+                content += '->'
+
+                do_subdivision = content
+
+            lines = pytermgui.break_line(content,MAX_MESSAGE_WIDTH(),do_subdivision=do_subdivision) 
+
+            if FADE_SENDING:
+                if m in extras:
+                    if m_type == 'file':
+                        for j,l in enumerate(lines):
+                            lines[j] = parse_color(THEME['fade'],italic(l))
+                    else:
+                        for j,l in enumerate(lines):
+                            lines[j] = parse_color(THEME['fade'],l)
+            
+            if m_type == 'file':
+                if not self.is_local(m.get('filename')+m.get('extension')):
+                    for j,l in enumerate(lines):
+                        lines[j] = italic(l)
+
+            if i == self.selected_message:
+                for k,l in enumerate(lines):
+                    lines[k] = parse_color(THEME['prompt_highlight'],l)
+
+            replyId = m.get('replyId')
+            if replyId:
+                reply_parent = self.local_get_by_id(replyId)
+
+                if reply_parent == None:
+                    reply_parent = self.get_by_id(replyId,join=True)
+
+            else:
+                reply_parent = None
+
+            if reply_parent:
+                if reply_parent.get('type') == 'file':
+                    message = reply_parent.get('filename')
+                else:
+                    message = reply_parent.get('message')
+
+                reply = pytermgui.break_line(parse_emoji('> ' + message),MAX_MESSAGE_WIDTH())
+                newlines = []
+                for l in reply:
+                    if l.count('\n'):
+                        newlines += l.split('\n')
+
+                if len(newlines):
+                    reply = newlines
+
+                if len(reply) > 2:
+                    reply = reply[:1] + [reply[1]+'...']
+
+                for l,r in enumerate(reply):
+                    reply[l] = parse_color(THEME['reply'],r)
+                lines = reply+lines
+
+
+            # test if the current message is the start of a chunk
+            chunk_start = True
+            if len(messagelist) > i+1 and not i == len(messagelist)-1:
+                prev_msg = messagelist[i+1]
+            else:
+                prev_msg = None
+
+            if prev_msg:
+                prev_time = int(prev_msg.get('time'))
+
+                if prev_msg.get('username') == username:
+                    if current_time-prev_time < int(MESSAGE_SEPARATE_TIME):
+                        chunk_start = False         
+
+
+            # test if current message is the end of a chunk 
+            chunk_end = True
+            if 0 <= i-1:
+                next_msg = messagelist[i-1]
+            else:
+                next_msg = None
+
+
+            if next_msg:
+                next_time = int(next_msg.get('time'))
+                if next_msg.get('username') == username:
+                    if next_time-current_time < int(MESSAGE_SEPARATE_TIME):
+                        chunk_end = False
+ 
+            
+            # add extra elements as needed
+            if chunk_start:
+                # TODO: this color will eventually be given by the server
+                lines.insert(0,parse_color(THEME['title'],nickname))
+
+            if chunk_end:
+                lines.append(parse_color(THEME['fade'],sendtime))
+                lines.append('')
+
+
+            # print lines:
+            for k,l in enumerate(reversed(lines)):
+                if not do_print or dont_ignore or 0 < y <= starty:
+                    # set cursor location
+                    if do_print:
+                        if username == self.username:
+                            buff += f'\033[{y};{WIDTH-real_length(l)}H'
+                        else:
+                            buff += f'\033[{y};{leftx}H'
+
+                        buff += l
+
+                    y -= 1
+            y -= 1
+
+            if i == self.selected_message:
+                self.selected_message_y = y
+
+        if not do_print:
+            return lines
+
+        for _ in range(offset):
+            buff += '\n'
+
+        # clear affected rows
+        endpoint = (HEIGHT if self.offset else starty+(len(completer.rows) if completer._has_printed else 0))
+        for cleany in range(0,endpoint+1):
+            buff = f'\033[{cleany};H'+'\033[K' + buff
+        sys.stdout.write(buff)
+
+
+        # print mode label
+        if MODE != 'ESCAPE':
+            print(MODE_LABEL)
+            
+        # print top bar
+        if not CONV_HEADER.hidden and not self.offset:
+            print(CONV_HEADER)
+
+        # print completer
+        if completer._has_printed:
+            print(completer)
 
 class UIGenerator:
     """
@@ -3998,6 +4414,7 @@ LOGFILE = os.path.join(PATH,'log')
 # TODO: support windows
 CONFIG_DIR = os.path.join(HOME,'.config/teahaz')
 CONFIG_FILE = os.path.join(CONFIG_DIR,'thconf.py')
+CLIENT_LOCATION = os.path.join(CONFIG_DIR,'client.obj')
 
 
 import_json("settings")
@@ -4084,10 +4501,14 @@ if __name__ == "__main__":
     dbg(datetime.datetime.now())
     dbg('starting teahaz at size',str(WIDTH),str(HEIGHT))
 
+
     pytermgui.set_debugger(dbg)
+    ui = UIGenerator()
+
 
     ## clear screen
     print('\033[2J')
+
 
     if WIDTH < 37:
         w = Container(height=3)
@@ -4104,106 +4525,35 @@ if __name__ == "__main__":
             print()
         sys.exit(1)
 
+
     if os.path.exists(CONFIG_FILE):
         CONFIG = import_path(CONFIG_FILE)
     else:
         if not os.path.exists(CONFIG_DIR):
             try:
-                dbg(f'couldn\'t create config directory "{CONFIG_FILE}": {e}')
-            except Exception as e:
                 os.makedirs(CONFIG_DIR)
-    handle_config()
+            except Exception as e:
+                dbg(f'couldn\'t create config directory "{CONFIG_DIR}": {e}')
 
-    ## set pytermgui styles
-    pytermgui.set_style('container_title',lambda item: parse_color(THEME['title'],item).replace('_',' '))
-    pytermgui.set_style('container_error',lambda item: parse_color(THEME['error'],item.upper())),
-    pytermgui.set_style('container_success',lambda item: parse_color(THEME['success'],item.upper()))
-    pytermgui.set_style('container_label',lambda item: parse_color(THEME['label'],item.lower()))
-    pytermgui.set_style('container_value',lambda item: parse_color(THEME['value'],item))
-    pytermgui.set_style('container_border',lambda item: parse_color(THEME['border'],item))
-    pytermgui.set_style('container_corner',lambda item: parse_color(THEME['corner'],item))
+    _handle_config()
+    _handle_args()
+    _set_styles()
+    _create_objects()
 
-    pytermgui.set_style('prompt_long_highlight',lambda item: "> "+parse_color('bold()',item))
-    pytermgui.set_style('prompt_short_highlight',lambda item: parse_color(THEME['prompt_highlight'],item))
-    pytermgui.set_style('tabbar_highlight',lambda item: parse_color(THEME['title'],item))
-
-    pytermgui.set_style('container_border_chars',lambda: [bold(v) for v in THEME['border_chars']])
-    pytermgui.set_style('prompt_delimiter_style',lambda: THEME['prompt_delimiters'])
-
-
-    # set up bottom mode label
-    MODE_LABEL = ModeLabel(value='-- ESCAPE --',justify='left')
-    MODE_LABEL.set_style('value',lambda item: color(item,THEME['mode_indicator']))
-
-    # set up top bar to indicate current conv
-    CONV_HEADER = Container(width=int(WIDTH*0.4))
-    CONV_HEADER.center(axes='x')
-    CONV_HEADER._repr_pre = CONV_HEADER.wipe_all_containing
-    CONV_HEADER_LABEL = Label(justify='center')
-    CONV_HEADER_LABEL.set_style('value',pytermgui.CONTAINER_VALUE_STYLE)
-    CONV_HEADER.add_elements(CONV_HEADER_LABEL)
-    CONV_HEADER.hidden = False
-
-    # set corners for header
-    for i,c in enumerate([v for k,v in THEME['corner_chars'].items()]):
-        if not c == None:
-            CONV_HEADER.set_corner(i,c)
-
-    # set up infield
-    infield = InputDialogField(pos=get_infield_pos())
-    infield.line_offset = None
-    infield.visual_color = lambda text: parse_color(THEME['field_highlight'],text)
-    switch_mode("ESCAPE")
-
-    # set up completer
-    completer = InputFieldCompleter(options=EMOJI_KEYS,threshold=1,field=infield,trigger=':',icon_callback=parse_emoji)
-    completer._is_enabled = lambda: COMPLETER_ENABLED
-    completer._show_icons = lambda: COMPLETER_ICONS
-
-
-    # set up loading screen
-    loader      = LoadingScreen(frametime=1/8,sprites=[bold(sprite) for sprite in SPRITES['loading_screen']])
-    loader.set_title(None)
-    loader.set_borders([''*4])
-
-    # set up category classes
-    ui = UIGenerator()
-    th = TeahazHelper()
-
-    # used for open & exec 
-    filemanager = FileManager()
-
-
-
-    # load session.obj
-    SESSIONLOCATION = os.path.join(PATH,'session.obj')
-    if os.path.exists(SESSIONLOCATION):
-        with open(SESSIONLOCATION,'rb') as f:
-            SESSION = pickle.load(f)
-            if not hasattr(SESSION,'last_get'):
-                SESSION.last_get = 0
+    if os.path.exists(CLIENT_LOCATION):
+        with open(CLIENT_LOCATION,'rb') as f:
+            th = pickle.load(f)
+            MESSAGES = th.get_messages(0,join=1)
+            th.print_messages(MESSAGES)
     else:
-        SESSION = requests.session()
-        SESSION.last_get = 0
+        th = TeahazHelper()
+        teahaz.interactive(th.login)
 
-    if is_set('CURRENT_CHATROOM'):
-        url,index = CURRENT_CHATROOM
-        th.set_chatroom(url,index)
-        username = SERVERS[url][index]['username']
-        if username == None:
-            ui.create_error_dialog('Something went wrong during login.',handler= lambda container,self: handle_action('menu_login/register'))
 
-    else:
-        CURRENT_CHATROOM = None
-        CHAT_ID = None
-        SERVERS = {}
 
-    handle_args()
 
-    # start get loop
-    get_loop = threading.Thread(target=th.get_loop,name='get_loop')
-    get_loop.start()
+    run_loop = threading.Thread(target=th.run,kwargs={'hook_own_messages': True})
+    run_loop.start()
     
     # main input loop
     getch_loop()        
-
