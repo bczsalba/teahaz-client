@@ -2,6 +2,7 @@
 - [ ] teahaz.py integration
     * [x] set up base loop, print_messages
     * [ ] update all ui functions to support it
+    * [ ] save messages on exit, load them on startup && get from last time
 
 # BUGS
 - files with the same name but different content are seen as being the same

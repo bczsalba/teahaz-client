@@ -808,7 +808,22 @@ def handle_action(action) -> None:
         if is_set('hook__message_send'):
             msg = hook__message_send(msg)
 
-        th.send_message(msg,callback=lambda resp: dbg(resp.text))
+        temp = MESSAGE_TEMPLATE.copy()
+
+        temp['time']     = time.time()
+        temp['username'] = th.username
+        temp['nickname'] = temp['username']
+        temp['message']  = msg
+
+        th.extras.append(temp)
+        th.print_messages(reprint=True)
+
+        th.send_message(msg,callback=lambda _: {
+            th.extras.remove(temp),
+            th.add_to_messages(th.get_messages(join=True))
+            }
+        )
+
         set_mark('`')
         th.selected_message = None
         th.offset = 0
@@ -2790,6 +2805,7 @@ class TeahazHelper(teahaz.Client):
         super().__init__()
 
         self.offset             = 0
+        self.extras             = []
         self.selected_message   = None
         self.selected_message_y = None
 
@@ -2802,7 +2818,6 @@ class TeahazHelper(teahaz.Client):
         if is_set('hook__message_get'):
             hook__message_get(messages,same_user)
 
-        # dbg('1714e1a8-87ee-11eb-931c-0242ac110002')
         self.add_to_messages(messages)
 
     def handle_context_buttons(self,param,context):
@@ -2887,11 +2902,16 @@ class TeahazHelper(teahaz.Client):
             return None
 
     def add_to_messages(self,messages):
-        # dbg('happen')
-        globals()['MESSAGES'] += messages
+        added = []
+        for m in messages:
+            new = m.get('messageId')
+            if not new in [M['messageId'] for M in MESSAGES]:
+                added.append(m)
+
+        globals()['MESSAGES'] += added
         self.print_messages(MESSAGES)
 
-    def print_messages(self,messages=[],extras=[],
+    def print_messages(self,messages=[],
                         offset=0,select=None,reprint=False,
                         dont_ignore=False,do_print=True):
 
@@ -2901,6 +2921,7 @@ class TeahazHelper(teahaz.Client):
         # get positions
         leftx = infield.pos[0]
 
+
         # print same messages
         if reprint:
             messagelist = MESSAGES.copy()
@@ -2909,15 +2930,15 @@ class TeahazHelper(teahaz.Client):
         elif len(messages):
             messagelist = messages.copy()
 
-        # only print extra messages
-        elif len(extras):
-            messagelist = MESSAGES.copy()+extras.copy()
-            # self.extras += extras
-
         # return if there's nothing to print
         else:
+            dbg('nothing to print')
             return 
 
+
+        extras = self.extras.copy()
+        messagelist += extras
+        
         # messages are printed in reverse order
         messagelist.reverse()
 
@@ -4543,11 +4564,23 @@ if __name__ == "__main__":
     if os.path.exists(CLIENT_LOCATION):
         with open(CLIENT_LOCATION,'rb') as f:
             th = pickle.load(f)
+            th_dummy = TeahazHelper()
+
+            for key,value in th_dummy.__dict__.items():
+                if key not in th.__dict__.keys():
+                    setattr(th,key,value)
+            
+            del th_dummy
+
+            th.extras = []
             MESSAGES = th.get_messages(0,join=1)
             th.print_messages(MESSAGES)
     else:
         th = TeahazHelper()
         teahaz.interactive(th.login)
+
+        MESSAGES = th.get_messages(0,join=1)
+        th.print_messages(MESSAGES)
 
 
 
