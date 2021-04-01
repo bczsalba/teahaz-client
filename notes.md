@@ -2,6 +2,8 @@
 - [ ] teahaz.py integration
     * [x] set up base loop, print_messages
     * [ ] update all ui functions to support it
+        - [ ] login
+        - [ ] use_invite
     * [ ] save messages on exit, load them on startup && get from last time
 
 # BUGS
