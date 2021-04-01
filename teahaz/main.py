@@ -24,16 +24,8 @@ from fuzzywuzzy import fuzz as fw
 from urllib.parse import urlparse
 from pytermgui import WIDTH,HEIGHT
 from pytermgui import clean_ansi,real_length,break_line
-from pytermgui import Color,Regex
-italic         =  Color.italic
-bold           =  Color.bold
-underline      =  Color.underline
-strikethrough  =  Color.strikethrough
-color          =  Color.color
-highlight      =  Color.highlight
-gradient       =  Color.gradient
-get_gradient   =  Color.get_gradient
-from pytermgui import Container,Prompt,Label,container_from_dict
+from pytermgui import italic,bold,underline,strikethrough,color,highlight,gradient,get_gradient
+from pytermgui import Container,Prompt,Label,InputField,container_from_dict,Regex
 
 
 
@@ -172,9 +164,9 @@ def _create_objects() -> None:
             CONV_HEADER.set_corner(i,c)
 
     # set up infield
-    infield = InputDialogField(pos=get_infield_pos())
+    infield = InputField(pos=get_infield_pos())
     infield.line_offset = None
-    infield.visual_color = lambda text: parse_color(THEME['field_highlight'],text)
+    infield.set_style('highlight',lambda text: parse_color(THEME['field_highlight'],text))
     switch_mode("ESCAPE")
 
     # set up completer
@@ -192,20 +184,20 @@ def _create_objects() -> None:
     filemanager = FileManager()
 
 def _set_styles() -> None:
-    pytermgui.set_style('container_title',lambda item: parse_color(THEME['title'],item).replace('_',' '))
-    pytermgui.set_style('container_error',lambda item: parse_color(THEME['error'],item.upper())),
-    pytermgui.set_style('container_success',lambda item: parse_color(THEME['success'],item.upper()))
-    pytermgui.set_style('container_label',lambda item: parse_color(THEME['label'],item.lower()))
-    pytermgui.set_style('container_value',lambda item: parse_color(THEME['value'],item))
-    pytermgui.set_style('container_border',lambda item: parse_color(THEME['border'],item))
-    pytermgui.set_style('container_corner',lambda item: parse_color(THEME['corner'],item))
+    pytermgui.set_style('container_title',   lambda item: parse_color(THEME['title'],item).replace('_',' '))
+    pytermgui.set_style('container_error',   lambda item: parse_color(THEME['error'],item.upper())),
+    pytermgui.set_style('container_success', lambda item: parse_color(THEME['success'],item.upper()))
+    pytermgui.set_style('container_label',   lambda item: parse_color(THEME['label'],item.lower()))
+    pytermgui.set_style('container_value',   lambda item: parse_color(THEME['value'],item))
+    pytermgui.set_style('container_border',  lambda item: parse_color(THEME['border'],item))
+    pytermgui.set_style('container_corner',  lambda item: parse_color(THEME['corner'],item))
 
-    pytermgui.set_style('prompt_long_highlight',lambda item: "> "+parse_color('bold()',item))
-    pytermgui.set_style('prompt_short_highlight',lambda item: parse_color(THEME['prompt_highlight'],item))
-    pytermgui.set_style('tabbar_highlight',lambda item: parse_color(THEME['title'],item))
+    pytermgui.set_style('prompt_long_highlight',  lambda item: "> "+parse_color('bold()',item))
+    pytermgui.set_style('prompt_short_highlight', lambda item: parse_color(THEME['prompt_highlight'],item))
+    pytermgui.set_style('tabbar_highlight',       lambda item: parse_color(THEME['title'],item))
 
-    pytermgui.set_style('container_border_chars',lambda: [bold(v) for v in THEME['border_chars']])
-    pytermgui.set_style('prompt_delimiter_style',lambda: THEME['prompt_delimiters'])
+    pytermgui.set_style('container_border_chars', lambda: [bold(v) for v in THEME['border_chars']])
+    pytermgui.set_style('prompt_delimiter_style', lambda: THEME['prompt_delimiters'])
 
 ## handle config file
 def _handle_config() -> None:
@@ -1398,7 +1390,7 @@ def handle_menu(key,obj,send_escape=True,attributes={},page=0) -> None:
     # do actions specific to input dialog
     if isinstance(obj,InputDialog):
         # send key to field
-        if hasattr(obj,'field') and isinstance(obj.field,InputDialogField) and (len(key) < 2 or key == 'BACKSPACE'):
+        if hasattr(obj,'field') and isinstance(obj.field,InputField) and (len(key) < 2 or key == 'BACKSPACE'):
             obj.field.send(key)
             print(obj)
             return
@@ -3242,7 +3234,8 @@ class UIGenerator:
 
             for d in dicts:
                 # add title object to 0 index
-                title = Label(value=pytermgui.CONTAINER_TITLE_STYLE(source.real_label),justify='center')
+                title = Label(value=source.real_label,justify='center')
+                title.set_style('value',lambda item: parse_color(THEME['title'],item))
                 d.add_elements(title)
                 l = d.elements.pop(-1)
                 d.elements.insert(0,l)
@@ -3653,11 +3646,10 @@ class InputDialog(Container):
     """
     def __init__(self,options=None,label_value='',label_justify="center",label_underpad=0,field_value='',dialog_type=None,**kwargs):
         super().__init__(**kwargs)
-        gui = pytermgui.__dict__
         
         # set up label class
         self.label = Label(value=label_value,justify=label_justify)
-        self.label.set_style('value',gui['CONTAINER_TITLE_STYLE'])
+        self.label.set_style('value',lambda item: parse_color(THEME['title'],item))
 
         # set up field depending on options given
         self.options = options
@@ -3671,13 +3663,14 @@ class InputDialog(Container):
 
         if self.dialog_type == "prompt":
             self.field = Prompt(options=options,width=self.width)
-            self.field.set_style('value',gui['CONTAINER_VALUE_STYLE'])
-            self.field.set_style('label',gui['CONTAINER_LABEL_STYLE'])
+            self.field.set_style('value',lambda item: parse_color(THEME['value'],item))
+            self.field.set_style('label',lambda item: parse_color(THEME['label'],item))
         
         elif self.dialog_type == "field":
-            self.field = InputDialogField(default=field_value,print_at_start=False)
-            self.field.set_style('value',gui['CONTAINER_VALUE_STYLE'])
-            self.field.field_color = '\033['+THEME['value']+'m'
+            self.field = InputField(default=field_value,print_at_start=False)
+            self.field.set_style('value',lambda item: parse_color(THEME['value'],item))
+            self.field.set_style('highlight',lambda item: parse_color(THEME['field_highlight'],item))
+
             self.width = WIDTH
             borders = self.borders
             label_underpad += 2
@@ -3708,35 +3701,6 @@ class InputDialog(Container):
 
         return super().__repr__()
 
-class InputDialogField(getch.InputField):
-    """
-    Class to extend getch's InputField to add compatibility
-    for pytermgui Containers.
-    """
-
-    def __init__(self,**kwargs):
-        super().__init__(**kwargs)
-
-        self.width = len(self.value)
-        self.height = 1
-        self._is_selectable = False
-        self.options = None
-
-        self.value_style = lambda item: item
-
-    # return text of self
-    def __repr__(self):
-        value = self.print(return_line=True)
-        line = self.value_style(value)
-        return line
-    
-    def set_style(self,key,value):
-        setattr(self,key+'_style',value)
-
-    # return value
-    def submit(self):
-        return self.value
-
 class InputFieldCompleter(Container):
     def __init__(self,options,threshold=0,icon_callback=None,completion_callback=None,field=None,height=5,trigger=None,**kwargs):
         super().__init__(**kwargs)
@@ -3752,7 +3716,7 @@ class InputFieldCompleter(Container):
         if field:
             self.field = field
         else:
-            self.field = InputDialogField()
+            self.field = InputField()
         self.target_pos = self.field.pos
         self.prev_output = None
 
@@ -4059,7 +4023,7 @@ class FileManager(Container):
             self.add_elements(row)
 
         # set up field
-        self.field = InputDialogField(pos=self.pos)
+        self.field = InputField(pos=self.pos)
         self.field.og_send = self.field.send
         self.field.send = self.field_send
         self.field.is_active = False
@@ -4127,9 +4091,9 @@ class FileManager(Container):
 
                 row.is_dir = os.path.isdir(row.real_label)
                 if row.is_dir:
-                    row.set_style('label',lambda item: color(item,THEME['value']))
+                    row.set_style('label',lambda item: parse_color(THEME['value'],item))
                 else:
-                    row.set_style('label',lambda item: item)
+                    row.set_style('label',lambda item: parse_color(THEME['value'],item))
             else:
                 row.label = ''
                 row.real_label = ''
@@ -4573,7 +4537,7 @@ if __name__ == "__main__":
             del th_dummy
 
             th.extras = []
-            MESSAGES = th.get_messages(0,join=1)
+            th.get_messages(0,callback=th.add_to_messages)
             th.print_messages(MESSAGES)
     else:
         th = TeahazHelper()
