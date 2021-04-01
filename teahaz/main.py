@@ -3323,7 +3323,7 @@ class UIGenerator:
                 d.set_corner(i,c)
 
         # go through servers
-        for url_long,data in SERVERS.items():
+        for urlindex,(url_long,data) in enumerate(th.connections['servers'].items()):
             d.add_elements([Label()])
 
             # convert url to a nicer form
@@ -3333,12 +3333,12 @@ class UIGenerator:
             url_col = color(url,THEME['value'])
 
             subtitle = Label(value=url+':',justify='center')
-            subtitle.set_style('value',pytermgui.CONTAINER_TITLE_STYLE)
+            subtitle.set_style('value',lambda item: parse_color(THEME['title'],item))
             d.add_elements(subtitle)
 
             # go through chatrooms
-            for chatroom in data:
-                chatname = chatroom['chatroom_name']
+            for chatindex,chatroom in enumerate(data):
+                chatname = chatroom['name']
 
                 chat_col = parse_color(THEME['value'],chatname)
                 username = chatroom['username']
@@ -3356,13 +3356,16 @@ class UIGenerator:
 
                 p.handler = lambda prev,self: {
                         handle_menu('ESC',prev)
-                        if not th.set_chatroom(self.url,SERVERS[self.url].index(self.chatroom)) else None}
+                        if not th.set_chatroom(self.url,self.chatroom) else None}
 
                 d.add_elements(p)
 
+                if chatroom['chatroom'] == th.chatid:
+                    d.select(urlindex+chatindex)
+
         # create, add button
         button = Prompt(options=['add new'])
-        button.set_style('value',pytermgui.CONTAINER_VALUE_STYLE)
+        button.set_style('value',lambda item: parse_color(THEME['value'],item))
         pytermgui.set_element_id(button,'server_picker-button_add')
 
         pytermgui.set_attribute_for_id(button.id,'handler',lambda prev,self: {
@@ -3379,7 +3382,6 @@ class UIGenerator:
         add_to_trace([{},d])
 
         d.center()
-        d.select(CURRENT_CHATROOM[1])
         print(d)
 
         return d
@@ -4543,10 +4545,8 @@ if __name__ == "__main__":
         th = TeahazHelper()
         teahaz.interactive(th.login)
 
-        MESSAGES = th.get_messages(0,join=1)
+        MESSAGES = th.get_messages(0,join=th.add_to_messages)
         th.print_messages(MESSAGES)
-
-
 
 
     run_loop = threading.Thread(target=th.run,kwargs={'hook_own_messages': True})
