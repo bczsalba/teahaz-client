@@ -35,16 +35,7 @@
                 null
             ],
             "prompt_delimiters": "<>",
-            "ui__prompt_options_highlight": [
-                "minimal",
-                "custom"
-            ],
-            "corner_chars": {
-                "top_left": "x",
-                "top_right": "x",
-                "bottom_left": "x",
-                "bottom_right": "x"
-            },
+            "corner_chars": "xxxx",
             "message_styles": {
                 "*": "italic",
                 "_": "italic",

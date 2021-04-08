@@ -7,7 +7,6 @@ import sys
 import json
 import time
 import types
-import getch
 import base64
 import pickle
 import teahaz
@@ -23,9 +22,10 @@ import pyperclip as clip
 from fuzzywuzzy import fuzz as fw
 from urllib.parse import urlparse
 from pytermgui import WIDTH,HEIGHT
-from pytermgui import clean_ansi,real_length,break_line
-from pytermgui import italic,bold,underline,strikethrough,color,highlight,gradient,get_gradient
-from pytermgui import Container,Prompt,Label,InputField,container_from_dict,Regex
+from pytermgui import clean_ansi, real_length, break_line
+from pytermgui import italic, bold, underline, strikethrough, color, highlight, gradient, get_gradient
+from pytermgui import Container, Prompt, Label, InputField, container_from_dict, Regex, getch, get_style
+from pytermgui.utils import wipe
 
 
 
@@ -143,7 +143,7 @@ def load_path(path,key=None) -> dict:
 
 ## init
 def _create_objects() -> None:
-    global MODE_LABEL,CONV_HEADER,infield,completer,loader,filemanager
+    global MODE_LABEL,CONV_HEADER,CONV_HEADER_LABEL,infield,completer,loader,filemanager
 
     # set up bottom mode label
     MODE_LABEL = ModeLabel(value='-- ESCAPE --',justify='left')
@@ -154,14 +154,10 @@ def _create_objects() -> None:
     CONV_HEADER.center(axes='x')
     CONV_HEADER._repr_pre = CONV_HEADER.wipe_all_containing
     CONV_HEADER_LABEL = Label(justify='center')
-    CONV_HEADER_LABEL.set_style('value',pytermgui.CONTAINER_VALUE_STYLE)
+    CONV_HEADER_LABEL.set_style('value',get_style('container_value'))
     CONV_HEADER.add_elements(CONV_HEADER_LABEL)
+    # CONV_HEADER.center()
     CONV_HEADER.hidden = False
-
-    # set corners for header
-    for i,c in enumerate([v for k,v in THEME['corner_chars'].items()]):
-        if not c == None:
-            CONV_HEADER.set_corner(i,c)
 
     # set up infield
     infield = InputField(pos=get_infield_pos())
@@ -189,14 +185,15 @@ def _set_styles() -> None:
     pytermgui.set_style('container_success', lambda item: parse_color(THEME['success'],item.upper()))
     pytermgui.set_style('container_label',   lambda item: parse_color(THEME['label'],item.lower()))
     pytermgui.set_style('container_value',   lambda item: parse_color(THEME['value'],item))
-    pytermgui.set_style('container_border',  lambda item: parse_color(THEME['border'],item))
-    pytermgui.set_style('container_corner',  lambda item: parse_color(THEME['corner'],item))
+    pytermgui.set_style('container_border',  lambda depth,item: parse_color(THEME['border'],item))
+    pytermgui.set_style('container_corner',  lambda depth,item: parse_color(THEME['corner'],item))
 
     pytermgui.set_style('prompt_long_highlight',  lambda item: "> "+parse_color('bold()',item))
     pytermgui.set_style('prompt_short_highlight', lambda item: parse_color(THEME['prompt_highlight'],item))
     pytermgui.set_style('tabbar_highlight',       lambda item: parse_color(THEME['title'],item))
 
-    pytermgui.set_style('container_border_chars', lambda: [bold(v) for v in THEME['border_chars']])
+    pytermgui.set_style('container_border_chars', lambda: THEME['border_chars'])
+    pytermgui.set_style('container_corner_chars', lambda: THEME['corner_chars'])
     pytermgui.set_style('prompt_delimiter_style', lambda: THEME['prompt_delimiters'])
 
 ## handle config file
@@ -681,7 +678,7 @@ def getch_loop() -> None:
 
     buff = ''
     while KEEP_GOING:
-        key = getch.getch()
+        key = getch()
 
         infield.pos = get_infield_pos()
 
@@ -765,7 +762,7 @@ def handle_action(action) -> None:
 
     elif action == "reprint":
         fun,args,obj = UI_TRACE[-1]
-        pytermgui.clr()
+        wipe()
         print('\033[2J')
         if not PIPE_OUTPUT:
             th.print_messages(reprint=True)
@@ -1424,12 +1421,11 @@ def handle_menu(key,obj,send_escape=True,attributes={},page=0) -> None:
         # get obj and index
         selected,_,index = obj.selected
         
+        obj.wipe()
         if hasattr(selected,'handler'):
             selected.handler(obj,selected)
             return
         
-        obj.wipe()
-
         # set previous trace element index
         UI_TRACE[-1][1]['index'] = index
 
@@ -1534,15 +1530,13 @@ def handle_menu(key,obj,send_escape=True,attributes={},page=0) -> None:
 def handle_menu_actions(action,current_file=None) -> int: 
     ui.wipe()
     if PIPE_OUTPUT == None:
-        pytermgui.clr()
+        wipe()
 
     menu = action.replace('menu_','')
-    corners = [v for k,v in THEME['corner_chars'].items()]
     attrs = {}
     selectable = True
 
     if menu == "settings":
-        corners[3] = "settings"
         source = os.path.join(PATH,'data','settings.json')
         pytermgui.set_attribute_for_id('settings-themes_showcolors','handler',
                 lambda prev,self: (prev.wipe(),ui.create_colormenu()))
@@ -1575,7 +1569,6 @@ def handle_menu_actions(action,current_file=None) -> int:
         chatid = chatroom['chatroom_id']
 
         name = chatid+' @ '+address
-        corners[3] = menu
         pytermgui.set_attribute_for_id(menu+'-button_submit','address',address)
         pytermgui.set_attribute_for_id(menu+'-button_submit','chatid',chatid)
         pytermgui.set_attribute_for_id(menu+'-button_submit','handler',
@@ -2903,6 +2896,9 @@ class TeahazHelper(teahaz.Client):
         globals()['MESSAGES'] += added
         self.print_messages(MESSAGES)
 
+    def is_local(*args,**kwargs):
+        return 0
+
     def print_messages(self,messages=[],
                         offset=0,select=None,reprint=False,
                         dont_ignore=False,do_print=True):
@@ -3184,12 +3180,7 @@ class UIGenerator:
         for o in objects:
             if not source_arg == source:
                 o.dict_path = kwargs['path']
-
-            # set theme corners
-            for i,c in enumerate([v for k,v in THEME['corner_chars'].items()]):
-                if not c == None:
-                    o.set_corner(i,c)
-            
+ 
             # set overwrite corners
             for i,c in enumerate(corners):
                 if c:
@@ -3267,8 +3258,6 @@ class UIGenerator:
             dic.setting = source.real_label
             dic.real_value = source.real_value
             dic.center()
-            for i,c in enumerate([v for k,v in THEME['corner_chars'].items()]):
-                dic.set_corner(i,c)
 
         d = dicts[dict_index]
         d.selected_index = (0 if index==None else index) 
@@ -3304,9 +3293,6 @@ class UIGenerator:
         set_pipe(handle_menu,{'obj': [d]})
         add_to_trace([{},d])
 
-        for i,c in enumerate(THEME['corner_chars'].values()):
-            d.set_corner(i,c)
-
         d.center()
         d.select()
         print(d)
@@ -3316,11 +3302,6 @@ class UIGenerator:
     def create_server_picker(self):
         # create container
         d = Container(width=50)
-
-        # set container corners
-        for i,c in enumerate([v for k,v in THEME['corner_chars'].items()]):
-            if not c == None:
-                d.set_corner(i,c)
 
         # go through servers
         for urlindex,(url_long,data) in enumerate(th.connections['servers'].items()):
@@ -3391,11 +3372,6 @@ class UIGenerator:
         f = caller_prompt.parent.dict_path 
 
         d = Container(width=50)
-
-        # set container corners
-        for i,c in enumerate([v for k,v in THEME['corner_chars'].items()]):
-            if not c == None:
-                d.set_corner(i,c)
 
         title = Label(value="choose or add address",justify="center")
         padding = Label()
@@ -4106,9 +4082,6 @@ class FileManager(Container):
             self.center('both')
         self.field.pos = self.pos[0]+2,self.pos[1]+self.real_height+1
 
-        for i,c in enumerate(THEME['corner_chars'].values()):
-            self.set_corner(i,c)
-
         if self.selected_file:
             self.bottombar.set_value("▲")
         elif len(self.files) > len(self.rows)-1:
@@ -4539,15 +4512,16 @@ if __name__ == "__main__":
             del th_dummy
 
             th.extras = []
+            CONV_HEADER_LABEL.set_value(f'{th.url}: {th.chatname}')
             th.get_messages(0,callback=th.add_to_messages)
             th.print_messages(MESSAGES)
     else:
         th = TeahazHelper()
         teahaz.interactive(th.login)
+        CONV_HEADER_LABEL.set_value(f'{th.url}: {th.chatname}')
 
         MESSAGES = th.get_messages(0,join=th.add_to_messages)
         th.print_messages(MESSAGES)
-
 
     run_loop = threading.Thread(target=th.run,kwargs={'hook_own_messages': True})
     run_loop.start()
